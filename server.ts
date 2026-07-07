@@ -42,11 +42,19 @@ app.get("/api/employees", async (req, res) => {
 // Create Employee
 app.post("/api/employees", async (req, res) => {
   try {
-    const { name, role, department, email, id } = req.body;
-    if (!name || !role || !department || !email) {
+    const { name, role, department, team, email, id } = req.body;
+    if (!name || !role || !department || !team || !email) {
       return res.status(400).json({ error: "Missing required fields" });
     }
-    const newEmp = await dbService.saveEmployee({ name, role, department, email, id, active: true });
+    const newEmp = await dbService.saveEmployee({
+      name,
+      role,
+      department,
+      team,
+      email,
+      id,
+      active: true
+    });
     res.status(201).json(newEmp);
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to save employee" });
@@ -57,7 +65,8 @@ app.post("/api/employees", async (req, res) => {
 app.put("/api/employees/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const updated = await dbService.updateEmployee(id, req.body);
+    const updateData = { ...req.body };
+    const updated = await dbService.updateEmployee(id, updateData);
     if (!updated) {
       return res.status(404).json({ error: "Employee not found" });
     }
@@ -67,15 +76,15 @@ app.put("/api/employees/:id", async (req, res) => {
   }
 });
 
-// Delete Employee (Soft delete)
+// Delete Employee (Hard delete)
 app.delete("/api/employees/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const deleted = await dbService.updateEmployee(id, { active: false });
-    if (!deleted) {
+    const success = await dbService.deleteEmployee(id);
+    if (!success) {
       return res.status(404).json({ error: "Employee not found" });
     }
-    res.json({ success: true, message: "Employee successfully deactivated" });
+    res.json({ success: true, message: "Employee successfully deleted" });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to delete employee" });
   }
@@ -165,9 +174,13 @@ app.post("/api/reports/generate", async (req, res) => {
       });
     }
 
+    // Fetch targets for this month to align AI expectations
+    const targets = await dbService.getTargets(month);
+    const target = targets.find(t => t.month === month);
+
     // Generate report using Gemini
     console.log(`Generating Monthly Talent Report for ${employee.name} for ${month}...`);
-    const generatedReportData = await generateMonthlyPerformanceReport(employee, record);
+    const generatedReportData = await generateMonthlyPerformanceReport(employee, record, target);
     
     // Save report to database
     const savedReport = await dbService.saveReport(generatedReportData);

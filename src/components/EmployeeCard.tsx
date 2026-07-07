@@ -11,6 +11,7 @@ interface EmployeeCardProps {
   onClick: () => void;
   index?: number;
   target?: MonthlyTarget;
+  targetProjectValueMin?: number;
 }
 
 export const EmployeeCard: React.FC<EmployeeCardProps> = ({
@@ -21,6 +22,7 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
   onClick,
   index = 0,
   target,
+  targetProjectValueMin = 25000,
 }) => {
   // Extract initials
   const getInitials = (name: string) => {
@@ -37,18 +39,24 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
   const projects = performanceRecord ? performanceRecord.deliveredProjectsAmount : null;
   const value = performanceRecord ? performanceRecord.deliveredProjectsValue : null;
 
+  const targetAttendanceMin = target?.attendanceMin || 95;
+
+  const attScore = attendance !== null ? Math.min(100, (attendance / targetAttendanceMin) * 100) : 0;
+  const valScore = value !== null ? Math.min(100, (value / targetProjectValueMin) * 100) : 0;
+  const combinedScore = attendance !== null && value !== null ? Math.round(attScore * 0.5 + valScore * 0.5) : 0;
+
   // Memoize underperforming metrics check
   const underperformingMetrics = React.useMemo(() => {
-    if (!performanceRecord || !target) return [];
+    if (!performanceRecord) return [];
     const flags: string[] = [];
-    if (attendance !== null && attendance < target.attendanceMin) {
+    if (attendance !== null && attendance < targetAttendanceMin) {
       flags.push("Attendance");
     }
-    if (value !== null && value < target.projectValueMin) {
+    if (value !== null && value < targetProjectValueMin) {
       flags.push("Project Value");
     }
     return flags;
-  }, [performanceRecord, target, attendance, value]);
+  }, [performanceRecord, targetAttendanceMin, targetProjectValueMin, attendance, value]);
 
   // Modern Lottie-like organic spring settings
   const cardVariants = {
@@ -79,172 +87,113 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
       initial="hidden"
       animate="visible"
       onClick={onClick}
-      className={`group relative p-4 rounded-2xl border transition-all duration-300 cursor-pointer overflow-hidden ${
+      className={`group relative p-3 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden ${
         isActive
-          ? "bg-white/60 border-blue-300/80 shadow-lg ring-1 ring-blue-500/10 scale-[1.01]"
-          : "bg-white/30 border-slate-100/60 hover:bg-white/50 hover:border-slate-300/40 hover:shadow-md"
+          ? "bg-white border-blue-300/80 shadow-sm ring-1 ring-blue-500/5 scale-[1.01]"
+          : "bg-white/40 border-slate-100/60 hover:bg-white hover:border-slate-300/40 hover:shadow-2xs"
       }`}
       style={{
         backdropFilter: "blur(12px)",
         WebkitBackdropFilter: "blur(12px)",
       }}
     >
-      {/* Decorative ambient glassmorphism glow backdrops */}
-      <div
-        className={`absolute -right-12 -top-12 w-28 h-28 rounded-full blur-2xl transition-all duration-500 pointer-events-none ${
-          isActive
-            ? "bg-gradient-to-br from-blue-400/20 to-indigo-500/20 scale-125"
-            : "bg-blue-400/5 group-hover:bg-blue-400/10"
-        }`}
-      />
-      <div
-        className={`absolute -left-12 -bottom-12 w-28 h-28 rounded-full blur-2xl transition-all duration-500 pointer-events-none ${
-          isActive
-            ? "bg-gradient-to-br from-emerald-400/20 to-teal-500/20 scale-125"
-            : "bg-emerald-400/0 group-hover:bg-emerald-400/5"
-        }`}
-      />
+      {/* Subtle ambient blur accents for active cards */}
+      {isActive && (
+        <>
+          <div className="absolute -right-8 -top-8 w-20 h-20 rounded-full bg-blue-400/10 blur-xl pointer-events-none" />
+          <div className="absolute -left-8 -bottom-8 w-20 h-20 rounded-full bg-indigo-400/10 blur-xl pointer-events-none" />
+        </>
+      )}
 
-      {/* Card Header Info */}
-      <div className="relative z-10 flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          {/* Creative Profile Initials with Glass reflection and glowing borders */}
+      {/* Main Row Content */}
+      <div className="relative z-10 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          {/* Compact Profile Initials */}
           <div
-            className={`w-11 h-11 rounded-xl flex-shrink-0 flex items-center justify-center font-bold text-xs transition-all duration-300 shadow-xs ${
+            className={`w-9 h-9 rounded-lg flex-shrink-0 flex items-center justify-center font-bold text-[10px] transition-all duration-300 ${
               isActive
-                ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white border border-white/20 ring-4 ring-blue-500/10"
-                : "bg-slate-100/80 text-slate-600 border border-slate-200/50 group-hover:bg-slate-200/50"
+                ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-2xs"
+                : "bg-slate-100/80 text-slate-600 border border-slate-200/40 group-hover:bg-slate-200/50"
             }`}
           >
             <span className="tracking-wider">{getInitials(employee.name)}</span>
           </div>
 
           <div className="min-w-0">
-            <h4 className="text-xs font-bold text-slate-800 truncate tracking-tight group-hover:text-blue-600 transition-colors">
+            <h4 className="text-xs font-semibold text-slate-800 truncate group-hover:text-blue-600 transition-colors">
               {employee.name}
             </h4>
-            <p className="text-[10px] text-slate-400 truncate mt-0.5 font-medium flex items-center gap-1">
-              <Briefcase className="h-2.5 w-2.5 opacity-60" />
+            <p className="text-[10px] text-slate-400 truncate mt-0.5 font-medium">
               {employee.role}
             </p>
           </div>
         </div>
 
-        {/* State Tags */}
-        <div className="flex flex-col items-end gap-1 flex-shrink-0">
-          <span className="text-[10px] font-mono font-extrabold text-slate-700 bg-slate-100/80 px-1.5 py-0.5 rounded-md border border-slate-200/30">
-            {employee.department.split(" ")[0]}
-          </span>
-          <div className="flex gap-1 flex-wrap justify-end">
-            {underperformingMetrics.length > 0 ? (
-              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-700 text-[8px] font-bold border border-rose-500/20 shadow-2xs animate-pulse">
-                <AlertCircle className="h-2 w-2 text-rose-500" />
-                Under Target
-              </span>
-            ) : null}
-            {hasReport ? (
-              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 text-[8px] font-bold border border-emerald-500/20">
-                <Sparkles className="h-2 w-2" />
-                AI Verified
-              </span>
-            ) : performanceRecord ? (
-              <span className="px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-700 text-[8px] font-bold border border-blue-500/20">
-                Logged
-              </span>
-            ) : (
-              <span className="px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 text-[8px] font-bold border border-amber-500/20">
-                Pending
-              </span>
-            )}
-          </div>
+        {/* Right Aligned Target Score Pill */}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {performanceRecord ? (
+            <span className={`text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-md ${
+              combinedScore >= 95
+                ? "bg-emerald-50 text-emerald-700 border border-emerald-200/30"
+                : combinedScore >= 70
+                ? "bg-indigo-50 text-indigo-700 border border-indigo-200/30"
+                : "bg-rose-50 text-rose-700 border border-rose-200/30"
+            }`}>
+              {combinedScore}%
+            </span>
+          ) : (
+            <span className="text-[9px] font-semibold font-mono px-1.5 py-0.5 rounded-md bg-slate-100/80 text-slate-400 border border-slate-200/10">
+              Pending
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Creative Matrix Performance Representation */}
-      {performanceRecord ? (
-        <div className="relative z-10 mt-3.5 pt-3 border-t border-slate-100/80">
-          {/* Micro Grid Metrics */}
-          <div className="grid grid-cols-3 gap-2.5 mb-2.5">
-            {/* Metric 1: Attendance */}
-            <div className={`transition-colors p-1.5 rounded-lg border ${
-              target && attendance !== null && attendance < target.attendanceMin
-                ? "bg-rose-50/40 border-rose-200/50 hover:bg-rose-50/60"
-                : "bg-slate-50/40 group-hover:bg-slate-50/60 border-slate-100/50"
-            }`}>
-              <div className="flex items-center gap-0.5 text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">
-                <Calendar className={`h-2 w-2 ${
-                  target && attendance !== null && attendance < target.attendanceMin ? "text-rose-500 animate-pulse" : "text-emerald-500"
-                }`} />
-                <span>Attd</span>
-              </div>
-              <span className={`text-[11px] font-mono font-bold ${
-                target && attendance !== null && attendance < target.attendanceMin ? "text-rose-600 font-extrabold" : "text-slate-700"
-              }`}>
-                {attendance}%
-              </span>
-            </div>
-
-            {/* Metric 2: Meetings */}
-            <div className="bg-slate-50/40 group-hover:bg-slate-50/60 border-slate-100/50 transition-colors p-1.5 rounded-lg border">
-              <div className="flex items-center gap-0.5 text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">
-                <Users className="h-2 w-2 text-blue-500" />
-                <span>Meet</span>
-              </div>
-              <span className="text-[11px] font-mono font-bold text-slate-700">
-                {meetings}
-              </span>
-            </div>
-
-            {/* Metric 3: Projects */}
-            <div className={`transition-colors p-1.5 rounded-lg border ${
-              target && value !== null && value < target.projectValueMin
-                ? "bg-rose-50/40 border-rose-200/50 hover:bg-rose-50/60"
-                : "bg-slate-50/40 group-hover:bg-slate-50/60 border-slate-100/50"
-            }`}>
-              <div className="flex items-center gap-0.5 text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">
-                <TrendingUp className={`h-2 w-2 ${
-                  target && value !== null && value < target.projectValueMin ? "text-rose-500 animate-pulse" : "text-indigo-500"
-                }`} />
-                <span>Value</span>
-              </div>
-              <span className={`text-[11px] font-mono font-bold ${
-                target && value !== null && value < target.projectValueMin ? "text-rose-600 font-extrabold" : "text-slate-700"
-              }`}>
-                {value ? `$${(value / 1000).toFixed(0)}k` : "—"}
-              </span>
+      {/* Ultra-sleek single-line micro-metrics */}
+      {performanceRecord && (
+        <div className="relative z-10 mt-2.5 pt-2 border-t border-slate-100/80 flex flex-col gap-1 text-[9px] font-mono text-slate-400">
+          <div className="flex items-center justify-between">
+            <span>Attd: <strong className={attendance !== null && attendance < targetAttendanceMin ? "text-rose-600 font-extrabold" : "text-slate-600 font-semibold"}>{attendance}%</strong> <span className="text-slate-300 font-normal">/ {targetAttendanceMin}%</span></span>
+            
+            <div className="flex items-center gap-1">
+              {underperformingMetrics.length > 0 ? (
+                <span className="flex items-center gap-0.5 text-rose-500 font-bold text-[8px] uppercase tracking-wider animate-pulse">
+                  <AlertCircle className="h-2 w-2" />
+                  Under Target
+                </span>
+              ) : hasReport ? (
+                <span className="text-emerald-600 font-bold text-[8px] uppercase tracking-wider">
+                  AI Verified
+                </span>
+              ) : (
+                <span className="text-slate-400 font-semibold text-[8px] uppercase tracking-wider">
+                  Logged
+                </span>
+              )}
             </div>
           </div>
-
-          {/* Minimalist Micro Progress Bar linking all metrics together */}
-          <div className="space-y-1">
-            <div className="flex justify-between items-center text-[8px] text-slate-400 font-semibold font-mono">
-              <span>Overall Score Matrix</span>
-              <span className="text-blue-600 font-bold">
-                {Math.round(((attendance || 0) + Math.min(100, ((meetings || 0) / 15) * 100) + Math.min(100, ((projects || 0) / 3) * 100)) / 3)}%
-              </span>
-            </div>
-            <div className="h-1.5 w-full bg-slate-100/80 rounded-full overflow-hidden flex">
-              <div
-                className="h-full bg-emerald-400 transition-all duration-500"
-                style={{ width: `${(attendance || 0) / 3}%` }}
-                title={`Attendance: ${attendance}%`}
-              />
-              <div
-                className="h-full bg-blue-400 transition-all duration-500"
-                style={{ width: `${Math.min(100, ((meetings || 0) / 15) * 100) / 3}%` }}
-                title={`Meetings: ${meetings}`}
-              />
-              <div
-                className="h-full bg-indigo-400 transition-all duration-500"
-                style={{ width: `${Math.min(100, ((projects || 0) / 3) * 100) / 3}%` }}
-                title={`Projects: ${projects}`}
-              />
-            </div>
+          
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span>Target: <strong className="text-slate-600 font-semibold">${targetProjectValueMin.toLocaleString()}</strong></span>
+            <span className="text-slate-200">•</span>
+            <span>Achieved: <strong className={value !== null && value < targetProjectValueMin ? "text-rose-600 font-extrabold" : "text-emerald-600 font-extrabold"}>{value !== null ? `$${value.toLocaleString()}` : "—"}</strong></span>
           </div>
         </div>
-      ) : (
-        <div className="relative z-10 mt-3.5 pt-3.5 border-t border-slate-100/80 text-[10px] text-slate-400 italic text-center py-2 bg-slate-50/20 rounded-lg border border-dashed border-slate-200/40">
-          No performance logged for this month
+      )}
+
+      {/* Decorative dynamic edge-aligned progress bar */}
+      {performanceRecord && (
+        <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-slate-100/50 overflow-hidden">
+          <div
+            className={`h-full transition-all duration-500 ${
+              combinedScore >= 95
+                ? "bg-emerald-500"
+                : combinedScore >= 70
+                ? "bg-indigo-500"
+                : "bg-rose-500 animate-pulse"
+            }`}
+            style={{ width: `${combinedScore}%` }}
+          />
         </div>
       )}
     </motion.div>

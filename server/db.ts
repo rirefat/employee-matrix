@@ -32,7 +32,8 @@ const initialEmployees: Employee[] = [
     id: "emp-1",
     name: "Sarah Jenkins",
     role: "Senior Frontend Engineer",
-    department: "Engineering",
+    department: "Operations",
+    team: "Custom",
     email: "sarah.jenkins@company.com",
     active: true,
     createdAt: new Date("2025-01-15").toISOString(),
@@ -42,6 +43,7 @@ const initialEmployees: Employee[] = [
     name: "David Chen",
     role: "Account Executive",
     department: "Sales",
+    team: "Shopify",
     email: "david.chen@company.com",
     active: true,
     createdAt: new Date("2025-03-10").toISOString(),
@@ -50,7 +52,8 @@ const initialEmployees: Employee[] = [
     id: "emp-3",
     name: "Maria Rodriguez",
     role: "Customer Support Specialist",
-    department: "Customer Success",
+    department: "Operations",
+    team: "WordPress",
     email: "maria.rodriguez@company.com",
     active: true,
     createdAt: new Date("2025-06-01").toISOString(),
@@ -59,7 +62,8 @@ const initialEmployees: Employee[] = [
     id: "emp-4",
     name: "Alex Thompson",
     role: "Product Designer",
-    department: "Product",
+    department: "Sales",
+    team: "Custom",
     email: "alex.thompson@company.com",
     active: true,
     createdAt: new Date("2025-08-20").toISOString(),
@@ -405,6 +409,7 @@ class DatabaseService {
       name: emp.name,
       role: emp.role,
       department: emp.department,
+      team: emp.team,
       email: emp.email,
       id: targetId,
       active: true,
@@ -424,22 +429,11 @@ class DatabaseService {
   public async updateEmployee(id: string, emp: Partial<Employee>): Promise<Employee | null> {
     await this.ensureInitialized();
     if (this.db && this.dbStatus.connectionType === "mongodb") {
-      const result = await this.db.collection("employees").findOneAndUpdate(
+      await this.db.collection("employees").updateOne(
         { id: id },
-        { $set: emp },
-        { returnDocument: "after" }
+        { $set: emp }
       );
-      if (!result) return null;
-      
-      // Handle MongoDB Driver v4/v5 which wraps the document in `{ value: Doc }`
-      // versus MongoDB Driver v6 which returns the document directly.
-      let doc: any = null;
-      if ("value" in result) {
-        doc = (result as any).value;
-      } else {
-        doc = result;
-      }
-      
+      const doc = await this.db.collection("employees").findOne({ id: id });
       if (!doc) return null;
       const { _id, ...rest } = doc;
       return { ...rest, id: rest.id || _id.toString() } as Employee;
@@ -450,6 +444,29 @@ class DatabaseService {
       data.employees[idx] = { ...data.employees[idx], ...emp };
       this.writeLocal(data);
       return data.employees[idx];
+    }
+  }
+
+  public async deleteEmployee(id: string): Promise<boolean> {
+    await this.ensureInitialized();
+    if (this.db && this.dbStatus.connectionType === "mongodb") {
+      const result = await this.db.collection("employees").deleteOne({ id: id });
+      // Clean up associated performance records, monthly reports
+      await this.db.collection("performance_records").deleteMany({ employeeId: id });
+      await this.db.collection("monthly_reports").deleteMany({ employeeId: id });
+      return result.deletedCount > 0;
+    } else {
+      const data = this.readLocal();
+      const idx = data.employees.findIndex(e => e.id === id);
+      if (idx === -1) return false;
+      data.employees.splice(idx, 1);
+      
+      // Clean up local associated tables too
+      data.performance = data.performance.filter(p => p.employeeId !== id);
+      data.reports = data.reports.filter(r => r.employeeId !== id);
+
+      this.writeLocal(data);
+      return true;
     }
   }
 

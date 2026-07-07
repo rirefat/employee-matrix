@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { Employee, PerformanceRecord, MonthlyReport } from "../src/types";
+import { Employee, PerformanceRecord, MonthlyReport, MonthlyTarget } from "../src/types";
 
 // Initialize GoogleGenAI SDK with fallback safety
 let ai: GoogleGenAI | null = null;
@@ -32,8 +32,12 @@ interface GeneratedReportContent {
 
 export async function generateMonthlyPerformanceReport(
   employee: Employee,
-  record: PerformanceRecord
+  record: PerformanceRecord,
+  target?: MonthlyTarget
  ): Promise<Omit<MonthlyReport, "id" | "generatedAt">> {
+  const targetAtt = target?.attendanceMin ?? 95;
+  const targetVal = target?.projectValueMin ?? 25000;
+
   const prompt = `
     You are an expert Talent Development Coach and HR Analytics Specialist.
     Please analyze the following employee performance data for the month of ${record.month} and generate a structured performance review & development plan.
@@ -43,7 +47,11 @@ export async function generateMonthlyPerformanceReport(
     - Role: ${employee.role}
     - Department: ${employee.department}
 
-    Performance Metrics for ${record.month}:
+    Target Expectations for ${record.month} (Manually Set):
+    - Minimum Attendance Rate: ${targetAtt}%
+    - Minimum Delivered Project Value: $${targetVal.toLocaleString()}
+
+    Actual Performance Metrics for ${record.month}:
     - Attendance Rate: ${record.attendance}% (average attendance rate)
     ${record.totalWorkingDays !== undefined ? `- Total Working Days in Month: ${record.totalWorkingDays} days` : ""}
     ${record.presentDays !== undefined ? `- Days Attended (Present): ${record.presentDays} days` : ""}
@@ -55,12 +63,10 @@ export async function generateMonthlyPerformanceReport(
     ${record.managerRemarks ? `- Manager Remarks (Qualitative Feedback): "${record.managerRemarks}"` : ""}
 
     Guidance for analysis:
-    - Focus on data-driven insights. Translate numerical values into meaningful assessments.
-    - Specifically address their attendance details (the exact number of days present, absent, leaves, and the average attendance rate) in the synthesis or as a strength/growth opportunity where relevant.
+    - Base their overall performance assessment primarily on these two core metrics: Attendance Rate and Delivered Project Value. Compare actual results directly against the targets (Attendance Target: ${targetAtt}%, Project Value Target: $${targetVal.toLocaleString()}).
+    - Focus on data-driven insights. Translate numerical target achievement values (e.g. met, exceeded, or missed) into meaningful talent development assessments.
+    - Specifically address whether they met, exceeded, or missed their attendance and project value targets in the synthesis, strengths, or growth opportunities where relevant.
     ${record.managerRemarks ? `- Highly prioritize and incorporate the manager's qualitative feedback/remarks ("${record.managerRemarks}") into your summary/synthesis and action items where applicable.` : ""}
-    - Engineering roles might value project quality, focus, and technical deliverables.
-    - Sales roles value meeting numbers and high deal/project values.
-    - Customer Support values volume (amount of delivered items) and attendance.
     - Keep the tone highly supportive, constructive, and oriented towards long-term professional development.
   `;
 

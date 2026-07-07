@@ -50,7 +50,27 @@ import { EmployeeCard } from "./components/EmployeeCard";
 import { MonthPicker } from "./components/MonthPicker";
 import { motion, AnimatePresence } from "motion/react";
 
-const DEPARTMENTS = ["Engineering", "Sales", "Customer Success", "Product", "Operations"];
+const DEPARTMENTS = ["Sales", "Operations"];
+const TEAMS = ["Custom", "Shopify", "WordPress"];
+
+const getDeptIcon = (dept: string) => {
+  switch (dept) {
+    case "All": return <Layers className="h-3.5 w-3.5" />;
+    case "Sales": return <DollarSign className="h-3.5 w-3.5" />;
+    case "Operations": return <Briefcase className="h-3.5 w-3.5" />;
+    default: return <Building className="h-3.5 w-3.5" />;
+  }
+};
+
+const getTeamIcon = (team: string) => {
+  switch (team) {
+    case "All": return <Users className="h-3.5 w-3.5" />;
+    case "Custom": return <Cpu className="h-3.5 w-3.5" />;
+    case "Shopify": return <Sparkles className="h-3.5 w-3.5" />;
+    case "WordPress": return <Server className="h-3.5 w-3.5" />;
+    default: return <Briefcase className="h-3.5 w-3.5" />;
+  }
+};
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<"profile" | "team" | "roster">("profile");
@@ -61,8 +81,17 @@ export default function App() {
   const [selectedMonth, setSelectedMonth] = useState<string>("2026-06");
   const [rosterSearchQuery, setRosterSearchQuery] = useState<string>("");
   const [rosterDeptFilter, setRosterDeptFilter] = useState<string>("All");
+  const [rosterTeamFilter, setRosterTeamFilter] = useState<string>("All");
   const [attendanceWarningThreshold, setAttendanceWarningThreshold] = useState<number>(85);
+  const [universalProjectValueTarget, setUniversalProjectValueTarget] = useState<number>(() => {
+    const saved = localStorage.getItem("universalProjectValueTarget");
+    return saved ? Number(saved) : 25000;
+  });
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    localStorage.setItem("universalProjectValueTarget", universalProjectValueTarget.toString());
+  }, [universalProjectValueTarget]);
 
   const currentTarget = useMemo(() => {
     return targets.find((t) => t.month === selectedMonth);
@@ -76,12 +105,15 @@ export default function App() {
   // Modals state
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
   const [isTargetsModalOpen, setIsTargetsModalOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [employeeFormData, setEmployeeFormData] = useState({
     id: "",
     name: "",
     role: "",
     department: DEPARTMENTS[0],
+    team: TEAMS[0],
     email: ""
   });
 
@@ -105,7 +137,7 @@ export default function App() {
 
   const [targetFormData, setTargetFormData] = useState({
     attendanceMin: 95,
-    projectValueMin: 25000,
+    projectValueMin: universalProjectValueTarget,
   });
 
   useEffect(() => {
@@ -118,7 +150,7 @@ export default function App() {
       } else {
         setTargetFormData({
           attendanceMin: 95,
-          projectValueMin: 25000,
+          projectValueMin: universalProjectValueTarget,
         });
       }
     }
@@ -126,7 +158,7 @@ export default function App() {
 
   // Lock body scroll when any modal is open to prevent background scrolling
   useEffect(() => {
-    const isAnyModalOpen = isEmployeeModalOpen || isTargetsModalOpen || isPerformanceModalOpen;
+    const isAnyModalOpen = isEmployeeModalOpen || isTargetsModalOpen || isPerformanceModalOpen || isDeleteConfirmOpen;
     if (isAnyModalOpen) {
       document.body.classList.add("overflow-hidden");
     } else {
@@ -135,7 +167,7 @@ export default function App() {
     return () => {
       document.body.classList.remove("overflow-hidden");
     };
-  }, [isEmployeeModalOpen, isTargetsModalOpen, isPerformanceModalOpen]);
+  }, [isEmployeeModalOpen, isTargetsModalOpen, isPerformanceModalOpen, isDeleteConfirmOpen]);
 
   const handleSaveTarget = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -228,7 +260,14 @@ export default function App() {
   // --- EMPLOYEE LOGIC ---
   const handleOpenAddEmployee = () => {
     setEditingEmployee(null);
-    setEmployeeFormData({ id: "", name: "", role: "", department: DEPARTMENTS[0], email: "" });
+    setEmployeeFormData({
+      id: "",
+      name: "",
+      role: "",
+      department: DEPARTMENTS[0],
+      team: TEAMS[0],
+      email: ""
+    });
     setIsEmployeeModalOpen(true);
   };
 
@@ -239,6 +278,7 @@ export default function App() {
       name: emp.name,
       role: emp.role,
       department: emp.department,
+      team: emp.team || TEAMS[0],
       email: emp.email
     });
     setIsEmployeeModalOpen(true);
@@ -290,15 +330,20 @@ export default function App() {
     }
   };
 
-  const handleDeleteEmployee = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to deactivate ${name}'s performance profile? Historical data will be preserved, but they will not appear in current metrics.`)) {
-      return;
-    }
+  const handleDeleteEmployeeClick = (emp: Employee) => {
+    setEmployeeToDelete(emp);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDeleteEmployee = async () => {
+    if (!employeeToDelete) return;
 
     try {
-      const res = await fetch(`/api/employees/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/employees/${employeeToDelete.id}`, { method: "DELETE" });
       if (res.ok) {
-        showToast("Employee profile deactivated.", "success");
+        showToast("Employee profile deleted.", "success");
+        setIsDeleteConfirmOpen(false);
+        setEmployeeToDelete(null);
         fetchData();
       } else {
         showToast("Failed to delete employee profile.", "error");
@@ -450,6 +495,7 @@ export default function App() {
       emp.name.toLowerCase().includes(q) ||
       emp.role.toLowerCase().includes(q) ||
       emp.department.toLowerCase().includes(q) ||
+      (emp.team && emp.team.toLowerCase().includes(q)) ||
       emp.email.toLowerCase().includes(q)
     );
   });
@@ -466,10 +512,11 @@ export default function App() {
         emp.id.toLowerCase().includes(q);
 
       const matchesDept = rosterDeptFilter === "All" || emp.department === rosterDeptFilter;
+      const matchesTeam = rosterTeamFilter === "All" || emp.team === rosterTeamFilter;
 
-      return matchesSearch && matchesDept;
+      return matchesSearch && matchesDept && matchesTeam;
     });
-  }, [employees, rosterSearchQuery, rosterDeptFilter]);
+  }, [employees, rosterSearchQuery, rosterDeptFilter, rosterTeamFilter]);
 
   // Selected report for the active reporter
   const activeReport = reports.find(
@@ -488,6 +535,24 @@ export default function App() {
   );
 
   const selectedReportEmployeeObj = employees.find(e => e.id === reportEmployeeId);
+
+  const activeEmployeesCount = useMemo(() => {
+    return employees.filter(e => e.active !== false).length || 1;
+  }, [employees]);
+
+  const effectiveProjectValueMin = useMemo(() => {
+    const totalTarget = currentTarget?.projectValueMin !== undefined ? currentTarget.projectValueMin : universalProjectValueTarget;
+    return Math.round(totalTarget / activeEmployeesCount);
+  }, [currentTarget, universalProjectValueTarget, activeEmployeesCount]);
+
+  const overallPerformance = useMemo(() => {
+    if (!activeRecord) return null;
+    const targetAtt = currentTarget?.attendanceMin || 95;
+    const targetVal = effectiveProjectValueMin;
+    const attScore = Math.min(100, (activeRecord.attendance / targetAtt) * 100);
+    const valScore = Math.min(100, (activeRecord.deliveredProjectsValue / targetVal) * 100);
+    return Math.round(attScore * 0.5 + valScore * 0.5);
+  }, [activeRecord, currentTarget, effectiveProjectValueMin]);
 
   const getInitials = (name: string) => {
     return name
@@ -537,7 +602,7 @@ export default function App() {
         {/* Glow-bar Accent Line */}
         <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 opacity-90" />
         
-        <div className="max-w-7xl mx-auto h-16 px-4 sm:px-6 flex items-center justify-between">
+        <div className="w-[85%] max-w-[85%] mx-auto h-16 px-4 sm:px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* Animated Geometric Emblem */}
             <motion.div 
@@ -667,6 +732,32 @@ export default function App() {
                           Configures the threshold below which employee records are flagged for poor attendance. Rows with attendance below this value will highlight in red on the 'Database Records' table.
                         </p>
                       </div>
+
+                      <div className="border-t border-slate-100 pt-2" />
+
+                      {/* Universal Delivered Value Target Panel */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 text-slate-700">
+                            <TrendingUp className="h-3.5 w-3.5 text-indigo-500" />
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Universal Value Target</span>
+                          </div>
+                        </div>
+                        <div className="relative mt-1">
+                          <span className="absolute left-3 top-2 text-slate-400 text-xs font-bold">$</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1000"
+                            value={universalProjectValueTarget}
+                            onChange={(e) => setUniversalProjectValueTarget(Math.max(0, Number(e.target.value)))}
+                            className="w-full pl-6 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition-all"
+                          />
+                        </div>
+                        <p className="text-[10px] text-slate-500 leading-normal">
+                          Configures the default minimum delivered value target for all members. This is used when no month-specific target is defined.
+                        </p>
+                      </div>
                     </motion.div>
                   </>
                 )}
@@ -695,7 +786,7 @@ export default function App() {
       </header>
 
       {/* Main Grid Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-12 gap-6 items-start">
+      <main className="flex-1 w-[85%] max-w-[85%] mx-auto p-4 md:p-6 grid grid-cols-12 gap-6 items-start">
 
         {/* LEFT COLUMN: Direct Reports Sidebar */}
         <aside className="col-span-12 lg:col-span-4 lg:sticky lg:top-20 z-30 flex flex-col gap-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
@@ -744,6 +835,7 @@ export default function App() {
                     performanceRecord={rec}
                     hasReport={hasReport}
                     target={currentTarget}
+                    targetProjectValueMin={effectiveProjectValueMin}
                     onClick={() => setReportEmployeeId(emp.id)}
                   />
                 );
@@ -800,11 +892,20 @@ export default function App() {
               {selectedReportEmployeeObj ? (
                 <>
                   {/* Glassmorphic Selected employee info card with ambient blur backdrops */}
-                  <div className="relative overflow-hidden rounded-2xl border border-white/40 shadow-xl p-6 bg-white/60 backdrop-blur-md">
+                  <div className="relative overflow-hidden rounded-2xl border border-slate-200/50 shadow-xl p-6 bg-white/70 backdrop-blur-md">
                     {/* Atmospheric color nodes under glass to enhance depth */}
-                    <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 blur-3xl pointer-events-none" />
-                    <div className="absolute -bottom-24 -left-24 w-48 h-48 rounded-full bg-gradient-to-br from-emerald-500/10 to-teal-500/20 blur-3xl pointer-events-none" />
-                    <div className="absolute top-1/2 left-1/3 w-32 h-32 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+                    <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-gradient-to-br from-indigo-500/15 to-purple-500/15 blur-3xl pointer-events-none" />
+                    <div className="absolute -bottom-24 -left-24 w-48 h-48 rounded-full bg-gradient-to-br from-emerald-500/10 to-teal-500/15 blur-3xl pointer-events-none" />
+                    <div className="absolute top-1/2 left-1/3 w-32 h-32 rounded-full bg-blue-500/5 blur-3xl pointer-events-none" />
+
+                    {/* Creative technical background gridlines */}
+                    <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.06)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none" />
+                    
+                    {/* Technical decorative crosshairs and corner lines for a premium aesthetic */}
+                    <div className="absolute top-3 left-3 w-1.5 h-1.5 border-t border-l border-slate-300 pointer-events-none" />
+                    <div className="absolute top-3 right-3 w-1.5 h-1.5 border-t border-r border-slate-300 pointer-events-none" />
+                    <div className="absolute bottom-3 left-3 w-1.5 h-1.5 border-b border-l border-slate-300 pointer-events-none" />
+                    <div className="absolute bottom-3 right-3 w-1.5 h-1.5 border-b border-r border-slate-300 pointer-events-none" />
 
                     <div className="relative z-10 flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
                       <div className="flex gap-4">
@@ -817,9 +918,9 @@ export default function App() {
                           <p className="text-xs text-slate-600 mt-1 flex items-center gap-1.5">
                             <span className="font-medium">Matrix Tier:</span>
                             {activeRecord ? (
-                              activeRecord.attendance >= 95 && activeRecord.deliveredProjectsAmount >= 2 ? (
+                              activeRecord.attendance >= (currentTarget?.attendanceMin || 95) && activeRecord.deliveredProjectsValue >= effectiveProjectValueMin ? (
                                 <span className="text-emerald-700 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full text-[10px]">Exceeds Expectations</span>
-                              ) : activeRecord.attendance >= 90 ? (
+                              ) : (overallPerformance || 0) >= 80 ? (
                                 <span className="text-blue-700 font-bold bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full text-[10px]">Meets Expectations</span>
                               ) : (
                                 <span className="text-amber-600 font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full text-[10px]">Development Required</span>
@@ -828,13 +929,80 @@ export default function App() {
                               <span className="text-slate-400 italic font-medium">No metrics registered yet</span>
                             )}
                           </p>
-                          <div className="flex flex-wrap gap-2 mt-3">
-                            <span className="px-2.5 py-0.5 bg-white/60 border border-white/50 backdrop-blur-xs rounded-md text-[9px] font-bold text-slate-500 uppercase tracking-wider">
-                              Q3 Focus: {selectedReportEmployeeObj.department}
-                            </span>
-                            <span className="px-2.5 py-0.5 bg-white/60 border border-white/50 backdrop-blur-xs rounded-md text-[9px] font-bold text-slate-500 uppercase tracking-wider">
-                              Remote-First
-                            </span>
+                          <div className="mt-4 pt-4 border-t border-slate-200/40 space-y-3">
+                            {/* Header Info */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-sans">
+                                  Overall Performance Rating
+                                </span>
+                                {activeRecord && overallPerformance !== null ? (
+                                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold border transition-colors ${
+                                    overallPerformance >= 90
+                                      ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                                      : overallPerformance >= 70
+                                      ? "bg-amber-50 text-amber-700 border-amber-100"
+                                      : "bg-rose-50 text-rose-700 border-rose-100"
+                                  }`}>
+                                    <span className={`h-1.5 w-1.5 rounded-full ${
+                                      overallPerformance >= 90 
+                                        ? "bg-emerald-500 animate-pulse" 
+                                        : overallPerformance >= 70 
+                                        ? "bg-amber-500" 
+                                        : "bg-rose-500 animate-ping"
+                                    }`} />
+                                    {overallPerformance >= 90 ? "On Track" : overallPerformance >= 70 ? "Needs Attention" : "At Risk"}
+                                  </span>
+                                ) : null}
+                              </div>
+                              
+                              {activeRecord && overallPerformance !== null ? (
+                                <span className="text-sm font-bold font-mono text-slate-800">
+                                  {overallPerformance}%
+                                </span>
+                              ) : (
+                                <span className="text-xs text-slate-400 italic">No metrics registered yet</span>
+                              )}
+                            </div>
+
+                            {/* Creative Horizontal Segmented Rating Line */}
+                            {activeRecord && overallPerformance !== null && (
+                              <div className="space-y-2">
+                                <div className="relative w-full h-1.5 bg-slate-100/80 rounded-full overflow-hidden flex">
+                                  {/* Background segment colors under layer */}
+                                  <div className="w-[70%] h-full bg-rose-500/10 border-r border-white/40" />
+                                  <div className="w-[20%] h-full bg-amber-500/10 border-r border-white/40" />
+                                  <div className="w-[10%] h-full bg-emerald-500/10" />
+                                  
+                                  {/* Animated Progress Overlay */}
+                                  <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${overallPerformance}%` }}
+                                    transition={{ duration: 0.8, ease: "easeOut" }}
+                                    className={`absolute top-0 left-0 h-full rounded-full ${
+                                      overallPerformance >= 90 
+                                        ? "bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]" 
+                                        : overallPerformance >= 70 
+                                        ? "bg-gradient-to-r from-amber-400 to-amber-500" 
+                                        : "bg-gradient-to-r from-rose-400 to-rose-500"
+                                    }`}
+                                  />
+                                </div>
+
+                                {/* Minimal Status Key Legend */}
+                                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 pt-1 text-[9px] font-semibold text-slate-400 font-mono">
+                                  <span className="flex items-center gap-1">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-rose-400" /> At Risk (&lt;70%)
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> Needs Attention (70%-89%)
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> On Track (90%+)
+                                  </span>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -860,69 +1028,117 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Four metrics boxes redesigned as frosted glass panels with dynamic gauge style */}
+                    {/* Four metrics boxes redesigned as frosted glass panels with target comparisons */}
                     <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-4">
                       {/* Box 1: Attendance */}
-                      <div className="p-4 bg-white/40 border border-white/50 rounded-xl flex flex-col justify-between min-h-[105px] transition-all hover:bg-white/50 hover:shadow-xs">
+                      <div className={`p-4 border rounded-xl flex flex-col justify-between min-h-[120px] transition-all hover:shadow-xs ${
+                        activeRecord && activeRecord.attendance >= (currentTarget?.attendanceMin || 95)
+                          ? "bg-emerald-50/20 border-emerald-200/50 hover:bg-emerald-50/30"
+                          : activeRecord
+                          ? "bg-rose-50/20 border-rose-200/50 hover:bg-rose-50/30"
+                          : "bg-white/40 border-white/50 hover:bg-white/50"
+                      }`}>
                         <div>
-                          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Attendance Rate</div>
+                          <div className="flex justify-between items-start mb-1">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Attendance Rate</span>
+                            {activeRecord && (
+                              <span className={`text-[8px] font-bold px-1.5 py-0.2 rounded font-mono ${
+                                activeRecord.attendance >= (currentTarget?.attendanceMin || 95)
+                                  ? "text-emerald-700 bg-emerald-100/60"
+                                  : "text-rose-700 bg-rose-100/60"
+                              }`}>
+                                {activeRecord.attendance >= (currentTarget?.attendanceMin || 95) ? "Met ✓" : "Missed ⚠"}
+                              </span>
+                            )}
+                          </div>
                           <div className="text-xl font-bold font-mono text-slate-800">
                             {activeRecord ? `${activeRecord.attendance}%` : "—"}
                           </div>
+                          <div className="text-[9px] text-slate-500 font-medium font-sans mt-0.5">
+                            Target: <span className="font-mono font-bold">{(currentTarget?.attendanceMin || 95)}%</span>
+                          </div>
                           {activeRecord && (
-                            <div className="mt-1 flex flex-wrap gap-x-1.5 gap-y-0.5 text-[8px] font-semibold text-slate-500 font-mono">
+                            <div className="mt-1.5 flex flex-wrap gap-x-1.5 gap-y-0.5 text-[8px] font-semibold text-slate-500 font-mono">
                               <span className="text-emerald-700 bg-emerald-500/10 px-1 rounded">Pres: {activeRecord.presentDays !== undefined ? activeRecord.presentDays : Math.round((activeRecord.totalWorkingDays || 22) * (activeRecord.attendance / 100))}d</span>
                               <span className="text-rose-700 bg-rose-500/10 px-1 rounded">Abs: {activeRecord.absentDays !== undefined ? activeRecord.absentDays : ((activeRecord.totalWorkingDays || 22) - (activeRecord.presentDays !== undefined ? activeRecord.presentDays : Math.round((activeRecord.totalWorkingDays || 22) * (activeRecord.attendance / 100))))}d</span>
-                              {activeRecord.leaveDays !== undefined && activeRecord.leaveDays > 0 && (
-                                <span className="text-amber-700 bg-amber-500/10 px-1 rounded">Lv: {activeRecord.leaveDays}d</span>
-                              )}
                             </div>
                           )}
                         </div>
-                        <div className="h-1.5 w-full bg-slate-200/50 rounded-full mt-2 overflow-hidden border border-white/20">
+                        <div className="h-1 w-full bg-slate-200/50 rounded-full mt-2 overflow-hidden border border-white/20">
                           <div
-                            className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 transition-all duration-500 rounded-full"
+                            className={`h-full transition-all duration-500 rounded-full ${
+                              activeRecord && activeRecord.attendance >= (currentTarget?.attendanceMin || 95)
+                                ? "bg-emerald-400"
+                                : "bg-rose-400 animate-pulse"
+                            }`}
                             style={{ width: `${activeRecord ? activeRecord.attendance : 0}%` }}
                           />
                         </div>
                       </div>
 
-                      {/* Box 2: Meetings */}
-                      <div className="p-4 bg-white/40 border border-white/50 rounded-xl flex flex-col justify-between min-h-[105px] transition-all hover:bg-white/50 hover:shadow-xs">
+                      {/* Box 2: Delivered Project Value */}
+                      <div className={`p-4 border rounded-xl flex flex-col justify-between min-h-[120px] transition-all hover:shadow-xs ${
+                        activeRecord && activeRecord.deliveredProjectsValue >= effectiveProjectValueMin
+                          ? "bg-indigo-50/20 border-indigo-200/50 hover:bg-indigo-50/30"
+                          : activeRecord
+                          ? "bg-rose-50/20 border-rose-200/50 hover:bg-rose-50/30"
+                          : "bg-white/40 border-white/50 hover:bg-white/50"
+                      }`}>
                         <div>
-                          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Meetings Conducted</div>
+                          <div className="flex justify-between items-start mb-1">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Delivered Value</span>
+                            {activeRecord && (
+                              <span className={`text-[8px] font-bold px-1.5 py-0.2 rounded font-mono ${
+                                activeRecord.deliveredProjectsValue >= effectiveProjectValueMin
+                                  ? "text-indigo-700 bg-indigo-100/60"
+                                  : "text-rose-700 bg-rose-100/60"
+                              }`}>
+                                {activeRecord.deliveredProjectsValue >= effectiveProjectValueMin ? "Met ✓" : "Missed ⚠"}
+                              </span>
+                            )}
+                          </div>
                           <div className="text-xl font-bold font-mono text-slate-800">
-                            {activeRecord ? activeRecord.conductedMeetings : "—"}
+                            {activeRecord ? `$${(activeRecord.deliveredProjectsValue).toLocaleString()}` : "—"}
+                          </div>
+                          <div className="text-[9px] text-slate-500 font-medium font-sans mt-0.5">
+                            Target: <span className="font-mono font-bold">${effectiveProjectValueMin.toLocaleString()}</span>
                           </div>
                         </div>
-                        <div className="text-[9px] text-slate-400 mt-2 truncate font-medium">
-                          {activeRecord ? `Target: 10 (${activeRecord.conductedMeetings >= 10 ? 'Exceeded' : 'Under'})` : "No activity"}
+                        <div className="h-1 w-full bg-slate-200/50 rounded-full mt-2 overflow-hidden border border-white/20">
+                          <div
+                            className={`h-full transition-all duration-500 rounded-full ${
+                              activeRecord && activeRecord.deliveredProjectsValue >= effectiveProjectValueMin
+                                ? "bg-indigo-400"
+                                : "bg-rose-400 animate-pulse"
+                            }`}
+                            style={{ width: `${activeRecord ? Math.min(100, (activeRecord.deliveredProjectsValue / effectiveProjectValueMin) * 100) : 0}%` }}
+                          />
                         </div>
                       </div>
 
                       {/* Box 3: Project Count */}
-                      <div className="p-4 bg-white/40 border border-white/50 rounded-xl flex flex-col justify-between min-h-[105px] transition-all hover:bg-white/50 hover:shadow-xs">
+                      <div className="p-4 bg-white/40 border border-white/50 rounded-xl flex flex-col justify-between min-h-[120px] transition-all hover:bg-white/50 hover:shadow-xs">
                         <div>
                           <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Projects Shipped</div>
                           <div className="text-xl font-bold font-mono text-slate-800">
                             {activeRecord ? activeRecord.deliveredProjectsAmount : "—"}
                           </div>
                         </div>
-                        <div className="text-[9px] text-emerald-700 font-bold mt-2 truncate bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-md inline-block w-max">
-                          {activeRecord ? `+${activeRecord.deliveredProjectsAmount} Delivered` : "No deliverables"}
+                        <div className="text-[9px] text-emerald-700 font-bold mt-2 truncate bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-md inline-block w-max font-mono">
+                          {activeRecord ? `+${activeRecord.deliveredProjectsAmount} Deliverables` : "No activity"}
                         </div>
                       </div>
 
-                      {/* Box 4: Project Value */}
-                      <div className="p-4 bg-white/40 border border-white/50 rounded-xl flex flex-col justify-between min-h-[105px] transition-all hover:bg-white/50 hover:shadow-xs">
+                      {/* Box 4: Meetings Conducted */}
+                      <div className="p-4 bg-white/40 border border-white/50 rounded-xl flex flex-col justify-between min-h-[120px] transition-all hover:bg-white/50 hover:shadow-xs">
                         <div>
-                          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Pipeline Impact</div>
+                          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Meetings Conducted</div>
                           <div className="text-xl font-bold font-mono text-slate-800">
-                            {activeRecord ? `$${(activeRecord.deliveredProjectsValue / 1000).toFixed(0)}k` : "—"}
+                            {activeRecord ? activeRecord.conductedMeetings : "—"}
                           </div>
                         </div>
-                        <div className="text-[9px] text-slate-400 mt-2 truncate font-medium">
-                          {activeRecord ? "Strategic execution value" : "Pending evaluations"}
+                        <div className="text-[9px] text-indigo-700 font-bold mt-2 truncate bg-indigo-500/10 border border-indigo-500/20 px-1.5 py-0.5 rounded-md inline-block w-max font-mono">
+                          {activeRecord ? `${activeRecord.conductedMeetings} sessions run` : "No activity"}
                         </div>
                       </div>
                     </div>
@@ -1114,7 +1330,7 @@ export default function App() {
               </div>
 
               {/* Interactive Search & Filter Controls */}
-              <div className="bg-slate-50/50 p-4 border border-slate-200/60 rounded-2xl space-y-3.5 animate-fade-in">
+              <div className="bg-white/90 border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4 animate-fade-in">
                 {/* Search input with inner styling */}
                 <div className="relative">
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -1123,46 +1339,120 @@ export default function App() {
                     value={rosterSearchQuery}
                     onChange={(e) => setRosterSearchQuery(e.target.value)}
                     placeholder="Search by name, role, email, or Security ID..."
-                    className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-2xs"
+                    className="w-full pl-10 pr-4 py-2 bg-slate-50/50 border border-slate-200/80 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-3xs"
                   />
                   {rosterSearchQuery && (
                     <button
                       onClick={() => setRosterSearchQuery("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 text-[10px] font-bold"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 text-[10px] font-bold cursor-pointer"
                     >
                       Clear
                     </button>
                   )}
                 </div>
 
-                {/* Filter Pills */}
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mr-2">Divisions:</span>
-                  {["All", ...DEPARTMENTS].map((dept) => {
-                    const isActive = rosterDeptFilter === dept;
-                    const count = dept === "All" 
-                      ? employees.length 
-                      : employees.filter(e => e.department === dept).length;
+                {/* Ultra-Sleek Single-Line Unified Filter Bar */}
+                <div className="w-full border-b border-slate-100 pb-3 mt-1 overflow-hidden">
+                  <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden flex-nowrap whitespace-nowrap py-1">
+                    {/* Divisions Section Header */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50/80 px-2 py-0.5 rounded-md font-mono uppercase tracking-wider">
+                        Divisions
+                      </span>
+                    </div>
+                    
+                    {/* Divisions Items */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {["All", ...DEPARTMENTS].map((dept) => {
+                        const isActive = rosterDeptFilter === dept;
+                        const count = dept === "All" 
+                          ? employees.length 
+                          : employees.filter(e => e.department === dept).length;
 
-                    return (
-                      <button
-                        key={dept}
-                        onClick={() => setRosterDeptFilter(dept)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
-                          isActive
-                            ? "bg-indigo-600 text-white font-bold shadow-xs"
-                            : "bg-white text-slate-600 border border-slate-200/60 hover:bg-slate-100 hover:text-slate-900"
-                        }`}
-                      >
-                        {dept}
-                        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full font-mono ${
-                          isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
-                        }`}>
-                          {count}
-                        </span>
-                      </button>
-                    );
-                  })}
+                        return (
+                          <button
+                            key={dept}
+                            onClick={() => setRosterDeptFilter(dept)}
+                            className={`relative px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                              isActive ? "text-indigo-950" : "text-slate-500 hover:text-slate-800"
+                            }`}
+                          >
+                            {/* Sliding Active Indicator */}
+                            {isActive && (
+                              <motion.div
+                                layoutId="activeDept"
+                                className="absolute inset-0 bg-indigo-50 border border-indigo-100/50 rounded-lg z-0"
+                                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                              />
+                            )}
+                            <span className="relative z-10 flex items-center gap-1.5">
+                              <span className={`${isActive ? "text-indigo-600" : "text-slate-400"}`}>
+                                {getDeptIcon(dept)}
+                              </span>
+                              <span>{dept}</span>
+                              <span className={`text-[8px] font-bold px-1.5 py-0.2 rounded font-mono ${
+                                isActive ? "bg-indigo-150 text-indigo-800" : "bg-slate-200/40 text-slate-500"
+                              }`}>
+                                {count}
+                              </span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Creative Thin Divider */}
+                    <div className="h-5 w-[1px] bg-slate-200 shrink-0 mx-2 relative">
+                      <div className="absolute inset-y-1/2 -translate-y-1/2 left-0 w-1.5 h-1.5 -ml-[3px] rounded-full bg-slate-300" />
+                    </div>
+
+                    {/* Teams Section Header */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="text-[10px] font-bold text-blue-600 bg-blue-50/80 px-2 py-0.5 rounded-md font-mono uppercase tracking-wider">
+                        Teams
+                      </span>
+                    </div>
+
+                    {/* Teams Items */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {["All", ...TEAMS].map((t) => {
+                        const isActive = rosterTeamFilter === t;
+                        const count = t === "All"
+                          ? employees.length
+                          : employees.filter(e => e.team === t).length;
+
+                        return (
+                          <button
+                            key={t}
+                            onClick={() => setRosterTeamFilter(t)}
+                            className={`relative px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                              isActive ? "text-blue-950" : "text-slate-500 hover:text-slate-800"
+                            }`}
+                          >
+                            {/* Sliding Active Indicator */}
+                            {isActive && (
+                              <motion.div
+                                layoutId="activeTeam"
+                                className="absolute inset-0 bg-blue-50 border border-blue-100/50 rounded-lg z-0"
+                                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                              />
+                            )}
+                            <span className="relative z-10 flex items-center gap-1.5">
+                              <span className={`${isActive ? "text-blue-600" : "text-slate-400"}`}>
+                                {getTeamIcon(t)}
+                              </span>
+                              <span>{t}</span>
+                              <span className={`text-[8px] font-bold px-1.5 py-0.2 rounded font-mono ${
+                                isActive ? "bg-blue-150 text-blue-800" : "bg-slate-200/40 text-slate-500"
+                              }`}>
+                                {count}
+                              </span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1278,10 +1568,17 @@ export default function App() {
 
                               {/* Division Cell */}
                               <td className="px-6 py-4">
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border ${style.badge}`}>
-                                  <Building className="h-3 w-3 opacity-70" />
-                                  {emp.department}
-                                </span>
+                                <div className="flex flex-col gap-1 sm:flex-row sm:items-center">
+                                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border ${style.badge}`}>
+                                    <Building className="h-3 w-3 opacity-70" />
+                                    {emp.department}
+                                  </span>
+                                  {emp.team && (
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border bg-indigo-50 text-indigo-700 border-indigo-100">
+                                      {emp.team}
+                                    </span>
+                                  )}
+                                </div>
                               </td>
 
                               {/* Registry Credentials Cell (Combined Email & ID) */}
@@ -1347,9 +1644,9 @@ export default function App() {
                                   <Edit3 className="h-3.5 w-3.5" />
                                 </button>
                                 <button
-                                  onClick={() => handleDeleteEmployee(emp.id, emp.name)}
+                                  onClick={() => handleDeleteEmployeeClick(emp)}
                                   className="p-2 hover:bg-rose-50 rounded-xl text-slate-400 hover:text-rose-600 hover:border-rose-100 border border-transparent transition-all inline-flex items-center justify-center cursor-pointer"
-                                  title="Deactivate Profile"
+                                  title="Delete Profile"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </button>
@@ -1399,7 +1696,7 @@ export default function App() {
 
       {/* FOOTER */}
       <footer className="mt-12 bg-slate-900 border-t border-slate-800 text-slate-400 py-6 px-6 text-xs font-mono text-center">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="w-[85%] max-w-[85%] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <span>&copy; 2026 Employee Performance Cards. Built for Managers.</span>
           <div className="flex gap-4">
             <span className="flex items-center gap-1">
@@ -1494,6 +1791,19 @@ export default function App() {
                 </div>
 
                 <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Team *</label>
+                  <select
+                    value={employeeFormData.team}
+                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, team: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                  >
+                    {TEAMS.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
                   <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Corporate Email *</label>
                   <input
                     type="email"
@@ -1504,6 +1814,8 @@ export default function App() {
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
                   />
                 </div>
+
+
               </div>
 
               <div className="p-6 pt-4 border-t border-slate-100 flex justify-end gap-2 text-xs shrink-0 bg-slate-50/50">
@@ -1851,6 +2163,48 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* MODAL 4: DELETE CONFIRMATION */}
+      {isDeleteConfirmOpen && employeeToDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-xs">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md flex flex-col shadow-xl animate-in fade-in zoom-in-95 overflow-hidden">
+            <div className="p-6 text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-rose-50 text-rose-600 mb-4 border border-rose-100">
+                <AlertTriangle className="h-6 w-6 animate-bounce" />
+              </div>
+              <h3 className="text-md font-bold text-slate-800 mb-2">
+                Delete Employee Profile?
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Are you sure you want to permanently delete <strong className="text-slate-800 font-semibold">{employeeToDelete.name}</strong>'s performance profile?
+                This action cannot be undone, and all their historical performance records, targets, and reports will be removed from the database.
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="p-6 pt-2 border-t border-slate-100 flex gap-2 text-xs shrink-0 bg-slate-50/50 justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDeleteConfirmOpen(false);
+                  setEmployeeToDelete(null);
+                }}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-lg transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteEmployee}
+                className="px-4 py-2 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white font-bold rounded-lg shadow-md hover:shadow-lg transition-all cursor-pointer"
+              >
+                Delete Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <DBStatusBanner />
     </div>
   );

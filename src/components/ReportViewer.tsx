@@ -46,7 +46,7 @@ export function ReportViewer({
     const text = `
 MONTHLY PROGRESS & TALENT DEVELOPMENT REPORT
 Employee: ${employee.name} (${employee.role})
-Department: ${employee.department}
+Department: ${employee.department}${employee.team ? `\nTeam: ${employee.team}` : ""}
 Month: ${report.month}
 Generated At: ${new Date(report.generatedAt).toLocaleDateString()}
 
@@ -155,7 +155,7 @@ ${report.developmentPlan}
             </div>
             <h3 className="text-xl font-bold mt-1">{employee.name}</h3>
             <p className="text-xs text-slate-300">
-              {employee.role} &bull; {employee.department}
+              {employee.role} &bull; {employee.department}{employee.team ? ` \u2022 ${employee.team}` : ""}
             </p>
           </div>
 

@@ -3,6 +3,7 @@ export interface Employee {
   name: string;
   role: string;
   department: string;
+  team: string;
   email: string;
   active: boolean;
   createdAt: string;
