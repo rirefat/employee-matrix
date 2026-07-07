@@ -23,7 +23,14 @@ import {
   Briefcase,
   UserCheck,
   Cpu,
-  Compass
+  Compass,
+  Copy,
+  Check,
+  Server,
+  Key,
+  SlidersHorizontal,
+  Mail,
+  Building
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -51,6 +58,8 @@ export default function App() {
   const [reports, setReports] = useState<MonthlyReport[]>([]);
   const [targets, setTargets] = useState<MonthlyTarget[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>("2026-06");
+  const [rosterSearchQuery, setRosterSearchQuery] = useState<string>("");
+  const [rosterDeptFilter, setRosterDeptFilter] = useState<string>("All");
 
   const currentTarget = useMemo(() => {
     return targets.find((t) => t.month === selectedMonth);
@@ -425,10 +434,34 @@ export default function App() {
     );
   });
 
+  // Filter roster database
+  const rosterFilteredEmployees = useMemo(() => {
+    return employees.filter(emp => {
+      const q = rosterSearchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        emp.name.toLowerCase().includes(q) ||
+        emp.role.toLowerCase().includes(q) ||
+        emp.email.toLowerCase().includes(q) ||
+        emp.id.toLowerCase().includes(q);
+
+      const matchesDept = rosterDeptFilter === "All" || emp.department === rosterDeptFilter;
+
+      return matchesSearch && matchesDept;
+    });
+  }, [employees, rosterSearchQuery, rosterDeptFilter]);
+
   // Selected report for the active reporter
   const activeReport = reports.find(
     r => r.employeeId === reportEmployeeId && r.month === selectedMonth
   ) || null;
+
+  const [copiedText, setCopiedText] = useState<string | null>(null);
+  const handleCopyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedText(text);
+    setTimeout(() => setCopiedText(null), 1500);
+  };
 
   const activeRecord = performance.find(
     p => p.employeeId === reportEmployeeId && p.month === selectedMonth
@@ -922,65 +955,309 @@ export default function App() {
           {/* TAB CONTENT: ROSTER DATABASE */}
           {activeTab === "roster" && (
             <div className="space-y-6">
+              {/* Header Section */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-800">Corporate Employee Records</h3>
-                  <p className="text-xs text-slate-500">Review, modify, or delete profiles from the secure MongoDB store.</p>
+                  <h3 className="text-xl font-bold text-slate-900 tracking-tight font-display flex items-center gap-2">
+                    <Users className="h-5 w-5 text-indigo-600" />
+                    Corporate Employee Records
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Review, filter, copy, and modify profiles registered inside the secure database registry.</p>
                 </div>
 
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.02, y: -1 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={handleOpenAddEmployee}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all self-start sm:self-auto"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-md transition-all self-start sm:self-auto cursor-pointer"
                 >
                   <UserPlus className="h-4 w-4" />
                   Add Team Profile
-                </button>
+                </motion.button>
               </div>
 
-              {/* Table */}
+              {/* Database Registry Status Tiles */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-2xl flex items-center gap-3.5">
+                  <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100">
+                    <Server className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registry Engine</span>
+                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5 mt-0.5">
+                      Active Cluster
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-2xl flex items-center gap-3.5">
+                  <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl border border-blue-100">
+                    <Users className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Roster Size</span>
+                    <span className="text-xs font-bold text-slate-800 mt-0.5 font-mono">{employees.length} Active Profiles</span>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 border border-slate-200/60 rounded-2xl flex items-center gap-3.5">
+                  <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100">
+                    <SlidersHorizontal className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Query Matches</span>
+                    <span className="text-xs font-bold text-slate-800 mt-0.5 font-mono">
+                      {rosterFilteredEmployees.length} profiles listed
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Interactive Search & Filter Controls */}
+              <div className="bg-slate-50/50 p-4 border border-slate-200/60 rounded-2xl space-y-3.5">
+                {/* Search input with inner styling */}
+                <div className="relative">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <input
+                    type="text"
+                    value={rosterSearchQuery}
+                    onChange={(e) => setRosterSearchQuery(e.target.value)}
+                    placeholder="Search by name, role, email, or Security ID..."
+                    className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-2xs"
+                  />
+                  {rosterSearchQuery && (
+                    <button
+                      onClick={() => setRosterSearchQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 text-[10px] font-bold"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                {/* Filter Pills */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mr-2">Divisions:</span>
+                  {["All", ...DEPARTMENTS].map((dept) => {
+                    const isActive = rosterDeptFilter === dept;
+                    const count = dept === "All" 
+                      ? employees.length 
+                      : employees.filter(e => e.department === dept).length;
+
+                    return (
+                      <button
+                        key={dept}
+                        onClick={() => setRosterDeptFilter(dept)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+                          isActive
+                            ? "bg-indigo-600 text-white font-bold shadow-xs"
+                            : "bg-white text-slate-600 border border-slate-200/60 hover:bg-slate-100 hover:text-slate-900"
+                        }`}
+                      >
+                        {dept}
+                        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full font-mono ${
+                          isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
+                        }`}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Modernized Roster Table Container */}
               <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs text-slate-500">
-                    <thead className="bg-slate-50 uppercase text-slate-400 font-mono text-[10px] border-b border-slate-100">
+                    <thead className="bg-slate-50/70 uppercase text-slate-400 font-mono text-[9px] tracking-wider border-b border-slate-100">
                       <tr>
-                        <th className="px-6 py-4">Name</th>
-                        <th className="px-6 py-4">Role</th>
-                        <th className="px-6 py-4">Department</th>
-                        <th className="px-6 py-4">Corporate Email</th>
-                        <th className="px-6 py-4">Security ID</th>
-                        <th className="px-6 py-4 text-right">Actions</th>
+                        <th className="px-6 py-4">Employee Profile</th>
+                        <th className="px-6 py-4">Corporate Division</th>
+                        <th className="px-6 py-4">Registry Credentials</th>
+                        <th className="px-6 py-4 text-right pr-8">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {employees.map((emp) => (
-                        <tr key={emp.id} className="hover:bg-slate-50/50">
-                          <td className="px-6 py-4 font-bold text-slate-800">{emp.name}</td>
-                          <td className="px-6 py-4">{emp.role}</td>
-                          <td className="px-6 py-4">
-                            <span className="inline-block bg-blue-50 text-blue-700 font-semibold px-2 py-0.5 rounded-full text-[10px]">
-                              {emp.department}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 font-mono text-[11px]">{emp.email}</td>
-                          <td className="px-6 py-4 font-mono text-[11px] text-slate-400">{emp.id}</td>
-                          <td className="px-6 py-4 text-right space-x-1">
-                            <button
-                              onClick={() => handleOpenEditEmployee(emp)}
-                              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-all inline-block"
-                              title="Edit Profile"
+                    <tbody className="divide-y divide-slate-100/80">
+                      <AnimatePresence mode="popLayout">
+                        {rosterFilteredEmployees.map((emp) => {
+                          // Department styling generator
+                          const getDeptStyle = (dept: string) => {
+                            switch (dept) {
+                              case "Engineering":
+                                return {
+                                  badge: "bg-indigo-50 text-indigo-700 border-indigo-100",
+                                  avatar: "bg-gradient-to-tr from-indigo-500/10 to-blue-500/10 text-indigo-700 border-indigo-200/30"
+                                };
+                              case "Sales":
+                                return {
+                                  badge: "bg-emerald-50 text-emerald-700 border-emerald-100",
+                                  avatar: "bg-gradient-to-tr from-emerald-500/10 to-teal-500/10 text-emerald-700 border-emerald-200/30"
+                                };
+                              case "Customer Success":
+                                return {
+                                  badge: "bg-purple-50 text-purple-700 border-purple-100",
+                                  avatar: "bg-gradient-to-tr from-purple-500/10 to-pink-500/10 text-purple-700 border-purple-200/30"
+                                };
+                              case "Product":
+                                return {
+                                  badge: "bg-amber-50 text-amber-800 border-amber-100",
+                                  avatar: "bg-gradient-to-tr from-amber-500/10 to-orange-500/10 text-amber-800 border-amber-200/30"
+                                };
+                              case "Operations":
+                                return {
+                                  badge: "bg-slate-100 text-slate-700 border-slate-200",
+                                  avatar: "bg-gradient-to-tr from-slate-500/10 to-slate-600/10 text-slate-700 border-slate-200/50"
+                                };
+                              default:
+                                return {
+                                  badge: "bg-slate-50 text-slate-600 border-slate-200/50",
+                                  avatar: "bg-slate-50 text-slate-600 border-slate-200/50"
+                                };
+                            }
+                          };
+
+                          const style = getDeptStyle(emp.department);
+                          const isEmailCopied = copiedText === emp.email;
+                          const isIdCopied = copiedText === emp.id;
+
+                          return (
+                            <motion.tr
+                              layout
+                              initial={{ opacity: 0, y: 8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.98 }}
+                              transition={{ duration: 0.2 }}
+                              key={emp.id}
+                              className="hover:bg-slate-50/40 group transition-all"
                             >
-                              <Edit3 className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteEmployee(emp.id, emp.name)}
-                              className="p-1.5 hover:bg-rose-50 rounded-lg text-slate-400 hover:text-rose-600 transition-all inline-block"
-                              title="Deactivate Profile"
+                              {/* Employee Profile Cell */}
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-3.5">
+                                  {/* Custom Initials Avatar */}
+                                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs border tracking-wide shrink-0 ${style.avatar}`}>
+                                    {getInitials(emp.name)}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <span className="block font-bold text-slate-800 text-xs tracking-tight">{emp.name}</span>
+                                    <span className="block text-[11px] text-slate-500 font-medium mt-0.5">{emp.role}</span>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Division Cell */}
+                              <td className="px-6 py-4">
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border ${style.badge}`}>
+                                  <Building className="h-3 w-3 opacity-70" />
+                                  {emp.department}
+                                </span>
+                              </td>
+
+                              {/* Registry Credentials Cell (Combined Email & ID) */}
+                              <td className="px-6 py-4 space-y-1.5">
+                                {/* Monospace Email */}
+                                <div className="flex items-center gap-1.5">
+                                  <Mail className="h-3 w-3 text-slate-400 shrink-0" />
+                                  <span className="font-mono text-[11px] text-slate-600 font-medium select-all">{emp.email}</span>
+                                  
+                                  <button
+                                    onClick={() => handleCopyToClipboard(emp.email)}
+                                    className={`p-1 rounded-md transition-all cursor-pointer ${
+                                      isEmailCopied 
+                                        ? "bg-emerald-50 text-emerald-600 border border-emerald-200/40" 
+                                        : "opacity-0 group-hover:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-slate-700"
+                                    }`}
+                                    title={isEmailCopied ? "Copied!" : "Copy Email"}
+                                  >
+                                    {isEmailCopied ? (
+                                      <Check className="h-2.5 w-2.5" />
+                                    ) : (
+                                      <Copy className="h-2.5 w-2.5" />
+                                    )}
+                                  </button>
+                                  {isEmailCopied && (
+                                    <span className="text-[9px] font-bold text-emerald-600 animate-fade-in">Copied</span>
+                                  )}
+                                </div>
+
+                                {/* Monospace Security ID */}
+                                <div className="flex items-center gap-1.5">
+                                  <Key className="h-3 w-3 text-slate-400 shrink-0" />
+                                  <span className="font-mono text-[10px] text-slate-400 tracking-tighter select-all">ID: {emp.id}</span>
+                                  
+                                  <button
+                                    onClick={() => handleCopyToClipboard(emp.id)}
+                                    className={`p-1 rounded-md transition-all cursor-pointer ${
+                                      isIdCopied 
+                                        ? "bg-emerald-50 text-emerald-600 border border-emerald-200/40" 
+                                        : "opacity-0 group-hover:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-slate-700"
+                                    }`}
+                                    title={isIdCopied ? "Copied!" : "Copy Security ID"}
+                                  >
+                                    {isIdCopied ? (
+                                      <Check className="h-2.5 w-2.5" />
+                                    ) : (
+                                      <Copy className="h-2.5 w-2.5" />
+                                    )}
+                                  </button>
+                                  {isIdCopied && (
+                                    <span className="text-[9px] font-bold text-emerald-600 animate-fade-in">Copied</span>
+                                  )}
+                                </div>
+                              </td>
+
+                              {/* Action Items */}
+                              <td className="px-6 py-4 text-right pr-6 space-x-1 shrink-0">
+                                <button
+                                  onClick={() => handleOpenEditEmployee(emp)}
+                                  className="p-2 hover:bg-slate-100 rounded-xl text-slate-500 hover:text-indigo-600 hover:border-indigo-100 border border-transparent transition-all inline-flex items-center justify-center cursor-pointer"
+                                  title="Edit Profile"
+                                >
+                                  <Edit3 className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteEmployee(emp.id, emp.name)}
+                                  className="p-2 hover:bg-rose-50 rounded-xl text-slate-400 hover:text-rose-600 hover:border-rose-100 border border-transparent transition-all inline-flex items-center justify-center cursor-pointer"
+                                  title="Deactivate Profile"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </td>
+                            </motion.tr>
+                          );
+                        })}
+                      </AnimatePresence>
+
+                      {/* No Results Empty State */}
+                      {rosterFilteredEmployees.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="py-12 px-6 text-center">
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className="max-w-xs mx-auto flex flex-col items-center"
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
+                              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-slate-400 mb-3">
+                                <Search className="h-5 w-5" />
+                              </div>
+                              <h4 className="text-xs font-bold text-slate-800">No Database Records Found</h4>
+                              <p className="text-[11px] text-slate-400 mt-1 leading-normal">
+                                No employees matched "{rosterSearchQuery}" or the "{rosterDeptFilter}" division filter. Try adjusting your query.
+                              </p>
+                              <button
+                                onClick={() => {
+                                  setRosterSearchQuery("");
+                                  setRosterDeptFilter("All");
+                                }}
+                                className="mt-4 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-bold transition-all cursor-pointer"
+                              >
+                                Clear All Filters
+                              </button>
+                            </motion.div>
                           </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
