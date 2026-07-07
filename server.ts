@@ -1,7 +1,6 @@
 import express from "express";
 import path from "path";
 import dotenv from "dotenv";
-import { createServer as createViteServer } from "vite";
 import { dbService } from "./server/db";
 import { generateMonthlyPerformanceReport } from "./server/gemini";
 
@@ -180,16 +179,20 @@ app.post("/api/reports/generate", async (req, res) => {
 // --- VITE DEV MIDDLEWARE OR PRODUCTION STATIC ROUTING ---
 if (process.env.NODE_ENV !== "production") {
   console.log("Setting up Vite Development Server middleware...");
-  createViteServer({
-    server: { middlewareMode: true },
-    appType: "spa",
-  }).then((vite) => {
-    app.use(vite.middlewares);
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`Server listening on http://0.0.0.0:${PORT} (Dev)`);
+  import("vite").then(({ createServer: createViteServer }) => {
+    createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    }).then((vite) => {
+      app.use(vite.middlewares);
+      app.listen(PORT, "0.0.0.0", () => {
+        console.log(`Server listening on http://0.0.0.0:${PORT} (Dev)`);
+      });
+    }).catch((err) => {
+      console.error("Vite Dev Server creation failed:", err);
     });
   }).catch((err) => {
-    console.error("Vite Dev Server creation failed:", err);
+    console.error("Failed to dynamically import Vite module:", err);
   });
 } else {
   // Production environment
