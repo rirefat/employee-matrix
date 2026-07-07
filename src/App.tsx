@@ -21,7 +21,9 @@ import {
   Award,
   DollarSign,
   Briefcase,
-  UserCheck
+  UserCheck,
+  Cpu,
+  Compass
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -72,7 +74,8 @@ export default function App() {
     totalWorkingDays: 22,
     presentDays: 22,
     absentDays: 0,
-    leaveDays: 0
+    leaveDays: 0,
+    managerRemarks: ""
   });
 
   // Report specific selection
@@ -215,7 +218,8 @@ export default function App() {
         totalWorkingDays: working,
         presentDays: present,
         absentDays: absent,
-        leaveDays: leave
+        leaveDays: leave,
+        managerRemarks: existing.managerRemarks || ""
       });
     } else {
       setPerfFormData({
@@ -226,7 +230,8 @@ export default function App() {
         totalWorkingDays: 22,
         presentDays: 21,
         absentDays: 1,
-        leaveDays: 0
+        leaveDays: 0,
+        managerRemarks: ""
       });
     }
     setIsPerformanceModalOpen(true);
@@ -355,36 +360,79 @@ export default function App() {
         </div>
       )}
 
-      {/* Top Header Navigation matching Mockup precisely */}
-      <header className="h-16 bg-white border-b border-slate-200 px-6 sticky top-0 z-40 flex items-center justify-between shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
-            <div className="w-4 h-4 border-2 border-white rounded-full"></div>
-          </div>
-          <span className="text-xl font-bold text-slate-800 tracking-tight">
-            Employee Matrix <span className="font-normal text-slate-400 text-xs sm:text-sm">Manager Portal</span>
-          </span>
-        </div>
+      {/* Top Futuristic Header Navigation - Glassmorphic, Modern, Minimal */}
+      <header className="sticky top-0 z-40 w-full bg-white/70 backdrop-blur-md border-b border-slate-200/80 transition-all duration-300">
+        {/* Glow-bar Accent Line */}
+        <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 opacity-90" />
+        
+        <div className="max-w-7xl mx-auto h-16 px-4 sm:px-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {/* Animated Geometric Emblem */}
+            <motion.div 
+              className="relative w-9 h-9 flex items-center justify-center"
+              whileHover={{ scale: 1.05 }}
+            >
+              {/* Pulsing Outer Aura */}
+              <div className="absolute inset-0 bg-blue-500/10 rounded-xl blur-[6px] animate-pulse" />
+              
+              {/* Rotating Tech Ring */}
+              <motion.div 
+                className="absolute inset-0 border-2 border-dashed border-blue-500/40 rounded-xl"
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 25, ease: "linear" }}
+              />
+              
+              {/* Core Symbol */}
+              <div className="w-6 h-6 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-md shadow-blue-500/20 text-white">
+                <Cpu className="h-3.5 w-3.5 animate-pulse" />
+              </div>
+            </motion.div>
 
-        <div className="flex items-center gap-4 sm:gap-6">
-          {/* Month selector directly in header */}
-          <div className="flex items-center gap-2 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 transition-colors">
-            <Calendar className="h-3.5 w-3.5 text-blue-600" />
-            <input
-              type="month"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="bg-transparent text-slate-800 font-mono text-xs font-bold focus:outline-none cursor-pointer"
-            />
-          </div>
-
-          <div className="hidden md:flex items-center gap-3 text-right">
-            <div>
-              <div className="text-xs font-semibold text-slate-700">Rafiul Refat</div>
-              <div className="text-[10px] text-slate-400">Engineering Lead</div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2.5">
+              <span className="text-lg font-bold font-display text-slate-950 tracking-tight leading-none">
+                Employee Matrix
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="hidden sm:inline-block h-3 w-[1px] bg-slate-300" />
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-mono tracking-widest font-extrabold uppercase bg-indigo-50 border border-indigo-100/60 text-indigo-600">
+                  <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                  Manager Portal
+                </span>
+              </div>
             </div>
-            <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-xs">
-              RR
+          </div>
+
+          <div className="flex items-center gap-3 sm:gap-6">
+            {/* Month selector directly in header */}
+            <motion.div 
+              className="flex items-center gap-2 bg-slate-50/80 hover:bg-slate-100/80 focus-within:ring-2 focus-within:ring-blue-500/10 focus-within:border-blue-500/60 px-3.5 py-1.5 rounded-xl border border-slate-200 text-slate-700 transition-all duration-200 shadow-2xs"
+              whileHover={{ y: -1 }}
+            >
+              <Calendar className="h-3.5 w-3.5 text-blue-500" />
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="bg-transparent text-slate-900 font-mono text-xs font-bold focus:outline-none cursor-pointer"
+              />
+            </motion.div>
+
+            {/* Profile area */}
+            <div className="flex items-center gap-3">
+              <div className="hidden md:flex flex-col items-end text-right">
+                <span className="text-xs font-bold text-slate-800 font-display">Rafiul Refat</span>
+                <span className="text-[10px] text-slate-400 font-mono font-medium">Lead / System Node</span>
+              </div>
+              <motion.div 
+                className="relative p-[1.5px] rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600"
+                whileHover={{ scale: 1.05 }}
+              >
+                <div className="w-8.5 h-8.5 bg-slate-100 rounded-full flex items-center justify-center font-extrabold text-xs text-blue-600 border border-white">
+                  RR
+                </div>
+                {/* Active Indicator Pulse */}
+                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white animate-pulse" />
+              </motion.div>
             </div>
           </div>
         </div>
@@ -420,7 +468,7 @@ export default function App() {
           </div>
 
           {/* Direct Reports List */}
-          <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+          <div className="space-y-3 max-h-[500px] overflow-y-auto no-scrollbar p-2 -m-2">
             {filteredEmployees.length === 0 ? (
               <div className="py-8 text-center text-slate-400 text-xs italic">
                 No matching team members found.
@@ -1089,6 +1137,18 @@ export default function App() {
                   />
                 </div>
                 <span className="text-[10px] text-slate-400">Estimated value impact of deliverables (in USD).</span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Manager Remarks (Qualitative Feedback)</label>
+                <textarea
+                  rows={3}
+                  value={perfFormData.managerRemarks}
+                  onChange={(e) => setPerfFormData({ ...perfFormData, managerRemarks: e.target.value })}
+                  placeholder="e.g., Led the Q3 planning session, resolved high-priority support ticket backlogs, showed outstanding leadership under pressure..."
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all placeholder:text-slate-400 font-sans"
+                />
+                <span className="text-[10px] text-slate-400">Attach descriptive, qualitative highlights to supplement the metrics.</span>
               </div>
 
               <div className="pt-4 border-t border-slate-100 flex justify-end gap-2 text-xs">

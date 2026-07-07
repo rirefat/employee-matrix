@@ -128,6 +128,13 @@ ${report.developmentPlan}
           <Sparkles className="h-4 w-4" />
           Generate AI Report
         </button>
+
+        {record.managerRemarks && (
+          <div className="mt-5 w-full max-w-md bg-white border border-slate-200 rounded-xl p-3 text-left shadow-xs">
+            <span className="block text-[9px] font-extrabold text-indigo-500 uppercase tracking-wider mb-1">Attached Manager Remarks</span>
+            <p className="text-xs text-slate-600 italic">"{record.managerRemarks}"</p>
+          </div>
+        )}
       </div>
     );
   }
@@ -224,6 +231,19 @@ ${report.developmentPlan}
             {report.summary}
           </p>
         </div>
+
+        {/* Manager Remarks Block */}
+        {record.managerRemarks && (
+          <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1.5">
+              <UserCheck className="h-3.5 w-3.5 text-indigo-500" />
+              Manager Remarks & Qualitative Feedback
+            </h4>
+            <p className="text-xs text-slate-600 leading-relaxed italic">
+              "{record.managerRemarks}"
+            </p>
+          </div>
+        )}
 
         {/* Strengths & Growth Areas Grid */}
         <div className="grid md:grid-cols-2 gap-6">

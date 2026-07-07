@@ -33,7 +33,7 @@ interface GeneratedReportContent {
 export async function generateMonthlyPerformanceReport(
   employee: Employee,
   record: PerformanceRecord
-): Promise<Omit<MonthlyReport, "id" | "generatedAt">> {
+ ): Promise<Omit<MonthlyReport, "id" | "generatedAt">> {
   const prompt = `
     You are an expert Talent Development Coach and HR Analytics Specialist.
     Please analyze the following employee performance data for the month of ${record.month} and generate a structured performance review & development plan.
@@ -52,10 +52,12 @@ export async function generateMonthlyPerformanceReport(
     - Conducted Meetings: ${record.conductedMeetings}
     - Delivered Projects Amount: ${record.deliveredProjectsAmount} projects
     - Delivered Projects Total Value: $${record.deliveredProjectsValue.toLocaleString()}
+    ${record.managerRemarks ? `- Manager Remarks (Qualitative Feedback): "${record.managerRemarks}"` : ""}
 
     Guidance for analysis:
     - Focus on data-driven insights. Translate numerical values into meaningful assessments.
     - Specifically address their attendance details (the exact number of days present, absent, leaves, and the average attendance rate) in the synthesis or as a strength/growth opportunity where relevant.
+    ${record.managerRemarks ? `- Highly prioritize and incorporate the manager's qualitative feedback/remarks ("${record.managerRemarks}") into your summary/synthesis and action items where applicable.` : ""}
     - Engineering roles might value project quality, focus, and technical deliverables.
     - Sales roles value meeting numbers and high deal/project values.
     - Customer Support values volume (amount of delivered items) and attendance.
@@ -109,6 +111,10 @@ export async function generateMonthlyPerformanceReport(
         "Streamline standard operating procedures for faster customer onboarding"
       ];
       developmentPlan = "Participate in Customer Journey Mapping exercises to better understand client touchpoints and improve first-touch resolution times.";
+    }
+
+    if (record.managerRemarks) {
+      summary += ` Note: ${record.managerRemarks}`;
     }
 
     return { summary, strengths, growthOpportunities, developmentPlan };

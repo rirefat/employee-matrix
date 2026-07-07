@@ -21,6 +21,7 @@ export interface PerformanceRecord {
   presentDays?: number;
   absentDays?: number;
   leaveDays?: number;
+  managerRemarks?: string;
 }
 
 export interface MonthlyReport {

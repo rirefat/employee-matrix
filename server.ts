@@ -105,7 +105,8 @@ app.post("/api/performance", async (req, res) => {
       totalWorkingDays,
       presentDays,
       absentDays,
-      leaveDays
+      leaveDays,
+      managerRemarks
     } = req.body;
     if (!employeeId || !month || attendance === undefined || conductedMeetings === undefined || deliveredProjectsAmount === undefined || deliveredProjectsValue === undefined) {
       return res.status(400).json({ error: "Missing required performance metrics" });
@@ -121,6 +122,7 @@ app.post("/api/performance", async (req, res) => {
       presentDays: presentDays !== undefined ? Number(presentDays) : undefined,
       absentDays: absentDays !== undefined ? Number(absentDays) : undefined,
       leaveDays: leaveDays !== undefined ? Number(leaveDays) : undefined,
+      managerRemarks: managerRemarks !== undefined ? String(managerRemarks) : undefined,
     });
     res.json(record);
   } catch (err: any) {
