@@ -42,11 +42,11 @@ app.get("/api/employees", async (req, res) => {
 // Create Employee
 app.post("/api/employees", async (req, res) => {
   try {
-    const { name, role, department, email } = req.body;
+    const { name, role, department, email, id } = req.body;
     if (!name || !role || !department || !email) {
       return res.status(400).json({ error: "Missing required fields" });
     }
-    const newEmp = await dbService.saveEmployee({ name, role, department, email, active: true });
+    const newEmp = await dbService.saveEmployee({ name, role, department, email, id, active: true });
     res.status(201).json(newEmp);
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to save employee" });

@@ -383,11 +383,30 @@ class DatabaseService {
     }
   }
 
-  public async saveEmployee(emp: Omit<Employee, "id" | "createdAt">): Promise<Employee> {
+  public async saveEmployee(emp: Omit<Employee, "id" | "createdAt"> & { id?: string }): Promise<Employee> {
     await this.ensureInitialized();
+    const targetId = emp.id && emp.id.trim() ? emp.id.trim() : "emp-" + generateId();
+
+    // Check if duplicate ID exists
+    if (this.db && this.dbStatus.connectionType === "mongodb") {
+      const existing = await this.db.collection("employees").findOne({ id: targetId });
+      if (existing) {
+        throw new Error(`Employee with ID "${targetId}" already exists in the system.`);
+      }
+    } else {
+      const data = this.readLocal();
+      const existing = data.employees.find(e => e.id.toLowerCase() === targetId.toLowerCase());
+      if (existing) {
+        throw new Error(`Employee with ID "${targetId}" already exists in the system.`);
+      }
+    }
+
     const newEmp: Employee = {
-      ...emp,
-      id: "emp-" + generateId(),
+      name: emp.name,
+      role: emp.role,
+      department: emp.department,
+      email: emp.email,
+      id: targetId,
       active: true,
       createdAt: new Date().toISOString()
     };

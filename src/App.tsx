@@ -13,6 +13,7 @@ import {
   Edit3,
   CheckCircle,
   AlertCircle,
+  AlertTriangle,
   X,
   FileSpreadsheet,
   Settings,
@@ -60,6 +61,8 @@ export default function App() {
   const [selectedMonth, setSelectedMonth] = useState<string>("2026-06");
   const [rosterSearchQuery, setRosterSearchQuery] = useState<string>("");
   const [rosterDeptFilter, setRosterDeptFilter] = useState<string>("All");
+  const [attendanceWarningThreshold, setAttendanceWarningThreshold] = useState<number>(85);
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
   const currentTarget = useMemo(() => {
     return targets.find((t) => t.month === selectedMonth);
@@ -75,6 +78,7 @@ export default function App() {
   const [isTargetsModalOpen, setIsTargetsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [employeeFormData, setEmployeeFormData] = useState({
+    id: "",
     name: "",
     role: "",
     department: DEPARTMENTS[0],
@@ -119,6 +123,19 @@ export default function App() {
       }
     }
   }, [isTargetsModalOpen, currentTarget]);
+
+  // Lock body scroll when any modal is open to prevent background scrolling
+  useEffect(() => {
+    const isAnyModalOpen = isEmployeeModalOpen || isTargetsModalOpen || isPerformanceModalOpen;
+    if (isAnyModalOpen) {
+      document.body.classList.add("overflow-hidden");
+    } else {
+      document.body.classList.remove("overflow-hidden");
+    }
+    return () => {
+      document.body.classList.remove("overflow-hidden");
+    };
+  }, [isEmployeeModalOpen, isTargetsModalOpen, isPerformanceModalOpen]);
 
   const handleSaveTarget = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,13 +228,14 @@ export default function App() {
   // --- EMPLOYEE LOGIC ---
   const handleOpenAddEmployee = () => {
     setEditingEmployee(null);
-    setEmployeeFormData({ name: "", role: "", department: DEPARTMENTS[0], email: "" });
+    setEmployeeFormData({ id: "", name: "", role: "", department: DEPARTMENTS[0], email: "" });
     setIsEmployeeModalOpen(true);
   };
 
   const handleOpenEditEmployee = (emp: Employee) => {
     setEditingEmployee(emp);
     setEmployeeFormData({
+      id: emp.id,
       name: emp.name,
       role: emp.role,
       department: emp.department,
@@ -246,7 +264,8 @@ export default function App() {
           fetchData();
           setIsEmployeeModalOpen(false);
         } else {
-          showToast("Failed to update employee.", "error");
+          const errData = await res.json().catch(() => ({}));
+          showToast(errData.error || "Failed to update employee.", "error");
         }
       } else {
         // Create
@@ -261,7 +280,8 @@ export default function App() {
           fetchData();
           setIsEmployeeModalOpen(false);
         } else {
-          showToast("Failed to add employee profile.", "error");
+          const errData = await res.json().catch(() => ({}));
+          showToast(errData.error || "Failed to add employee profile.", "error");
         }
       }
     } catch (err) {
@@ -565,7 +585,7 @@ export default function App() {
             {/* Set Monthly Targets Button */}
             <motion.button
               onClick={() => setIsTargetsModalOpen(true)}
-              className="flex items-center gap-1.5 bg-indigo-50/90 hover:bg-indigo-100/90 text-indigo-700 px-3 py-1.5 rounded-xl border border-indigo-200 text-xs font-bold transition-all duration-200 shadow-2xs cursor-pointer"
+              className="flex items-center gap-1.5 bg-indigo-50/90 hover:bg-indigo-100/90 text-indigo-700 px-3 py-1.5 rounded-xl border border-indigo-200 text-xs font-bold transition-all duration-200 shadow-2xs cursor-pointer animate-fade-in"
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -573,6 +593,85 @@ export default function App() {
               <span className="hidden sm:inline">Set Targets</span>
               <span className="sm:hidden">Targets</span>
             </motion.button>
+
+            {/* Portal Settings Dropdown */}
+            <div className="relative">
+              <motion.button
+                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all duration-200 shadow-2xs cursor-pointer ${
+                  isSettingsOpen 
+                    ? "bg-slate-950 border-slate-950 text-white" 
+                    : "bg-white hover:bg-slate-50 text-slate-700 border-slate-200"
+                }`}
+                whileHover={{ y: -1 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Settings className={`h-3.5 w-3.5 ${isSettingsOpen ? "text-white" : "text-slate-500"}`} />
+                <span className="hidden sm:inline">Settings</span>
+                <span className="sm:hidden">Set</span>
+              </motion.button>
+
+              <AnimatePresence>
+                {isSettingsOpen && (
+                  <>
+                    {/* Backdrop to close settings */}
+                    <div 
+                      className="fixed inset-0 z-40 cursor-default" 
+                      onClick={() => setIsSettingsOpen(false)} 
+                    />
+                    
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-4 space-y-3.5"
+                    >
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <div className="flex items-center gap-1.5 text-slate-800">
+                          <Settings className="h-4 w-4 text-slate-500" />
+                          <span className="text-xs font-extrabold uppercase tracking-wider font-display">System Config</span>
+                        </div>
+                        <button 
+                          onClick={() => setIsSettingsOpen(false)}
+                          className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-all cursor-pointer"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+
+                      {/* Attendance Warning Configuration Panel */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 text-slate-700">
+                            <AlertTriangle className="h-3.5 w-3.5 text-rose-500 animate-pulse" />
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Attendance Warning</span>
+                          </div>
+                          <span className="text-xs font-mono font-bold text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-lg">
+                            &lt; {attendanceWarningThreshold}%
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-[9px] font-bold text-slate-400 font-mono">70%</span>
+                          <input
+                            type="range"
+                            min="70"
+                            max="100"
+                            value={attendanceWarningThreshold}
+                            onChange={(e) => setAttendanceWarningThreshold(Number(e.target.value))}
+                            className="w-full accent-rose-500 h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer"
+                          />
+                          <span className="text-[9px] font-bold text-slate-400 font-mono">100%</span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 leading-normal">
+                          Configures the threshold below which employee records are flagged for poor attendance. Rows with attendance below this value will highlight in red on the 'Database Records' table.
+                        </p>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
 
             {/* Profile area */}
             <div className="flex items-center gap-3">
@@ -1015,7 +1114,7 @@ export default function App() {
               </div>
 
               {/* Interactive Search & Filter Controls */}
-              <div className="bg-slate-50/50 p-4 border border-slate-200/60 rounded-2xl space-y-3.5">
+              <div className="bg-slate-50/50 p-4 border border-slate-200/60 rounded-2xl space-y-3.5 animate-fade-in">
                 {/* Search input with inner styling */}
                 <div className="relative">
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -1118,6 +1217,9 @@ export default function App() {
                             }
                           };
 
+                          const rec = performance.find(p => p.employeeId === emp.id && p.month === selectedMonth);
+                          const hasLowAttendance = rec && rec.attendance < attendanceWarningThreshold;
+
                           const style = getDeptStyle(emp.department);
                           const isEmailCopied = copiedText === emp.email;
                           const isIdCopied = copiedText === emp.id;
@@ -1130,18 +1232,46 @@ export default function App() {
                               exit={{ opacity: 0, scale: 0.98 }}
                               transition={{ duration: 0.2 }}
                               key={emp.id}
-                              className="hover:bg-slate-50/40 group transition-all"
+                              className={`transition-all group border-l-2 ${
+                                hasLowAttendance 
+                                  ? "bg-rose-50/40 hover:bg-rose-100/40 border-l-rose-500" 
+                                  : "hover:bg-slate-50/40 border-l-transparent"
+                              }`}
                             >
                               {/* Employee Profile Cell */}
                               <td className="px-6 py-4">
                                 <div className="flex items-center gap-3.5">
                                   {/* Custom Initials Avatar */}
-                                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs border tracking-wide shrink-0 ${style.avatar}`}>
+                                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs border tracking-wide shrink-0 relative ${style.avatar}`}>
                                     {getInitials(emp.name)}
+                                    {hasLowAttendance && (
+                                      <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+                                      </span>
+                                    )}
                                   </div>
                                   <div className="min-w-0">
-                                    <span className="block font-bold text-slate-800 text-xs tracking-tight">{emp.name}</span>
-                                    <span className="block text-[11px] text-slate-500 font-medium mt-0.5">{emp.role}</span>
+                                    <span className="block font-bold text-slate-800 text-xs tracking-tight flex items-center gap-1.5 flex-wrap">
+                                      {emp.name}
+                                      {hasLowAttendance && (
+                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-rose-100 text-rose-700 border border-rose-200/50 animate-pulse">
+                                          <AlertTriangle className="h-2.5 w-2.5 text-rose-600" />
+                                          Low Attendance
+                                        </span>
+                                      )}
+                                    </span>
+                                    <span className="block text-[11px] text-slate-500 font-medium mt-0.5">
+                                      {emp.role} {rec ? (
+                                        <span className="text-slate-400 font-normal">
+                                          &middot; Attendance: <strong className={hasLowAttendance ? "text-rose-600 font-bold font-mono text-[10px]" : "text-slate-600 font-semibold font-mono text-[10px]"}>{rec.attendance}%</strong>
+                                        </span>
+                                      ) : (
+                                        <span className="text-slate-400 font-normal italic">
+                                          &middot; Attendance: not set
+                                        </span>
+                                      )}
+                                    </span>
                                   </div>
                                 </div>
                               </td>
@@ -1303,6 +1433,29 @@ export default function App() {
 
             <form onSubmit={handleSaveEmployee} className="flex-1 flex flex-col overflow-hidden">
               <div className="p-6 overflow-y-auto space-y-4 flex-1">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">
+                    Security ID {editingEmployee ? "" : "(Optional)"}
+                  </label>
+                  <input
+                    type="text"
+                    disabled={!!editingEmployee}
+                    placeholder="e.g. emp-99 or leave blank to autogenerate"
+                    value={employeeFormData.id}
+                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, id: e.target.value.replace(/\s+/g, '') })}
+                    className={`w-full px-3 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:outline-none transition-all font-mono ${
+                      editingEmployee 
+                        ? "bg-slate-100/80 border-slate-200/80 text-slate-400 cursor-not-allowed" 
+                        : "bg-slate-50 border-slate-200 text-slate-800"
+                    }`}
+                  />
+                  {!editingEmployee && (
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Set a custom unique identifier or leave blank to autogenerate a secure ID.
+                    </p>
+                  )}
+                </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Full Name *</label>
                   <input
