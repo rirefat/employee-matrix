@@ -82,6 +82,7 @@ export default function App() {
   const [rosterSearchQuery, setRosterSearchQuery] = useState<string>("");
   const [rosterDeptFilter, setRosterDeptFilter] = useState<string>("All");
   const [rosterTeamFilter, setRosterTeamFilter] = useState<string>("All");
+  const [rosterSortBy, setRosterSortBy] = useState<"Alphabetical Name" | "Highest Performance" | "Lowest Performance">("Alphabetical Name");
   const [attendanceWarningThreshold, setAttendanceWarningThreshold] = useState<number>(85);
   const [universalProjectValueTarget, setUniversalProjectValueTarget] = useState<number>(() => {
     const saved = localStorage.getItem("universalProjectValueTarget");
@@ -500,24 +501,6 @@ export default function App() {
     );
   });
 
-  // Filter roster database
-  const rosterFilteredEmployees = useMemo(() => {
-    return employees.filter(emp => {
-      const q = rosterSearchQuery.toLowerCase().trim();
-      const matchesSearch =
-        !q ||
-        emp.name.toLowerCase().includes(q) ||
-        emp.role.toLowerCase().includes(q) ||
-        emp.email.toLowerCase().includes(q) ||
-        emp.id.toLowerCase().includes(q);
-
-      const matchesDept = rosterDeptFilter === "All" || emp.department === rosterDeptFilter;
-      const matchesTeam = rosterTeamFilter === "All" || emp.team === rosterTeamFilter;
-
-      return matchesSearch && matchesDept && matchesTeam;
-    });
-  }, [employees, rosterSearchQuery, rosterDeptFilter, rosterTeamFilter]);
-
   // Selected report for the active reporter
   const activeReport = reports.find(
     r => r.employeeId === reportEmployeeId && r.month === selectedMonth
@@ -553,6 +536,60 @@ export default function App() {
     const valScore = Math.min(100, (activeRecord.deliveredProjectsValue / targetVal) * 100);
     return Math.round(attScore * 0.5 + valScore * 0.5);
   }, [activeRecord, currentTarget, effectiveProjectValueMin]);
+
+  // Filter & Sort roster database
+  const rosterFilteredEmployees = useMemo(() => {
+    const filtered = employees.filter(emp => {
+      const q = rosterSearchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        emp.name.toLowerCase().includes(q) ||
+        emp.role.toLowerCase().includes(q) ||
+        emp.email.toLowerCase().includes(q) ||
+        emp.id.toLowerCase().includes(q);
+
+      const matchesDept = rosterDeptFilter === "All" || emp.department === rosterDeptFilter;
+      const matchesTeam = rosterTeamFilter === "All" || emp.team === rosterTeamFilter;
+
+      return matchesSearch && matchesDept && matchesTeam;
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (rosterSortBy === "Alphabetical Name") {
+        return a.name.localeCompare(b.name);
+      }
+
+      // Compute performance score for the selected month to rank them
+      const getScore = (empId: string) => {
+        const rec = performance.find(p => p.employeeId === empId && p.month === selectedMonth);
+        if (!rec) return 0;
+        const targetAtt = currentTarget?.attendanceMin || 95;
+        const targetVal = effectiveProjectValueMin;
+        const attScore = Math.min(100, (rec.attendance / targetAtt) * 100);
+        const valScore = Math.min(100, (rec.deliveredProjectsValue / targetVal) * 100);
+        return Math.round(attScore * 0.5 + valScore * 0.5);
+      };
+
+      const scoreA = getScore(a.id);
+      const scoreB = getScore(b.id);
+
+      if (rosterSortBy === "Highest Performance") {
+        return scoreB - scoreA || a.name.localeCompare(b.name);
+      } else {
+        return scoreA - scoreB || a.name.localeCompare(b.name);
+      }
+    });
+  }, [
+    employees,
+    rosterSearchQuery,
+    rosterDeptFilter,
+    rosterTeamFilter,
+    rosterSortBy,
+    performance,
+    selectedMonth,
+    currentTarget,
+    effectiveProjectValueMin
+  ]);
 
   const getInitials = (name: string) => {
     return name
@@ -1347,24 +1384,44 @@ export default function App() {
 
               {/* Interactive Search & Filter Controls */}
               <div className="bg-white/90 border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4 animate-fade-in">
-                {/* Search input with inner styling */}
-                <div className="relative">
-                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <input
-                    type="text"
-                    value={rosterSearchQuery}
-                    onChange={(e) => setRosterSearchQuery(e.target.value)}
-                    placeholder="Search by name, role, email, or Security ID..."
-                    className="w-full pl-10 pr-4 py-2 bg-slate-50/50 border border-slate-200/80 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-3xs"
-                  />
-                  {rosterSearchQuery && (
-                    <button
-                      onClick={() => setRosterSearchQuery("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 text-[10px] font-bold cursor-pointer"
-                    >
-                      Clear
-                    </button>
-                  )}
+                {/* Search & Sort controls wrapper */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  {/* Search input with inner styling */}
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <input
+                      type="text"
+                      value={rosterSearchQuery}
+                      onChange={(e) => setRosterSearchQuery(e.target.value)}
+                      placeholder="Search by name, role, email, or Security ID..."
+                      className="w-full pl-10 pr-4 py-2 bg-slate-50/50 border border-slate-200/80 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-3xs"
+                    />
+                    {rosterSearchQuery && (
+                      <button
+                        onClick={() => setRosterSearchQuery("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 text-[10px] font-bold cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Premium Sort Dropdown */}
+                  <div className="flex items-center gap-2.5 bg-slate-50/70 border border-slate-200/80 rounded-xl px-3 py-1.5 shadow-3xs hover:border-slate-300 transition-all sm:w-60 shrink-0">
+                    <SlidersHorizontal className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="block text-[8px] font-bold uppercase tracking-wider text-slate-400 font-mono">Order By</span>
+                      <select
+                        value={rosterSortBy}
+                        onChange={(e) => setRosterSortBy(e.target.value as any)}
+                        className="w-full bg-transparent border-none text-xs font-bold text-slate-700 focus:outline-none focus:ring-0 p-0 cursor-pointer block"
+                      >
+                        <option value="Alphabetical Name">Alphabetical Name</option>
+                        <option value="Highest Performance">Highest Performance</option>
+                        <option value="Lowest Performance">Lowest Performance</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Ultra-Sleek Single-Line Unified Filter Bar */}
