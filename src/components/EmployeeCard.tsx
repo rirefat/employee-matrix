@@ -1,6 +1,6 @@
 import React from "react";
-import { Employee, PerformanceRecord } from "../types";
-import { Calendar, Users, Briefcase, Sparkles, TrendingUp } from "lucide-react";
+import { Employee, PerformanceRecord, MonthlyTarget } from "../types";
+import { Calendar, Users, Briefcase, Sparkles, TrendingUp, AlertCircle } from "lucide-react";
 import { motion } from "motion/react";
 
 interface EmployeeCardProps {
@@ -10,6 +10,7 @@ interface EmployeeCardProps {
   hasReport: boolean;
   onClick: () => void;
   index?: number;
+  target?: MonthlyTarget;
 }
 
 export const EmployeeCard: React.FC<EmployeeCardProps> = ({
@@ -19,6 +20,7 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
   hasReport,
   onClick,
   index = 0,
+  target,
 }) => {
   // Extract initials
   const getInitials = (name: string) => {
@@ -34,6 +36,19 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
   const meetings = performanceRecord ? performanceRecord.conductedMeetings : null;
   const projects = performanceRecord ? performanceRecord.deliveredProjectsAmount : null;
   const value = performanceRecord ? performanceRecord.deliveredProjectsValue : null;
+
+  // Memoize underperforming metrics check
+  const underperformingMetrics = React.useMemo(() => {
+    if (!performanceRecord || !target) return [];
+    const flags: string[] = [];
+    if (attendance !== null && attendance < target.attendanceMin) {
+      flags.push("Attendance");
+    }
+    if (value !== null && value < target.projectValueMin) {
+      flags.push("Project Value");
+    }
+    return flags;
+  }, [performanceRecord, target, attendance, value]);
 
   // Modern Lottie-like organic spring settings
   const cardVariants = {
@@ -120,7 +135,13 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
           <span className="text-[10px] font-mono font-extrabold text-slate-700 bg-slate-100/80 px-1.5 py-0.5 rounded-md border border-slate-200/30">
             {employee.department.split(" ")[0]}
           </span>
-          <div className="flex gap-1">
+          <div className="flex gap-1 flex-wrap justify-end">
+            {underperformingMetrics.length > 0 ? (
+              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-700 text-[8px] font-bold border border-rose-500/20 shadow-2xs animate-pulse">
+                <AlertCircle className="h-2 w-2 text-rose-500" />
+                Under Target
+              </span>
+            ) : null}
             {hasReport ? (
               <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 text-[8px] font-bold border border-emerald-500/20">
                 <Sparkles className="h-2 w-2" />
@@ -145,18 +166,26 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
           {/* Micro Grid Metrics */}
           <div className="grid grid-cols-3 gap-2.5 mb-2.5">
             {/* Metric 1: Attendance */}
-            <div className="bg-slate-50/40 group-hover:bg-slate-50/60 transition-colors p-1.5 rounded-lg border border-slate-100/50">
+            <div className={`transition-colors p-1.5 rounded-lg border ${
+              target && attendance !== null && attendance < target.attendanceMin
+                ? "bg-rose-50/40 border-rose-200/50 hover:bg-rose-50/60"
+                : "bg-slate-50/40 group-hover:bg-slate-50/60 border-slate-100/50"
+            }`}>
               <div className="flex items-center gap-0.5 text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">
-                <Calendar className="h-2 w-2 text-emerald-500" />
+                <Calendar className={`h-2 w-2 ${
+                  target && attendance !== null && attendance < target.attendanceMin ? "text-rose-500 animate-pulse" : "text-emerald-500"
+                }`} />
                 <span>Attd</span>
               </div>
-              <span className="text-[11px] font-mono font-bold text-slate-700">
+              <span className={`text-[11px] font-mono font-bold ${
+                target && attendance !== null && attendance < target.attendanceMin ? "text-rose-600 font-extrabold" : "text-slate-700"
+              }`}>
                 {attendance}%
               </span>
             </div>
 
             {/* Metric 2: Meetings */}
-            <div className="bg-slate-50/40 group-hover:bg-slate-50/60 transition-colors p-1.5 rounded-lg border border-slate-100/50">
+            <div className="bg-slate-50/40 group-hover:bg-slate-50/60 border-slate-100/50 transition-colors p-1.5 rounded-lg border">
               <div className="flex items-center gap-0.5 text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">
                 <Users className="h-2 w-2 text-blue-500" />
                 <span>Meet</span>
@@ -167,12 +196,20 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
             </div>
 
             {/* Metric 3: Projects */}
-            <div className="bg-slate-50/40 group-hover:bg-slate-50/60 transition-colors p-1.5 rounded-lg border border-slate-100/50">
+            <div className={`transition-colors p-1.5 rounded-lg border ${
+              target && value !== null && value < target.projectValueMin
+                ? "bg-rose-50/40 border-rose-200/50 hover:bg-rose-50/60"
+                : "bg-slate-50/40 group-hover:bg-slate-50/60 border-slate-100/50"
+            }`}>
               <div className="flex items-center gap-0.5 text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">
-                <TrendingUp className="h-2 w-2 text-indigo-500" />
+                <TrendingUp className={`h-2 w-2 ${
+                  target && value !== null && value < target.projectValueMin ? "text-rose-500 animate-pulse" : "text-indigo-500"
+                }`} />
                 <span>Value</span>
               </div>
-              <span className="text-[11px] font-mono font-bold text-slate-700">
+              <span className={`text-[11px] font-mono font-bold ${
+                target && value !== null && value < target.projectValueMin ? "text-rose-600 font-extrabold" : "text-slate-700"
+              }`}>
                 {value ? `$${(value / 1000).toFixed(0)}k` : "—"}
               </span>
             </div>

@@ -1,12 +1,30 @@
 import { MongoClient, Db, Collection } from "mongodb";
 import fs from "fs";
 import path from "path";
-import { Employee, PerformanceRecord, MonthlyReport, DBStatus } from "../src/types";
+import { Employee, PerformanceRecord, MonthlyReport, DBStatus, MonthlyTarget } from "../src/types";
 
 const LOCAL_DB_PATH = path.join(process.cwd(), "data.json");
 
 // Helper function to generate IDs if missing
 const generateId = () => Math.random().toString(36).substring(2, 11);
+
+// Seed data
+const initialTargets: MonthlyTarget[] = [
+  {
+    id: "target-default",
+    month: "2026-06",
+    attendanceMin: 95,
+    projectValueMin: 30000,
+    updatedAt: new Date("2026-06-01").toISOString()
+  },
+  {
+    id: "target-prev",
+    month: "2026-05",
+    attendanceMin: 95,
+    projectValueMin: 25000,
+    updatedAt: new Date("2026-05-01").toISOString()
+  }
+];
 
 // Seed data
 const initialEmployees: Employee[] = [
@@ -157,6 +175,7 @@ interface LocalSchema {
   employees: Employee[];
   performance: PerformanceRecord[];
   reports: MonthlyReport[];
+  targets: MonthlyTarget[];
 }
 
 class DatabaseService {
@@ -173,7 +192,8 @@ class DatabaseService {
   private memoryDb: LocalSchema = {
     employees: initialEmployees,
     performance: initialPerformance,
-    reports: initialReports
+    reports: initialReports,
+    targets: initialTargets
   };
 
   constructor() {
@@ -227,7 +247,8 @@ class DatabaseService {
       const initialData: LocalSchema = {
         employees: initialEmployees,
         performance: initialPerformance,
-        reports: initialReports
+        reports: initialReports,
+        targets: initialTargets
       };
       try {
         fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(initialData, null, 2));
@@ -266,6 +287,14 @@ class DatabaseService {
         const cleanReports = JSON.parse(JSON.stringify(initialReports));
         await this.db.collection("monthly_reports").insertMany(cleanReports);
       }
+
+      const targetsColl = this.db.collection("monthly_targets");
+      const targetsCount = await targetsColl.countDocuments();
+      if (targetsCount === 0) {
+        console.log("Seeding initial monthly targets into MongoDB...");
+        const cleanTargets = JSON.parse(JSON.stringify(initialTargets));
+        await this.db.collection("monthly_targets").insertMany(cleanTargets);
+      }
       
       console.log("MongoDB initialization/seeding check complete.");
     } catch (err) {
@@ -281,6 +310,7 @@ class DatabaseService {
         await this.db.collection("employees").deleteMany({});
         await this.db.collection("performance_records").deleteMany({});
         await this.db.collection("monthly_reports").deleteMany({});
+        await this.db.collection("monthly_targets").deleteMany({});
         
         await this.seedMongoIfNeeded();
         return true;
@@ -293,7 +323,8 @@ class DatabaseService {
       const initialData: LocalSchema = {
         employees: initialEmployees,
         performance: initialPerformance,
-        reports: initialReports
+        reports: initialReports,
+        targets: initialTargets
       };
       this.memoryDb = JSON.parse(JSON.stringify(initialData));
       try {
@@ -313,7 +344,11 @@ class DatabaseService {
   private readLocal(): LocalSchema {
     try {
       if (fs.existsSync(LOCAL_DB_PATH)) {
-        return JSON.parse(fs.readFileSync(LOCAL_DB_PATH, "utf8"));
+        const parsed = JSON.parse(fs.readFileSync(LOCAL_DB_PATH, "utf8"));
+        if (!parsed.targets) {
+          parsed.targets = [];
+        }
+        return parsed as LocalSchema;
       }
     } catch (e) {
       console.error("Error reading local db", e);
@@ -548,6 +583,86 @@ class DatabaseService {
       const data = this.readLocal();
       const rep = data.reports.find(r => r.employeeId === employeeId && r.month === month);
       return rep || null;
+    }
+  }
+
+  // --- MONTHLY TARGETS API ---
+  public async getTargets(month?: string): Promise<MonthlyTarget[]> {
+    await this.ensureInitialized();
+    if (this.db && this.dbStatus.connectionType === "mongodb") {
+      const query = month ? { month } : {};
+      const docs = await this.db.collection("monthly_targets").find(query).toArray();
+      return docs.map(doc => {
+        const { _id, ...rest } = doc;
+        return { ...rest, id: rest.id || _id.toString() } as MonthlyTarget;
+      });
+    } else {
+      const data = this.readLocal();
+      const targets = data.targets || [];
+      if (month) {
+        return targets.filter(t => t.month === month);
+      }
+      return targets;
+    }
+  }
+
+  public async saveTarget(target: Omit<MonthlyTarget, "id" | "updatedAt">): Promise<MonthlyTarget> {
+    await this.ensureInitialized();
+    const existing = await this.findTarget(target.month);
+    
+    const targetToSave = {
+      ...target,
+      updatedAt: new Date().toISOString()
+    };
+
+    if (existing) {
+      if (this.db && this.dbStatus.connectionType === "mongodb") {
+        await this.db.collection("monthly_targets").updateOne(
+          { id: existing.id },
+          { $set: targetToSave }
+        );
+      } else {
+        const data = this.readLocal();
+        if (!data.targets) data.targets = [];
+        const idx = data.targets.findIndex(t => t.id === existing.id);
+        if (idx !== -1) {
+          data.targets[idx] = { ...data.targets[idx], ...targetToSave };
+        } else {
+          data.targets.push({ ...existing, ...targetToSave });
+        }
+        this.writeLocal(data);
+      }
+      return { ...existing, ...targetToSave };
+    } else {
+      const newTarget: MonthlyTarget = {
+        ...targetToSave,
+        id: "target-" + generateId()
+      };
+      
+      if (this.db && this.dbStatus.connectionType === "mongodb") {
+        await this.db.collection("monthly_targets").insertOne({ ...newTarget });
+      } else {
+        const data = this.readLocal();
+        if (!data.targets) data.targets = [];
+        data.targets.push(newTarget);
+        this.writeLocal(data);
+      }
+      return newTarget;
+    }
+  }
+
+  private async findTarget(month: string): Promise<MonthlyTarget | null> {
+    await this.ensureInitialized();
+    if (this.db && this.dbStatus.connectionType === "mongodb") {
+      const doc = await this.db.collection("monthly_targets").findOne({ month });
+      if (!doc) return null;
+      const { _id, ...rest } = doc;
+      return { ...rest, id: rest.id || _id.toString() } as MonthlyTarget;
+    } else {
+      const data = this.readLocal();
+      const targets = data.targets || [];
+      const tar = targets.find(t => t.month === month);
+      return tar || null;
     }
   }
 }

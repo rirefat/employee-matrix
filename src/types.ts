@@ -35,6 +35,14 @@ export interface MonthlyReport {
   generatedAt: string;
 }
 
+export interface MonthlyTarget {
+  id: string;
+  month: string; // "YYYY-MM"
+  attendanceMin: number; // percentage, e.g. 95 for 95%
+  projectValueMin: number; // value in USD, e.g. 30000
+  updatedAt: string;
+}
+
 export interface DBStatus {
   isConnected: boolean;
   connectionType: 'mongodb' | 'local';

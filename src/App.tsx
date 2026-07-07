@@ -34,11 +34,12 @@ import {
   CartesianGrid,
   Tooltip
 } from "recharts";
-import { Employee, PerformanceRecord, MonthlyReport } from "./types";
+import { Employee, PerformanceRecord, MonthlyReport, MonthlyTarget } from "./types";
 import { DBStatusBanner } from "./components/DBStatusBanner";
 import { ReportViewer } from "./components/ReportViewer";
 import { DashboardTab } from "./components/DashboardTab";
 import { EmployeeCard } from "./components/EmployeeCard";
+import { MonthPicker } from "./components/MonthPicker";
 import { motion, AnimatePresence } from "motion/react";
 
 const DEPARTMENTS = ["Engineering", "Sales", "Customer Success", "Product", "Operations"];
@@ -48,7 +49,13 @@ export default function App() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [performance, setPerformance] = useState<PerformanceRecord[]>([]);
   const [reports, setReports] = useState<MonthlyReport[]>([]);
+  const [targets, setTargets] = useState<MonthlyTarget[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>("2026-06");
+
+  const currentTarget = useMemo(() => {
+    return targets.find((t) => t.month === selectedMonth);
+  }, [targets, selectedMonth]);
+
   const [searchQuery, setSearchQuery] = useState<string>(" "); // Space triggers full list but keeps standard structure
 
   // App Alerts
@@ -56,6 +63,7 @@ export default function App() {
 
   // Modals state
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
+  const [isTargetsModalOpen, setIsTargetsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [employeeFormData, setEmployeeFormData] = useState({
     name: "",
@@ -82,26 +90,100 @@ export default function App() {
   const [reportEmployeeId, setReportEmployeeId] = useState<string>("");
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
+  const [targetFormData, setTargetFormData] = useState({
+    attendanceMin: 95,
+    projectValueMin: 25000,
+  });
+
+  useEffect(() => {
+    if (isTargetsModalOpen) {
+      if (currentTarget) {
+        setTargetFormData({
+          attendanceMin: currentTarget.attendanceMin,
+          projectValueMin: currentTarget.projectValueMin,
+        });
+      } else {
+        setTargetFormData({
+          attendanceMin: 95,
+          projectValueMin: 25000,
+        });
+      }
+    }
+  }, [isTargetsModalOpen, currentTarget]);
+
+  const handleSaveTarget = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await fetch("/api/targets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          month: selectedMonth,
+          ...targetFormData,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to save targets");
+      }
+
+      const savedTarget = await response.json();
+      
+      setTargets((prev) => {
+        const idx = prev.findIndex((t) => t.month === selectedMonth);
+        if (idx !== -1) {
+          const next = [...prev];
+          next[idx] = savedTarget;
+          return next;
+        }
+        return [...prev, savedTarget];
+      });
+
+      showToast(`Performance targets for ${selectedMonth} have been successfully set!`, "success");
+      setIsTargetsModalOpen(false);
+    } catch (err: any) {
+      console.error(err);
+      showToast(err.message || "Failed to save monthly targets", "error");
+    }
+  };
+
   // Fetch initial data
   useEffect(() => {
     fetchData();
   }, []);
 
+  // Handle escape key to close modals
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsEmployeeModalOpen(false);
+        setIsPerformanceModalOpen(false);
+        setIsTargetsModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const fetchData = async () => {
     try {
-      const [empRes, perfRes, repRes] = await Promise.all([
+      const [empRes, perfRes, repRes, targetsRes] = await Promise.all([
         fetch("/api/employees"),
         fetch("/api/performance"),
-        fetch("/api/reports")
+        fetch("/api/reports"),
+        fetch("/api/targets")
       ]);
 
       const emps = await empRes.json();
       const perfs = await perfRes.json();
       const reps = await repRes.json();
+      const targs = await targetsRes.json();
 
       setEmployees(emps);
       setPerformance(perfs);
       setReports(reps);
+      setTargets(targs);
 
       if (emps.length > 0) {
         setReportEmployeeId(emps[0].id);
@@ -235,6 +317,43 @@ export default function App() {
       });
     }
     setIsPerformanceModalOpen(true);
+  };
+
+  const handleMonthChangeInPerfLog = (newMonth: string) => {
+    setSelectedMonth(newMonth);
+    if (!selectedPerfEmployee) return;
+
+    const existing = performance.find(p => p.employeeId === selectedPerfEmployee.id && p.month === newMonth);
+    if (existing) {
+      const working = existing.totalWorkingDays || 22;
+      const present = existing.presentDays !== undefined ? existing.presentDays : Math.round(working * (existing.attendance / 100));
+      const absent = existing.absentDays !== undefined ? existing.absentDays : (working - present);
+      const leave = existing.leaveDays || 0;
+
+      setPerfFormData({
+        attendance: existing.attendance,
+        conductedMeetings: existing.conductedMeetings,
+        deliveredProjectsAmount: existing.deliveredProjectsAmount,
+        deliveredProjectsValue: existing.deliveredProjectsValue,
+        totalWorkingDays: working,
+        presentDays: present,
+        absentDays: absent,
+        leaveDays: leave,
+        managerRemarks: existing.managerRemarks || ""
+      });
+    } else {
+      setPerfFormData({
+        attendance: 95,
+        conductedMeetings: 12,
+        deliveredProjectsAmount: 2,
+        deliveredProjectsValue: 15000,
+        totalWorkingDays: 22,
+        presentDays: 21,
+        absentDays: 1,
+        leaveDays: 0,
+        managerRemarks: ""
+      });
+    }
   };
 
   const handleSavePerformance = async (e: React.FormEvent) => {
@@ -404,18 +523,23 @@ export default function App() {
 
           <div className="flex items-center gap-3 sm:gap-6">
             {/* Month selector directly in header */}
-            <motion.div 
-              className="flex items-center gap-2 bg-slate-50/80 hover:bg-slate-100/80 focus-within:ring-2 focus-within:ring-blue-500/10 focus-within:border-blue-500/60 px-3.5 py-1.5 rounded-xl border border-slate-200 text-slate-700 transition-all duration-200 shadow-2xs"
+            <MonthPicker
+              value={selectedMonth}
+              onChange={setSelectedMonth}
+              align="right"
+            />
+
+            {/* Set Monthly Targets Button */}
+            <motion.button
+              onClick={() => setIsTargetsModalOpen(true)}
+              className="flex items-center gap-1.5 bg-indigo-50/90 hover:bg-indigo-100/90 text-indigo-700 px-3 py-1.5 rounded-xl border border-indigo-200 text-xs font-bold transition-all duration-200 shadow-2xs cursor-pointer"
               whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.98 }}
             >
-              <Calendar className="h-3.5 w-3.5 text-blue-500" />
-              <input
-                type="month"
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                className="bg-transparent text-slate-900 font-mono text-xs font-bold focus:outline-none cursor-pointer"
-              />
-            </motion.div>
+              <TrendingUp className="h-3.5 w-3.5 text-indigo-600" />
+              <span className="hidden sm:inline">Set Targets</span>
+              <span className="sm:hidden">Targets</span>
+            </motion.button>
 
             {/* Profile area */}
             <div className="flex items-center gap-3">
@@ -487,6 +611,7 @@ export default function App() {
                     isActive={isSelected}
                     performanceRecord={rec}
                     hasReport={hasReport}
+                    target={currentTarget}
                     onClick={() => setReportEmployeeId(emp.id)}
                   />
                 );
@@ -885,80 +1010,83 @@ export default function App() {
       {/* MODAL 1: ADD / EDIT EMPLOYEE */}
       {isEmployeeModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-xs">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-xl animate-in fade-in zoom-in-95">
-            <div className="flex justify-between items-center pb-4 border-b border-slate-100">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col shadow-xl animate-in fade-in zoom-in-95 overflow-hidden">
+            <div className="flex justify-between items-center p-6 pb-4 border-b border-slate-100 shrink-0">
               <h3 className="text-md font-bold text-slate-800">
                 {editingEmployee ? "Edit Performance Profile" : "Create Team Profile"}
               </h3>
               <button
+                type="button"
                 onClick={() => setIsEmployeeModalOpen(false)}
-                className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition-all"
+                className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition-all cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveEmployee} className="space-y-4 mt-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Full Name *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. John Doe"
-                  value={employeeFormData.name}
-                  onChange={(e) => setEmployeeFormData({ ...employeeFormData, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                />
+            <form onSubmit={handleSaveEmployee} className="flex-1 flex flex-col overflow-hidden">
+              <div className="p-6 overflow-y-auto space-y-4 flex-1">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. John Doe"
+                    value={employeeFormData.name}
+                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, name: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Professional Role *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Senior Software Architect"
+                    value={employeeFormData.role}
+                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, role: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Department *</label>
+                  <select
+                    value={employeeFormData.department}
+                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, department: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                  >
+                    {DEPARTMENTS.map((dept) => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Corporate Email *</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="john.doe@company.com"
+                    value={employeeFormData.email}
+                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, email: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Professional Role *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Senior Software Architect"
-                  value={employeeFormData.role}
-                  onChange={(e) => setEmployeeFormData({ ...employeeFormData, role: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Department *</label>
-                <select
-                  value={employeeFormData.department}
-                  onChange={(e) => setEmployeeFormData({ ...employeeFormData, department: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                >
-                  {DEPARTMENTS.map((dept) => (
-                    <option key={dept} value={dept}>{dept}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Corporate Email *</label>
-                <input
-                  type="email"
-                  required
-                  placeholder="john.doe@company.com"
-                  value={employeeFormData.email}
-                  onChange={(e) => setEmployeeFormData({ ...employeeFormData, email: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="pt-4 border-t border-slate-100 flex justify-end gap-2 text-xs">
+              <div className="p-6 pt-4 border-t border-slate-100 flex justify-end gap-2 text-xs shrink-0 bg-slate-50/50">
                 <button
                   type="button"
                   onClick={() => setIsEmployeeModalOpen(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-lg"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-lg cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-sm"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-sm cursor-pointer"
                 >
                   Save Profile
                 </button>
@@ -971,8 +1099,8 @@ export default function App() {
       {/* MODAL 2: LOG PERFORMANCE METRICS */}
       {isPerformanceModalOpen && selectedPerfEmployee && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-xs">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-xl animate-in fade-in zoom-in-95">
-            <div className="flex justify-between items-center pb-4 border-b border-slate-100">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col shadow-xl animate-in fade-in zoom-in-95 overflow-hidden">
+            <div className="flex justify-between items-center p-6 pb-4 border-b border-slate-100 shrink-0">
               <div>
                 <h3 className="text-md font-bold text-slate-800">Record Performance Card</h3>
                 <p className="text-xs text-slate-500 mt-1">
@@ -980,190 +1108,313 @@ export default function App() {
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => setIsPerformanceModalOpen(false)}
-                className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition-all"
+                className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition-all cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSavePerformance} className="space-y-4 mt-4">
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-600">Month Code:</span>
-                <span className="text-xs font-mono font-bold text-blue-600">{selectedMonth}</span>
-              </div>
-
-              <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-3">
-                <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                  <span className="text-xs font-bold text-slate-700 uppercase">Workplace Attendance Tracker</span>
-                  <span className="text-xs font-mono font-bold px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
-                    Avg: {perfFormData.attendance}%
-                  </span>
+            <form onSubmit={handleSavePerformance} className="flex-1 flex flex-col overflow-hidden">
+              <div className="p-6 overflow-y-auto space-y-4 flex-1">
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center justify-between gap-4">
+                  <span className="text-[11px] font-semibold text-slate-600">Month Code:</span>
+                  <MonthPicker
+                    value={selectedMonth}
+                    onChange={handleMonthChangeInPerfLog}
+                    align="right"
+                  />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Working Days</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="31"
-                      required
-                      value={perfFormData.totalWorkingDays}
-                      onChange={(e) => {
-                        const working = Number(e.target.value);
-                        const present = Math.min(working, perfFormData.presentDays);
-                        const rate = working > 0 ? Math.round((present / working) * 100) : 100;
-                        setPerfFormData({
-                          ...perfFormData,
-                          totalWorkingDays: working,
-                          presentDays: present,
-                          attendance: rate
-                        });
-                      }}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono"
-                    />
+                <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-3">
+                  <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                    <span className="text-xs font-bold text-slate-700 uppercase">Workplace Attendance Tracker</span>
+                    <span className="text-xs font-mono font-bold px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
+                      Avg: {perfFormData.attendance}%
+                    </span>
                   </div>
 
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Days Present</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max={perfFormData.totalWorkingDays}
-                      required
-                      value={perfFormData.presentDays}
-                      onChange={(e) => {
-                        const present = Number(e.target.value);
-                        const working = perfFormData.totalWorkingDays;
-                        const rate = working > 0 ? Math.round((present / working) * 100) : 100;
-                        setPerfFormData({
-                          ...perfFormData,
-                          presentDays: present,
-                          attendance: rate
-                        });
-                      }}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono"
-                    />
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Working Days</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="31"
+                        required
+                        value={perfFormData.totalWorkingDays}
+                        onChange={(e) => {
+                          const working = Number(e.target.value);
+                          const present = Math.min(working, perfFormData.presentDays);
+                          const rate = working > 0 ? Math.round((present / working) * 100) : 100;
+                          setPerfFormData({
+                            ...perfFormData,
+                            totalWorkingDays: working,
+                            presentDays: present,
+                            attendance: rate
+                          });
+                        }}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Days Present</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max={perfFormData.totalWorkingDays}
+                        required
+                        value={perfFormData.presentDays}
+                        onChange={(e) => {
+                          const present = Number(e.target.value);
+                          const working = perfFormData.totalWorkingDays;
+                          const rate = working > 0 ? Math.round((present / working) * 100) : 100;
+                          setPerfFormData({
+                            ...perfFormData,
+                            presentDays: present,
+                            attendance: rate
+                          });
+                        }}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Days Absent</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max={perfFormData.totalWorkingDays}
+                        required
+                        value={perfFormData.absentDays}
+                        onChange={(e) => {
+                          setPerfFormData({
+                            ...perfFormData,
+                            absentDays: Number(e.target.value)
+                          });
+                        }}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Leaves / Other</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max={perfFormData.totalWorkingDays}
+                        required
+                        value={perfFormData.leaveDays}
+                        onChange={(e) => {
+                          setPerfFormData({
+                            ...perfFormData,
+                            leaveDays: Number(e.target.value)
+                          });
+                        }}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono"
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Days Absent</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max={perfFormData.totalWorkingDays}
-                      required
-                      value={perfFormData.absentDays}
-                      onChange={(e) => {
-                        setPerfFormData({
-                          ...perfFormData,
-                          absentDays: Number(e.target.value)
-                        });
-                      }}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Leaves / Other</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max={perfFormData.totalWorkingDays}
-                      required
-                      value={perfFormData.leaveDays}
-                      onChange={(e) => {
-                        setPerfFormData({
-                          ...perfFormData,
-                          leaveDays: Number(e.target.value)
-                        });
-                      }}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono"
-                    />
-                  </div>
+                  {/* Balance validation alert */}
+                  {perfFormData.presentDays + perfFormData.absentDays + perfFormData.leaveDays !== perfFormData.totalWorkingDays && (
+                    <div className="text-[10px] text-amber-600 bg-amber-50 border border-amber-100 p-2 rounded-lg">
+                      <span>Note: Present + Absent + Leaves ({perfFormData.presentDays + perfFormData.absentDays + perfFormData.leaveDays} days) doesn't match Total Working Days ({perfFormData.totalWorkingDays} days).</span>
+                    </div>
+                  )}
+                  {perfFormData.presentDays + perfFormData.absentDays + perfFormData.leaveDays === perfFormData.totalWorkingDays && (
+                    <div className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 p-2 rounded-lg">
+                      <span>✓ Day counts sum up correctly to {perfFormData.totalWorkingDays} working days.</span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Balance validation alert */}
-                {perfFormData.presentDays + perfFormData.absentDays + perfFormData.leaveDays !== perfFormData.totalWorkingDays && (
-                  <div className="text-[10px] text-amber-600 bg-amber-50 border border-amber-100 p-2 rounded-lg">
-                    <span>Note: Present + Absent + Leaves ({perfFormData.presentDays + perfFormData.absentDays + perfFormData.leaveDays} days) doesn't match Total Working Days ({perfFormData.totalWorkingDays} days).</span>
-                  </div>
-                )}
-                {perfFormData.presentDays + perfFormData.absentDays + perfFormData.leaveDays === perfFormData.totalWorkingDays && (
-                  <div className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 p-2 rounded-lg">
-                    <span>✓ Day counts sum up correctly to {perfFormData.totalWorkingDays} working days.</span>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Conducted Meetings Count</label>
-                <input
-                  type="number"
-                  min="0"
-                  required
-                  value={perfFormData.conductedMeetings}
-                  onChange={(e) => setPerfFormData({ ...perfFormData, conductedMeetings: Number(e.target.value) })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none font-mono"
-                />
-                <span className="text-[10px] text-slate-400">Total operational syncs or stakeholder calls.</span>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Delivered Projects Count</label>
-                <input
-                  type="number"
-                  min="0"
-                  required
-                  value={perfFormData.deliveredProjectsAmount}
-                  onChange={(e) => setPerfFormData({ ...perfFormData, deliveredProjectsAmount: Number(e.target.value) })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none font-mono"
-                />
-                <span className="text-[10px] text-slate-400">Number of discrete projects or major features shipped.</span>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Delivered Projects Financial Value ($)</label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-mono text-xs">$</span>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Conducted Meetings Count</label>
                   <input
                     type="number"
                     min="0"
                     required
-                    value={perfFormData.deliveredProjectsValue}
-                    onChange={(e) => setPerfFormData({ ...perfFormData, deliveredProjectsValue: Number(e.target.value) })}
-                    className="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none font-mono"
+                    value={perfFormData.conductedMeetings}
+                    onChange={(e) => setPerfFormData({ ...perfFormData, conductedMeetings: Number(e.target.value) })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none font-mono"
                   />
+                  <span className="text-[10px] text-slate-400">Total operational syncs or stakeholder calls.</span>
                 </div>
-                <span className="text-[10px] text-slate-400">Estimated value impact of deliverables (in USD).</span>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Delivered Projects Count</label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={perfFormData.deliveredProjectsAmount}
+                    onChange={(e) => setPerfFormData({ ...perfFormData, deliveredProjectsAmount: Number(e.target.value) })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none font-mono"
+                  />
+                  <span className="text-[10px] text-slate-400">Number of discrete projects or major features shipped.</span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Delivered Projects Financial Value ($)</label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-mono text-xs">$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      required
+                      value={perfFormData.deliveredProjectsValue}
+                      onChange={(e) => setPerfFormData({ ...perfFormData, deliveredProjectsValue: Number(e.target.value) })}
+                      className="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none font-mono"
+                    />
+                  </div>
+                  <span className="text-[10px] text-slate-400">Estimated value impact of deliverables (in USD).</span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Manager Remarks (Qualitative Feedback)</label>
+                  <textarea
+                    rows={3}
+                    value={perfFormData.managerRemarks}
+                    onChange={(e) => setPerfFormData({ ...perfFormData, managerRemarks: e.target.value })}
+                    placeholder="e.g., Led the Q3 planning session, resolved high-priority support ticket backlogs, showed outstanding leadership under pressure..."
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all placeholder:text-slate-400 font-sans"
+                  />
+                  <span className="text-[10px] text-slate-400">Attach descriptive, qualitative highlights to supplement the metrics.</span>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Manager Remarks (Qualitative Feedback)</label>
-                <textarea
-                  rows={3}
-                  value={perfFormData.managerRemarks}
-                  onChange={(e) => setPerfFormData({ ...perfFormData, managerRemarks: e.target.value })}
-                  placeholder="e.g., Led the Q3 planning session, resolved high-priority support ticket backlogs, showed outstanding leadership under pressure..."
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all placeholder:text-slate-400 font-sans"
-                />
-                <span className="text-[10px] text-slate-400">Attach descriptive, qualitative highlights to supplement the metrics.</span>
-              </div>
-
-              <div className="pt-4 border-t border-slate-100 flex justify-end gap-2 text-xs">
+              <div className="p-6 pt-4 border-t border-slate-100 flex justify-end gap-2 text-xs shrink-0 bg-slate-50/50">
                 <button
                   type="button"
                   onClick={() => setIsPerformanceModalOpen(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-lg"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-lg cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-sm"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-sm cursor-pointer"
                 >
                   Record Card Metrics
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Set Monthly Targets Modal */}
+      {isTargetsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Glassmorphism Backdrop */}
+          <div 
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300"
+            onClick={() => setIsTargetsModalOpen(false)}
+          />
+
+          {/* Modal Container */}
+          <div className="relative bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 pb-4 border-b border-slate-100 shrink-0">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-indigo-600" />
+                  Set Monthly Targets
+                </h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Define expectations for <span className="font-semibold text-slate-600 font-mono">{selectedMonth}</span> to flag under-performance
+                </p>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setIsTargetsModalOpen(false)}
+                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSaveTarget} className="flex-1 flex flex-col overflow-hidden">
+              <div className="p-6 overflow-y-auto space-y-4 flex-1">
+                {/* Selected Month */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                    Target Month
+                  </label>
+                  <div>
+                    <MonthPicker
+                      value={selectedMonth}
+                      onChange={setSelectedMonth}
+                      fullWidth={true}
+                    />
+                  </div>
+                  <span className="text-[9px] text-slate-400 mt-0.5 block">
+                    Choose the performance tracking month
+                  </span>
+                </div>
+
+                {/* Attendance Target */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                    Min Attendance Rate (%)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      required
+                      value={targetFormData.attendanceMin}
+                      onChange={(e) => setTargetFormData({ ...targetFormData, attendanceMin: Number(e.target.value) })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none font-mono font-semibold"
+                    />
+                    <span className="absolute inset-y-0 right-3 flex items-center text-slate-400 text-[10px] font-bold">%</span>
+                  </div>
+                  <span className="text-[9px] text-slate-400 mt-0.5 block">
+                    Attendance percentage expectations. Standard baseline: 95%
+                  </span>
+                </div>
+
+                {/* Project Value Target */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                    Min Delivered Value ($)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-3 flex items-center text-slate-400 font-mono text-xs">$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      required
+                      value={targetFormData.projectValueMin}
+                      onChange={(e) => setTargetFormData({ ...targetFormData, projectValueMin: Number(e.target.value) })}
+                      className="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none font-mono font-semibold"
+                    />
+                  </div>
+                  <span className="text-[9px] text-slate-400 mt-0.5 block">
+                    Delivered project financial worth in dollars. Standard: $25,000
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="p-6 pt-4 border-t border-slate-100 flex justify-end gap-2 text-xs shrink-0 bg-slate-50/50">
+                <button
+                  type="button"
+                  onClick={() => setIsTargetsModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-lg transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-lg shadow-md hover:shadow-lg transition-all cursor-pointer"
+                >
+                  Save Target
                 </button>
               </div>
             </form>

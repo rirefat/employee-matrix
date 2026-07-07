@@ -178,6 +178,34 @@ app.post("/api/reports/generate", async (req, res) => {
   }
 });
 
+// --- TARGETS API ---
+app.get("/api/targets", async (req, res) => {
+  try {
+    const { month } = req.query;
+    const targets = await dbService.getTargets(month as string);
+    res.json(targets);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to fetch targets" });
+  }
+});
+
+app.post("/api/targets", async (req, res) => {
+  try {
+    const { month, attendanceMin, projectValueMin } = req.body;
+    if (!month || attendanceMin === undefined || projectValueMin === undefined) {
+      return res.status(400).json({ error: "Missing required target fields" });
+    }
+    const saved = await dbService.saveTarget({
+      month,
+      attendanceMin: Number(attendanceMin),
+      projectValueMin: Number(projectValueMin)
+    });
+    res.json(saved);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to save target" });
+  }
+});
+
 // --- VITE DEV MIDDLEWARE OR PRODUCTION STATIC ROUTING ---
 if (process.env.NODE_ENV !== "production") {
   console.log("Setting up Vite Development Server middleware...");

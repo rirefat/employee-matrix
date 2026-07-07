@@ -7,7 +7,9 @@ import {
   Award,
   DollarSign,
   Briefcase,
-  Sparkles
+  Sparkles,
+  Zap,
+  Activity
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -18,11 +20,10 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  LineChart,
-  Line,
-  Cell,
   AreaChart,
-  Area
+  Area,
+  Line,
+  Cell
 } from "recharts";
 import { Employee, PerformanceRecord } from "../types";
 import { motion } from "motion/react";
@@ -192,16 +193,17 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
       .slice(0, 4);
   }, [employees, records]);
 
-  // Design Colors
+  // Design Colors & Palettes
   const COLORS = {
     blue: "#3b82f6",
     emerald: "#10b981",
     indigo: "#6366f1",
     violet: "#8b5cf6",
-    cyan: "#06b6d4"
+    cyan: "#06b6d4",
+    slate: "#64748b"
   };
 
-  const barColors = [COLORS.blue, COLORS.indigo, COLORS.cyan, COLORS.violet, COLORS.emerald];
+  const barColors = [COLORS.indigo, COLORS.cyan, COLORS.violet, COLORS.blue, COLORS.emerald];
 
   const getInitials = (name: string) => {
     return name
@@ -212,20 +214,44 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
       .toUpperCase();
   };
 
-  // Stagger Container animations
+  // Custom high-fidelity modern tooltip
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-slate-950/90 border border-slate-800/80 backdrop-blur-md text-white rounded-xl p-3 shadow-xl text-left font-sans">
+          <p className="text-[9px] font-mono font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">{label}</p>
+          <div className="space-y-1">
+            {payload.map((item: any, i: number) => (
+              <div key={i} className="flex items-center gap-3 justify-between min-w-[120px]">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: item.color || item.fill }} />
+                  <span className="text-[10px] font-medium text-slate-300">{item.name}</span>
+                </div>
+                <span className="text-[10px] font-mono font-bold text-white">
+                  {typeof item.value === 'number' && item.name.includes('Value') ? `$${item.value}k` : item.value}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.05
+        staggerChildren: 0.04
       }
     }
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 16, scale: 0.98 },
-    show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 260, damping: 22 } }
+    hidden: { opacity: 0, y: 12, scale: 0.99 },
+    show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 280, damping: 25 } }
   };
 
   return (
@@ -236,121 +262,149 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
       animate="show"
       className="space-y-6"
     >
-      {/* Sleek Metrics Row */}
+      {/* Sleek, Minimal Metrics Row */}
       <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Metric 1 */}
-        <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-xs hover:shadow-md hover:border-slate-200/60 transition-all duration-300 relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500/80 rounded-r" />
+        <motion.div 
+          whileHover={{ y: -3, transition: { duration: 0.2 } }}
+          className="relative bg-white/70 backdrop-blur-md border border-slate-200/60 p-4 rounded-2xl shadow-2xs hover:shadow-md hover:border-slate-300 transition-all duration-300 group overflow-hidden"
+        >
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-blue-500 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Team Size</span>
-            <span className="p-1.5 bg-blue-50 text-blue-500 rounded-xl transition-transform group-hover:scale-105 duration-300">
+            <span className="text-[9px] font-mono font-extrabold text-slate-400 uppercase tracking-widest">Team Size</span>
+            <span className="p-1.5 bg-slate-50 border border-slate-100/80 text-blue-500 rounded-xl transition-all duration-300 group-hover:bg-blue-50 group-hover:text-blue-600">
               <Users className="h-4 w-4" />
             </span>
           </div>
-          <p className="text-2xl font-black font-mono text-slate-800 mt-2 tracking-tight">
+          <p className="text-3xl font-bold font-display text-slate-900 mt-2 tracking-tight">
             {summaryMetrics.totalEmployees}
           </p>
-          <span className="text-[10px] text-slate-400 block mt-1 font-medium">Active personnel profiles</span>
-        </div>
+          <span className="text-[10px] text-slate-400 block mt-1 font-medium font-sans">Active profiles in matrix</span>
+        </motion.div>
 
         {/* Metric 2 */}
-        <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-xs hover:shadow-md hover:border-slate-200/60 transition-all duration-300 relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-500/80 rounded-r" />
+        <motion.div 
+          whileHover={{ y: -3, transition: { duration: 0.2 } }}
+          className="relative bg-white/70 backdrop-blur-md border border-slate-200/60 p-4 rounded-2xl shadow-2xs hover:shadow-md hover:border-slate-300 transition-all duration-300 group overflow-hidden"
+        >
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-emerald-400 to-teal-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Avg Attendance</span>
-            <span className="p-1.5 bg-emerald-50 text-emerald-500 rounded-xl transition-transform group-hover:scale-105 duration-300">
+            <span className="text-[9px] font-mono font-extrabold text-slate-400 uppercase tracking-widest">Attendance</span>
+            <span className="p-1.5 bg-slate-50 border border-slate-100/80 text-emerald-500 rounded-xl transition-all duration-300 group-hover:bg-emerald-50 group-hover:text-emerald-600">
               <CalendarCheck className="h-4 w-4" />
             </span>
           </div>
-          <p className="text-2xl font-black font-mono text-slate-800 mt-2 tracking-tight">
+          <p className="text-3xl font-bold font-display text-slate-900 mt-2 tracking-tight">
             {summaryMetrics.avgAttendance}%
           </p>
-          <span className="text-[10px] text-slate-400 block mt-1 font-medium">Workplace presence rate</span>
-        </div>
+          <span className="text-[10px] text-slate-400 block mt-1 font-medium font-sans">Workplace presence rate</span>
+        </motion.div>
 
         {/* Metric 3 */}
-        <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-xs hover:shadow-md hover:border-slate-200/60 transition-all duration-300 relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500/80 rounded-r" />
+        <motion.div 
+          whileHover={{ y: -3, transition: { duration: 0.2 } }}
+          className="relative bg-white/70 backdrop-blur-md border border-slate-200/60 p-4 rounded-2xl shadow-2xs hover:shadow-md hover:border-slate-300 transition-all duration-300 group overflow-hidden"
+        >
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-indigo-500 to-violet-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Meetings Run</span>
-            <span className="p-1.5 bg-indigo-50 text-indigo-500 rounded-xl transition-transform group-hover:scale-105 duration-300">
+            <span className="text-[9px] font-mono font-extrabold text-slate-400 uppercase tracking-widest">Meetings Run</span>
+            <span className="p-1.5 bg-slate-50 border border-slate-100/80 text-indigo-500 rounded-xl transition-all duration-300 group-hover:bg-indigo-50 group-hover:text-indigo-600">
               <Video className="h-4 w-4" />
             </span>
           </div>
-          <p className="text-2xl font-black font-mono text-slate-800 mt-2 tracking-tight">
+          <p className="text-3xl font-bold font-display text-slate-900 mt-2 tracking-tight">
             {summaryMetrics.totalMeetings}
           </p>
-          <span className="text-[10px] text-slate-400 block mt-1 font-medium">Syncs & reviews conducted</span>
-        </div>
+          <span className="text-[10px] text-slate-400 block mt-1 font-medium font-sans">Syncs & reviews conducted</span>
+        </motion.div>
 
         {/* Metric 4 */}
-        <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-xs hover:shadow-md hover:border-slate-200/60 transition-all duration-300 relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-violet-500/80 rounded-r" />
+        <motion.div 
+          whileHover={{ y: -3, transition: { duration: 0.2 } }}
+          className="relative bg-white/70 backdrop-blur-md border border-slate-200/60 p-4 rounded-2xl shadow-2xs hover:shadow-md hover:border-slate-300 transition-all duration-300 group overflow-hidden"
+        >
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-violet-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Projects Shipped</span>
-            <span className="p-1.5 bg-violet-50 text-violet-500 rounded-xl transition-transform group-hover:scale-105 duration-300">
+            <span className="text-[9px] font-mono font-extrabold text-slate-400 uppercase tracking-widest">Shipped Items</span>
+            <span className="p-1.5 bg-slate-50 border border-slate-100/80 text-violet-500 rounded-xl transition-all duration-300 group-hover:bg-violet-50 group-hover:text-violet-600">
               <Briefcase className="h-4 w-4" />
             </span>
           </div>
-          <p className="text-2xl font-black font-mono text-slate-800 mt-2 tracking-tight">
+          <p className="text-3xl font-bold font-display text-slate-900 mt-2 tracking-tight">
             {summaryMetrics.totalProjectsAmount}
           </p>
-          <span className="text-[10px] text-slate-400 block mt-1 font-medium">Standalone accomplishments</span>
-        </div>
+          <span className="text-[10px] text-slate-400 block mt-1 font-medium font-sans">Standalone accomplishments</span>
+        </motion.div>
 
         {/* Metric 5 */}
-        <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-xs hover:shadow-md hover:border-slate-200/60 transition-all duration-300 relative overflow-hidden group col-span-2 lg:col-span-1">
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-600 rounded-r" />
+        <motion.div 
+          whileHover={{ y: -3, transition: { duration: 0.2 } }}
+          className="relative bg-white/70 backdrop-blur-md border border-slate-200/60 p-4 rounded-2xl shadow-2xs hover:shadow-md hover:border-slate-300 transition-all duration-300 group overflow-hidden col-span-2 lg:col-span-1"
+        >
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-indigo-500 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Delivered Value</span>
-            <span className="p-1.5 bg-teal-50 text-teal-600 rounded-xl transition-transform group-hover:scale-105 duration-300">
+            <span className="text-[9px] font-mono font-extrabold text-slate-400 uppercase tracking-widest">Pipeline Impact</span>
+            <span className="p-1.5 bg-slate-50 border border-slate-100/80 text-emerald-600 rounded-xl transition-all duration-300 group-hover:bg-emerald-50 group-hover:text-emerald-700">
               <DollarSign className="h-4 w-4" />
             </span>
           </div>
-          <p className="text-2xl font-black font-mono text-emerald-600 mt-2 tracking-tight">
+          <p className="text-3xl font-bold font-display text-emerald-600 mt-2 tracking-tight">
             ${(summaryMetrics.totalProjectsValue / 1000).toFixed(0)}k
           </p>
-          <span className="text-[10px] text-slate-400 block mt-1 font-medium">Sized portfolio financial weight</span>
-        </div>
+          <span className="text-[10px] text-slate-400 block mt-1 font-medium font-sans">Sized portfolio valuation</span>
+        </motion.div>
       </motion.div>
 
       {records.length === 0 ? (
         <motion.div
           variants={itemVariants}
-          className="bg-white border border-slate-100 rounded-2xl p-12 text-center text-slate-400 italic shadow-xs"
+          className="bg-white/60 backdrop-blur-md border border-slate-200/60 rounded-2xl p-12 text-center text-slate-400 italic font-medium shadow-xs"
         >
-          Please record monthly metrics first to view interactive dashboard trend charts.
+          Please record monthly metrics first to populate the interactive trend grids.
         </motion.div>
       ) : (
         <>
-          {/* Charts Row */}
-          <div className="grid md:grid-cols-2 gap-6">
+          {/* Charts Row - Completely Redesigned to be Sleek and Non-Cluttered */}
+          <div className="grid grid-cols-1 gap-6">
             {/* Chart 1: Project value by Department */}
             <motion.div
               variants={itemVariants}
-              className="bg-white border border-slate-100 rounded-2xl p-5 shadow-xs hover:shadow-sm transition-shadow relative overflow-hidden"
+              className="bg-white/70 backdrop-blur-md border border-slate-200/60 rounded-2xl p-6 shadow-2xs hover:shadow-xs transition-all"
             >
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-indigo-500" />
-                    Project Sizing by Department
+                  <h4 className="text-xs font-bold font-display text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-indigo-500 shrink-0" />
+                    Department Distribution
                   </h4>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Value distribution ($k) per division</p>
+                  <p className="text-[10px] text-slate-400 font-mono font-medium mt-0.5">Project Sizing Volume ($k)</p>
                 </div>
+                <span className="text-[9px] font-mono font-extrabold uppercase tracking-widest text-slate-400 px-2.5 py-1 bg-slate-50 border border-slate-100 rounded-lg">
+                  Division View
+                </span>
               </div>
-              <div className="h-[240px] mt-6">
+              <div className="h-[220px] mt-2">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={departmentData} barGap={0} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f8fafc" />
-                    <XAxis dataKey="name" fontSize={9} stroke="#94a3b8" tickLine={false} axisLine={false} />
-                    <YAxis fontSize={9} stroke="#94a3b8" tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}k`} />
-                    <Tooltip
-                      cursor={{ fill: '#f8fafc', opacity: 0.6 }}
-                      formatter={(value: any) => [`$${value}k`, "Total Value"]}
-                      contentStyle={{ background: "#0f172a", borderRadius: "12px", color: "#fff", border: "none", fontSize: "11px" }}
+                  <BarChart data={departmentData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f1f5f9" />
+                    <XAxis 
+                      dataKey="name" 
+                      fontSize={9} 
+                      stroke="#94a3b8" 
+                      tickLine={false} 
+                      axisLine={false} 
+                      dy={8}
                     />
-                    <Bar dataKey="Value ($k)" radius={[6, 6, 0, 0]} maxBarSize={32}>
+                    <YAxis 
+                      fontSize={9} 
+                      stroke="#94a3b8" 
+                      tickLine={false} 
+                      axisLine={false} 
+                      tickFormatter={(v) => `$${v}k`} 
+                      dx={-4}
+                    />
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f1f5f9', opacity: 0.5 }} />
+                    <Bar dataKey="Value ($k)" radius={[6, 6, 0, 0]} maxBarSize={28}>
                       {departmentData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={barColors[index % barColors.length]} />
                       ))}
@@ -363,85 +417,126 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
             {/* Chart 2: Project Delivery vs Meetings Over Time */}
             <motion.div
               variants={itemVariants}
-              className="bg-white border border-slate-100 rounded-2xl p-5 shadow-xs hover:shadow-sm transition-shadow"
+              className="bg-white/70 backdrop-blur-md border border-slate-200/60 rounded-2xl p-6 shadow-2xs hover:shadow-xs transition-all"
             >
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-blue-500" />
-                    Engagement & Delivery Timeline
+                  <h4 className="text-xs font-bold font-display text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />
+                    Timeline Dynamics
                   </h4>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Comparing shipped items and run meetings over months</p>
+                  <p className="text-[10px] text-slate-400 font-mono font-medium mt-0.5">Projects Delivered vs Meetings Run</p>
                 </div>
+                <span className="text-[9px] font-mono font-extrabold uppercase tracking-widest text-slate-400 px-2.5 py-1 bg-slate-50 border border-slate-100 rounded-lg">
+                  MoM View
+                </span>
               </div>
-              <div className="h-[240px] mt-6">
+              <div className="h-[220px] mt-2">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={timelineData} margin={{ top: 10, right: 15, left: -25, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f8fafc" />
-                    <XAxis dataKey="name" fontSize={9} stroke="#94a3b8" tickLine={false} axisLine={false} />
-                    <YAxis fontSize={9} stroke="#94a3b8" tickLine={false} axisLine={false} />
-                    <Tooltip
-                      contentStyle={{ background: "#0f172a", borderRadius: "12px", color: "#fff", border: "none", fontSize: "11px" }}
+                  <AreaChart data={timelineData} margin={{ top: 10, right: 15, left: -25, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={COLORS.blue} stopOpacity={0.15}/>
+                        <stop offset="95%" stopColor={COLORS.blue} stopOpacity={0.0}/>
+                      </linearGradient>
+                      <linearGradient id="colorMeetings" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={COLORS.indigo} stopOpacity={0.1}/>
+                        <stop offset="95%" stopColor={COLORS.indigo} stopOpacity={0.0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#f1f5f9" />
+                    <XAxis 
+                      dataKey="name" 
+                      fontSize={9} 
+                      stroke="#94a3b8" 
+                      tickLine={false} 
+                      axisLine={false} 
+                      dy={8}
                     />
-                    <Line
+                    <YAxis 
+                      fontSize={9} 
+                      stroke="#94a3b8" 
+                      tickLine={false} 
+                      axisLine={false} 
+                      dx={-4}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area
                       type="monotone"
                       dataKey="Projects Delivered"
                       stroke={COLORS.blue}
-                      strokeWidth={2.5}
-                      dot={{ r: 3, strokeWidth: 1.5, fill: "#fff" }}
-                      activeDot={{ r: 5 }}
+                      strokeWidth={2}
+                      fillOpacity={1}
+                      fill="url(#colorValue)"
                     />
-                    <Line
+                    <Area
                       type="monotone"
                       dataKey="Meetings"
                       stroke={COLORS.indigo}
                       strokeWidth={1.5}
                       strokeDasharray="4 4"
-                      dot={{ r: 2 }}
+                      fillOpacity={1}
+                      fill="url(#colorMeetings)"
                     />
-                  </LineChart>
+                  </AreaChart>
                 </ResponsiveContainer>
               </div>
             </motion.div>
           </div>
 
-          {/* Lower Grid Row */}
-          <div className="grid md:grid-cols-12 gap-6">
-            {/* Sleek Contributors Bento */}
+          {/* Lower Grid Row: High-Polished Lists & Progress bars */}
+          <div className="grid grid-cols-1 gap-6">
+            {/* Top Contributors Bento - Minimal, modern ranking structure */}
             <motion.div
               variants={itemVariants}
-              className="bg-white border border-slate-100 rounded-2xl p-5 shadow-xs md:col-span-7 lg:col-span-8 flex flex-col"
+              className="bg-white/70 backdrop-blur-md border border-slate-200/60 rounded-2xl p-6 shadow-2xs flex flex-col"
             >
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 mb-1">
-                <Award className="h-4 w-4 text-amber-500 animate-pulse" />
-                Key Team Contributors
-              </h4>
-              <p className="text-[10px] text-slate-400 mb-4">Historical cumulative productivity ranking</p>
+              <div className="flex justify-between items-center mb-5">
+                <div>
+                  <h4 className="text-xs font-bold font-display text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <Award className="h-4 w-4 text-amber-500 shrink-0" />
+                    Key Team Contributors
+                  </h4>
+                  <p className="text-[10px] text-slate-400 font-mono font-medium mt-0.5">Cumulative production efficiency leaderboards</p>
+                </div>
+              </div>
               
-              <div className="flex-1 space-y-2.5">
+              <div className="flex-1 space-y-3">
                 {topPerformers.map((perf, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between p-3 rounded-xl border border-slate-50 hover:bg-slate-50/50 hover:border-slate-100 transition-all duration-300"
+                    className="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50/50 transition-all duration-300"
                   >
                     <div className="flex items-center gap-3">
-                      {/* Initials profile bubble */}
-                      <div className="w-9 h-9 rounded-lg bg-slate-100 border border-slate-200/40 flex items-center justify-center text-[10px] font-bold text-slate-600">
-                        {getInitials(perf.name)}
+                      {/* Futurist Rank badge */}
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-mono font-extrabold text-[10px] border ${
+                        index === 0 
+                          ? 'bg-amber-50 border-amber-200 text-amber-700 shadow-sm shadow-amber-500/5' 
+                          : index === 1 
+                          ? 'bg-slate-50 border-slate-200 text-slate-600' 
+                          : 'bg-transparent border-slate-100 text-slate-400'
+                      }`}>
+                        #{index + 1}
                       </div>
-                      <div>
-                        <h5 className="text-xs font-bold text-slate-800">{perf.name}</h5>
-                        <p className="text-[9px] text-slate-400 mt-0.5">{perf.department}</p>
+
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-slate-100 to-slate-200 border border-slate-300/40 flex items-center justify-center text-[10px] font-extrabold text-slate-600">
+                          {getInitials(perf.name)}
+                        </div>
+                        <div>
+                          <h5 className="text-xs font-bold text-slate-900 font-display leading-tight">{perf.name}</h5>
+                          <p className="text-[9px] text-slate-400 font-mono font-semibold mt-0.5">{perf.department}</p>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-5">
                       <div className="text-right">
-                        <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold block">Shipped</span>
-                        <span className="text-xs font-mono font-bold text-slate-700">{perf.totalProjects} items</span>
+                        <span className="text-[8px] uppercase tracking-widest text-slate-400 font-mono font-extrabold block">Shipped</span>
+                        <span className="text-xs font-mono font-bold text-slate-800">{perf.totalProjects} items</span>
                       </div>
                       <div className="text-right min-w-[70px]">
-                        <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold block">Weight</span>
+                        <span className="text-[8px] uppercase tracking-widest text-slate-400 font-mono font-extrabold block">Value Weight</span>
                         <span className="text-xs font-mono font-extrabold text-emerald-600">
                           ${(perf.totalValue / 1000).toFixed(0)}k
                         </span>
@@ -452,26 +547,30 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
               </div>
             </motion.div>
 
-            {/* Attendance Bento Block */}
+            {/* Attendance Bento Block - Minimal gauge tracks */}
             <motion.div
               variants={itemVariants}
-              className="bg-white border border-slate-100 rounded-2xl p-5 shadow-xs md:col-span-5 lg:col-span-4"
+              className="bg-white/70 backdrop-blur-md border border-slate-200/60 rounded-2xl p-6 shadow-2xs"
             >
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 mb-1">
-                <CalendarCheck className="h-4 w-4 text-emerald-500" />
-                Attendance Breakdown
-              </h4>
-              <p className="text-[10px] text-slate-400 mb-5">Average attendance rate by organizational unit</p>
+              <div className="mb-5">
+                <h4 className="text-xs font-bold font-display text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <Activity className="h-4 w-4 text-emerald-500 shrink-0" />
+                  Presence Matrix
+                </h4>
+                <p className="text-[10px] text-slate-400 font-mono font-medium mt-0.5">Average attendance by division unit</p>
+              </div>
               
               <div className="space-y-4">
                 {departmentData.map((d, index) => (
                   <div key={index} className="space-y-1.5">
                     <div className="flex justify-between items-center text-xs">
-                      <span className="font-bold text-slate-700 text-[11px]">{d.name}</span>
-                      <span className="font-mono text-[10px] font-bold text-slate-500">{d["Avg Attendance (%)"]}%</span>
+                      <span className="font-bold font-display text-slate-800 text-[11px]">{d.name}</span>
+                      <span className="font-mono text-[10px] font-extrabold text-slate-500 bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded-md">
+                        {d["Avg Attendance (%)"]}%
+                      </span>
                     </div>
-                    {/* Sleek track and progress line */}
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200/20">
+                    {/* Futuristic progress indicator bar */}
+                    <div className="h-2 w-full bg-slate-50 rounded-full overflow-hidden p-0.5 border border-slate-200/40">
                       <div
                         className="h-full rounded-full bg-gradient-to-r from-blue-400 to-indigo-500 transition-all duration-500"
                         style={{ width: `${d["Avg Attendance (%)"]}%` }}
