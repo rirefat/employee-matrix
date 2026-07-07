@@ -36,6 +36,8 @@ import { Employee, PerformanceRecord, MonthlyReport } from "./types";
 import { DBStatusBanner } from "./components/DBStatusBanner";
 import { ReportViewer } from "./components/ReportViewer";
 import { DashboardTab } from "./components/DashboardTab";
+import { EmployeeCard } from "./components/EmployeeCard";
+import { motion, AnimatePresence } from "motion/react";
 
 const DEPARTMENTS = ["Engineering", "Sales", "Customer Success", "Product", "Operations"];
 
@@ -390,13 +392,9 @@ export default function App() {
 
       {/* Main Grid Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-12 gap-6 items-start">
-        {/* DB Status Banner (spanning full width) */}
-        <div className="col-span-12">
-          <DBStatusBanner />
-        </div>
 
         {/* LEFT COLUMN: Direct Reports Sidebar */}
-        <aside className="col-span-12 lg:col-span-4 flex flex-col gap-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+        <aside className="col-span-12 lg:col-span-4 lg:sticky lg:top-20 z-30 flex flex-col gap-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
               <Users className="h-4 w-4 text-blue-600" />
@@ -428,57 +426,21 @@ export default function App() {
                 No matching team members found.
               </div>
             ) : (
-              filteredEmployees.map((emp) => {
+              filteredEmployees.map((emp, index) => {
                 const isSelected = emp.id === reportEmployeeId;
                 const rec = performance.find(p => p.employeeId === emp.id && p.month === selectedMonth);
                 const hasReport = reports.some(r => r.employeeId === emp.id && r.month === selectedMonth);
 
                 return (
-                  <div
+                  <EmployeeCard
                     key={emp.id}
+                    index={index}
+                    employee={emp}
+                    isActive={isSelected}
+                    performanceRecord={rec}
+                    hasReport={hasReport}
                     onClick={() => setReportEmployeeId(emp.id)}
-                    className={`p-3.5 flex items-center gap-3.5 rounded-xl border transition-all cursor-pointer ${
-                      isSelected
-                        ? "bg-blue-50 border-blue-200 shadow-sm"
-                        : "bg-white border-slate-100 hover:bg-slate-50/80"
-                    }`}
-                  >
-                    {/* Initials block exactly like Mockup */}
-                    <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-xs ${
-                      isSelected
-                        ? "bg-blue-200 text-blue-700"
-                        : "bg-slate-100 text-slate-600"
-                    }`}>
-                      {getInitials(emp.name)}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-bold text-slate-800 truncate">{emp.name}</div>
-                      <div className="text-[10px] text-slate-400 truncate mt-0.5">{emp.role}</div>
-                    </div>
-
-                    {/* Right attendance indicator */}
-                    <div className="text-right flex-shrink-0">
-                      <div className="text-xs font-mono font-bold text-slate-700">
-                        {rec ? `${rec.attendance}%` : "—"}
-                      </div>
-                      <div className="mt-1 flex justify-end">
-                        {hasReport ? (
-                          <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[8px] font-bold">
-                            AI Report
-                          </span>
-                        ) : rec ? (
-                          <span className="inline-block px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 text-[8px] font-medium">
-                            Logged
-                          </span>
-                        ) : (
-                          <span className="inline-block px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 text-[8px] font-medium">
-                            Pending
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  />
                 );
               })
             )}
@@ -532,34 +494,40 @@ export default function App() {
             <div className="space-y-6">
               {selectedReportEmployeeObj ? (
                 <>
-                  {/* Selected employee info card */}
-                  <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
-                    <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
+                  {/* Glassmorphic Selected employee info card with ambient blur backdrops */}
+                  <div className="relative overflow-hidden rounded-2xl border border-white/40 shadow-xl p-6 bg-white/60 backdrop-blur-md">
+                    {/* Atmospheric color nodes under glass to enhance depth */}
+                    <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 blur-3xl pointer-events-none" />
+                    <div className="absolute -bottom-24 -left-24 w-48 h-48 rounded-full bg-gradient-to-br from-emerald-500/10 to-teal-500/20 blur-3xl pointer-events-none" />
+                    <div className="absolute top-1/2 left-1/3 w-32 h-32 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+
+                    <div className="relative z-10 flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
                       <div className="flex gap-4">
-                        <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600 font-bold text-2xl shadow-xs">
+                        {/* Avatar block with active state glowing borders */}
+                        <div className="w-16 h-16 bg-gradient-to-tr from-blue-500 to-indigo-600 text-white rounded-2xl flex items-center justify-center font-bold text-2xl shadow-md border border-white/20">
                           {getInitials(selectedReportEmployeeObj.name)}
                         </div>
                         <div>
-                          <h1 className="text-xl md:text-2xl font-bold text-slate-900">{selectedReportEmployeeObj.name}</h1>
-                          <p className="text-xs text-slate-500 mt-1">
-                            Performance Tier:{" "}
+                          <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">{selectedReportEmployeeObj.name}</h1>
+                          <p className="text-xs text-slate-600 mt-1 flex items-center gap-1.5">
+                            <span className="font-medium">Matrix Tier:</span>
                             {activeRecord ? (
                               activeRecord.attendance >= 95 && activeRecord.deliveredProjectsAmount >= 2 ? (
-                                <span className="text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full text-[10px]">Exceeds Expectations</span>
+                                <span className="text-emerald-700 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full text-[10px]">Exceeds Expectations</span>
                               ) : activeRecord.attendance >= 90 ? (
-                                <span className="text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded-full text-[10px]">Meets Expectations</span>
+                                <span className="text-blue-700 font-bold bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full text-[10px]">Meets Expectations</span>
                               ) : (
-                                <span className="text-amber-500 font-bold bg-amber-50 px-2 py-0.5 rounded-full text-[10px]">Development Required</span>
+                                <span className="text-amber-600 font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full text-[10px]">Development Required</span>
                               )
                             ) : (
                               <span className="text-slate-400 italic font-medium">No metrics registered yet</span>
                             )}
                           </p>
                           <div className="flex flex-wrap gap-2 mt-3">
-                            <span className="px-2.5 py-0.5 bg-slate-50 border border-slate-100 rounded text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                            <span className="px-2.5 py-0.5 bg-white/60 border border-white/50 backdrop-blur-xs rounded-md text-[9px] font-bold text-slate-500 uppercase tracking-wider">
                               Q3 Focus: {selectedReportEmployeeObj.department}
                             </span>
-                            <span className="px-2.5 py-0.5 bg-slate-50 border border-slate-100 rounded text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                            <span className="px-2.5 py-0.5 bg-white/60 border border-white/50 backdrop-blur-xs rounded-md text-[9px] font-bold text-slate-500 uppercase tracking-wider">
                               Remote-First
                             </span>
                           </div>
@@ -567,10 +535,10 @@ export default function App() {
                       </div>
 
                       {/* Action buttons inside Profile Card */}
-                      <div className="flex gap-2 w-full md:w-auto">
+                      <div className="flex gap-2 w-full md:w-auto relative z-20">
                         <button
                           onClick={() => handleOpenPerformanceLog(selectedReportEmployeeObj)}
-                          className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 rounded-xl text-xs font-semibold transition-all shadow-xs"
+                          className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-white/60 border border-white/50 text-slate-700 hover:bg-white/80 rounded-xl text-xs font-semibold transition-all shadow-xs backdrop-blur-xs"
                         >
                           <Plus className="h-3.5 w-3.5 text-blue-500" />
                           Log Metrics
@@ -579,7 +547,7 @@ export default function App() {
                         <button
                           onClick={handleGenerateReport}
                           disabled={isGeneratingReport || !activeRecord}
-                          className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+                          className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-blue-300 disabled:to-indigo-300 text-white rounded-xl text-xs font-bold transition-all shadow-md border border-white/10"
                         >
                           <Sparkles className="h-3.5 w-3.5" />
                           Generate Report
@@ -587,60 +555,70 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Four metrics boxes matching mockup precisely */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {/* Four metrics boxes redesigned as frosted glass panels with dynamic gauge style */}
+                    <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-4">
                       {/* Box 1: Attendance */}
-                      <div className="p-4 bg-slate-50/50 rounded-xl border border-slate-100 flex flex-col justify-between min-h-[96px]">
+                      <div className="p-4 bg-white/40 border border-white/50 rounded-xl flex flex-col justify-between min-h-[105px] transition-all hover:bg-white/50 hover:shadow-xs">
                         <div>
-                          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Attendance</div>
+                          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Attendance Rate</div>
                           <div className="text-xl font-bold font-mono text-slate-800">
                             {activeRecord ? `${activeRecord.attendance}%` : "—"}
                           </div>
                           {activeRecord && (
-                            <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[9px] font-semibold text-slate-500 font-mono">
-                              <span className="text-emerald-600 bg-emerald-50 px-1 rounded">Pres: {activeRecord.presentDays !== undefined ? activeRecord.presentDays : Math.round((activeRecord.totalWorkingDays || 22) * (activeRecord.attendance / 100))}d</span>
-                              <span className="text-rose-600 bg-rose-50 px-1 rounded">Abs: {activeRecord.absentDays !== undefined ? activeRecord.absentDays : ((activeRecord.totalWorkingDays || 22) - (activeRecord.presentDays !== undefined ? activeRecord.presentDays : Math.round((activeRecord.totalWorkingDays || 22) * (activeRecord.attendance / 100))))}d</span>
+                            <div className="mt-1 flex flex-wrap gap-x-1.5 gap-y-0.5 text-[8px] font-semibold text-slate-500 font-mono">
+                              <span className="text-emerald-700 bg-emerald-500/10 px-1 rounded">Pres: {activeRecord.presentDays !== undefined ? activeRecord.presentDays : Math.round((activeRecord.totalWorkingDays || 22) * (activeRecord.attendance / 100))}d</span>
+                              <span className="text-rose-700 bg-rose-500/10 px-1 rounded">Abs: {activeRecord.absentDays !== undefined ? activeRecord.absentDays : ((activeRecord.totalWorkingDays || 22) - (activeRecord.presentDays !== undefined ? activeRecord.presentDays : Math.round((activeRecord.totalWorkingDays || 22) * (activeRecord.attendance / 100))))}d</span>
                               {activeRecord.leaveDays !== undefined && activeRecord.leaveDays > 0 && (
-                                <span className="text-amber-600 bg-amber-50 px-1 rounded">Lv: {activeRecord.leaveDays}d</span>
+                                <span className="text-amber-700 bg-amber-500/10 px-1 rounded">Lv: {activeRecord.leaveDays}d</span>
                               )}
                             </div>
                           )}
                         </div>
-                        <div className="h-1.5 w-full bg-slate-200 rounded-full mt-2 overflow-hidden">
+                        <div className="h-1.5 w-full bg-slate-200/50 rounded-full mt-2 overflow-hidden border border-white/20">
                           <div
-                            className="h-full bg-emerald-500 transition-all duration-500"
+                            className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 transition-all duration-500 rounded-full"
                             style={{ width: `${activeRecord ? activeRecord.attendance : 0}%` }}
                           />
                         </div>
                       </div>
 
                       {/* Box 2: Meetings */}
-                      <div className="p-4 bg-slate-50/50 rounded-xl border border-slate-100">
-                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Meetings</div>
-                        <div className="text-xl font-bold font-mono text-slate-800">
-                          {activeRecord ? activeRecord.conductedMeetings : "—"}
+                      <div className="p-4 bg-white/40 border border-white/50 rounded-xl flex flex-col justify-between min-h-[105px] transition-all hover:bg-white/50 hover:shadow-xs">
+                        <div>
+                          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Meetings Conducted</div>
+                          <div className="text-xl font-bold font-mono text-slate-800">
+                            {activeRecord ? activeRecord.conductedMeetings : "—"}
+                          </div>
                         </div>
-                        <div className="text-[9px] text-slate-400 mt-2 truncate">Conducted this month</div>
-                      </div>
-
-                      {/* Box 3: Proj Count */}
-                      <div className="p-4 bg-slate-50/50 rounded-xl border border-slate-100">
-                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Proj Count</div>
-                        <div className="text-xl font-bold font-mono text-slate-800">
-                          {activeRecord ? activeRecord.deliveredProjectsAmount : "—"}
-                        </div>
-                        <div className="text-[9px] text-emerald-600 font-bold mt-2 truncate">
-                          {activeRecord ? `+${activeRecord.deliveredProjectsAmount} Shipped` : "No deliverables"}
+                        <div className="text-[9px] text-slate-400 mt-2 truncate font-medium">
+                          {activeRecord ? `Target: 10 (${activeRecord.conductedMeetings >= 10 ? 'Exceeded' : 'Under'})` : "No activity"}
                         </div>
                       </div>
 
-                      {/* Box 4: Proj Value */}
-                      <div className="p-4 bg-slate-50/50 rounded-xl border border-slate-100">
-                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Proj Value</div>
-                        <div className="text-xl font-bold font-mono text-slate-800">
-                          {activeRecord ? `$${(activeRecord.deliveredProjectsValue / 1000).toFixed(0)}k` : "—"}
+                      {/* Box 3: Project Count */}
+                      <div className="p-4 bg-white/40 border border-white/50 rounded-xl flex flex-col justify-between min-h-[105px] transition-all hover:bg-white/50 hover:shadow-xs">
+                        <div>
+                          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Projects Shipped</div>
+                          <div className="text-xl font-bold font-mono text-slate-800">
+                            {activeRecord ? activeRecord.deliveredProjectsAmount : "—"}
+                          </div>
                         </div>
-                        <div className="text-[9px] text-slate-400 mt-2 truncate">High impact delivery</div>
+                        <div className="text-[9px] text-emerald-700 font-bold mt-2 truncate bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-md inline-block w-max">
+                          {activeRecord ? `+${activeRecord.deliveredProjectsAmount} Delivered` : "No deliverables"}
+                        </div>
+                      </div>
+
+                      {/* Box 4: Project Value */}
+                      <div className="p-4 bg-white/40 border border-white/50 rounded-xl flex flex-col justify-between min-h-[105px] transition-all hover:bg-white/50 hover:shadow-xs">
+                        <div>
+                          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Pipeline Impact</div>
+                          <div className="text-xl font-bold font-mono text-slate-800">
+                            {activeRecord ? `$${(activeRecord.deliveredProjectsValue / 1000).toFixed(0)}k` : "—"}
+                          </div>
+                        </div>
+                        <div className="text-[9px] text-slate-400 mt-2 truncate font-medium">
+                          {activeRecord ? "Strategic execution value" : "Pending evaluations"}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -654,52 +632,63 @@ export default function App() {
                       <span className="text-[10px] text-slate-400">Month-over-month performance overview</span>
                     </div>
 
-                    {employeeHistoryData.length === 0 ? (
-                      <div className="h-44 flex items-center justify-center text-xs text-slate-400 italic">
-                        Not enough historical data points to generate progress graphs. Record metrics for multiple months.
-                      </div>
-                    ) : (
-                      <div className="h-48 w-full mt-2">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={employeeHistoryData}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                            <XAxis
-                              dataKey="month"
-                              stroke="#94a3b8"
-                              fontSize={10}
-                              tickLine={false}
-                              axisLine={false}
-                            />
-                            <YAxis
-                              stroke="#94a3b8"
-                              fontSize={10}
-                              tickLine={false}
-                              axisLine={false}
-                              domain={[0, 'auto']}
-                            />
-                            <Tooltip
-                              contentStyle={{ background: '#0f172a', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '11px' }}
-                            />
-                            <Line
-                              type="monotone"
-                              dataKey="Attendance (%)"
-                              stroke="#10b981"
-                              strokeWidth={2}
-                              dot={{ r: 3 }}
-                              activeDot={{ r: 5 }}
-                            />
-                            <Line
-                              type="monotone"
-                              dataKey="Value ($k)"
-                              stroke="#3b82f6"
-                              strokeWidth={2}
-                              dot={{ r: 3 }}
-                              activeDot={{ r: 5 }}
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                    )}
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={selectedReportEmployeeObj?.id}
+                        initial={{ opacity: 0, y: 15, scale: 0.98, filter: "blur(4px)" }}
+                        animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+                        exit={{ opacity: 0, y: -10, scale: 0.98, filter: "blur(4px)" }}
+                        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                        className="w-full"
+                      >
+                        {employeeHistoryData.length === 0 ? (
+                          <div className="h-44 flex items-center justify-center text-xs text-slate-400 italic">
+                            Not enough historical data points to generate progress graphs. Record metrics for multiple months.
+                          </div>
+                        ) : (
+                          <div className="h-48 w-full mt-2">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <LineChart data={employeeHistoryData}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis
+                                  dataKey="month"
+                                  stroke="#94a3b8"
+                                  fontSize={10}
+                                  tickLine={false}
+                                  axisLine={false}
+                                />
+                                <YAxis
+                                  stroke="#94a3b8"
+                                  fontSize={10}
+                                  tickLine={false}
+                                  axisLine={false}
+                                  domain={[0, 'auto']}
+                                />
+                                <Tooltip
+                                  contentStyle={{ background: '#0f172a', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '11px' }}
+                                />
+                                <Line
+                                  type="monotone"
+                                  dataKey="Attendance (%)"
+                                  stroke="#10b981"
+                                  strokeWidth={2}
+                                  dot={{ r: 3 }}
+                                  activeDot={{ r: 5 }}
+                                />
+                                <Line
+                                  type="monotone"
+                                  dataKey="Value ($k)"
+                                  stroke="#3b82f6"
+                                  strokeWidth={2}
+                                  dot={{ r: 3 }}
+                                  activeDot={{ r: 5 }}
+                                />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )}
+                      </motion.div>
+                    </AnimatePresence>
                   </div>
 
                   {/* Report viewer inside Profile */}
@@ -1121,6 +1110,7 @@ export default function App() {
           </div>
         </div>
       )}
+      <DBStatusBanner />
     </div>
   );
 }

@@ -6,7 +6,8 @@ import {
   Video,
   Award,
   DollarSign,
-  Briefcase
+  Briefcase,
+  Sparkles
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -20,10 +21,11 @@ import {
   LineChart,
   Line,
   Cell,
-  PieChart,
-  Pie
+  AreaChart,
+  Area
 } from "recharts";
 import { Employee, PerformanceRecord } from "../types";
+import { motion } from "motion/react";
 
 interface DashboardTabProps {
   employees: Employee[];
@@ -102,6 +104,7 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
     return Object.values(map).map((d) => ({
       name: d.dept,
       "Total Value ($)": d.value,
+      "Value ($k)": Math.round(d.value / 1000),
       "Projects Delivered": d.amount,
       "Meetings Conducted": d.meetings,
       "Avg Attendance (%)": Math.round((d.attendanceSum / d.count) * 10) / 10,
@@ -148,7 +151,7 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
         return {
           monthCode: m,
           name: formattedMonth,
-          "Total Value ($)": d.value,
+          "Value ($k)": Math.round(d.value / 1000),
           "Projects Delivered": d.amount,
           "Meetings": d.meetings,
           "Avg Attendance (%)": Math.round((d.attendanceSum / d.count) * 10) / 10,
@@ -189,211 +192,298 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
       .slice(0, 4);
   }, [employees, records]);
 
-  const COLORS = ["#2563eb", "#10b981", "#f59e0b", "#3b82f6", "#06b6d4"];
+  // Design Colors
+  const COLORS = {
+    blue: "#3b82f6",
+    emerald: "#10b981",
+    indigo: "#6366f1",
+    violet: "#8b5cf6",
+    cyan: "#06b6d4"
+  };
+
+  const barColors = [COLORS.blue, COLORS.indigo, COLORS.cyan, COLORS.violet, COLORS.emerald];
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+  };
+
+  // Stagger Container animations
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.05
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 16, scale: 0.98 },
+    show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 260, damping: 22 } }
+  };
 
   return (
-    <div id="dashboard-tab" className="space-y-6">
-      {/* Metrics Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        {/* Card 1 */}
-        <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs">
+    <motion.div
+      id="dashboard-tab"
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="space-y-6"
+    >
+      {/* Sleek Metrics Row */}
+      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* Metric 1 */}
+        <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-xs hover:shadow-md hover:border-slate-200/60 transition-all duration-300 relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500/80 rounded-r" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase">Team Size</span>
-            <span className="p-1.5 bg-slate-100 text-slate-600 rounded-lg">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Team Size</span>
+            <span className="p-1.5 bg-blue-50 text-blue-500 rounded-xl transition-transform group-hover:scale-105 duration-300">
               <Users className="h-4 w-4" />
             </span>
           </div>
-          <p className="text-2xl font-extrabold font-mono text-slate-800 mt-2">
+          <p className="text-2xl font-black font-mono text-slate-800 mt-2 tracking-tight">
             {summaryMetrics.totalEmployees}
           </p>
-          <span className="text-[10px] text-slate-400 block mt-1">Active team profiles</span>
+          <span className="text-[10px] text-slate-400 block mt-1 font-medium">Active personnel profiles</span>
         </div>
 
-        {/* Card 2 */}
-        <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs">
+        {/* Metric 2 */}
+        <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-xs hover:shadow-md hover:border-slate-200/60 transition-all duration-300 relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-500/80 rounded-r" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase">Avg Attendance</span>
-            <span className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Avg Attendance</span>
+            <span className="p-1.5 bg-emerald-50 text-emerald-500 rounded-xl transition-transform group-hover:scale-105 duration-300">
               <CalendarCheck className="h-4 w-4" />
             </span>
           </div>
-          <p className="text-2xl font-extrabold font-mono text-slate-800 mt-2">
+          <p className="text-2xl font-black font-mono text-slate-800 mt-2 tracking-tight">
             {summaryMetrics.avgAttendance}%
           </p>
-          <span className="text-[10px] text-slate-400 block mt-1">Workplace presence avg</span>
+          <span className="text-[10px] text-slate-400 block mt-1 font-medium">Workplace presence rate</span>
         </div>
 
-        {/* Card 3 */}
-        <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs">
+        {/* Metric 3 */}
+        <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-xs hover:shadow-md hover:border-slate-200/60 transition-all duration-300 relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500/80 rounded-r" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase">Meetings</span>
-            <span className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Meetings Run</span>
+            <span className="p-1.5 bg-indigo-50 text-indigo-500 rounded-xl transition-transform group-hover:scale-105 duration-300">
               <Video className="h-4 w-4" />
             </span>
           </div>
-          <p className="text-2xl font-extrabold font-mono text-slate-800 mt-2">
+          <p className="text-2xl font-black font-mono text-slate-800 mt-2 tracking-tight">
             {summaryMetrics.totalMeetings}
           </p>
-          <span className="text-[10px] text-slate-400 block mt-1">Conducted collaboration sessions</span>
+          <span className="text-[10px] text-slate-400 block mt-1 font-medium">Syncs & reviews conducted</span>
         </div>
 
-        {/* Card 4 */}
-        <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-xs">
+        {/* Metric 4 */}
+        <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-xs hover:shadow-md hover:border-slate-200/60 transition-all duration-300 relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-1.5 h-full bg-violet-500/80 rounded-r" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase">Projects Shipped</span>
-            <span className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Projects Shipped</span>
+            <span className="p-1.5 bg-violet-50 text-violet-500 rounded-xl transition-transform group-hover:scale-105 duration-300">
               <Briefcase className="h-4 w-4" />
             </span>
           </div>
-          <p className="text-2xl font-extrabold font-mono text-slate-800 mt-2">
+          <p className="text-2xl font-black font-mono text-slate-800 mt-2 tracking-tight">
             {summaryMetrics.totalProjectsAmount}
           </p>
-          <span className="text-[10px] text-slate-400 block mt-1">Total standalone deliverables</span>
+          <span className="text-[10px] text-slate-400 block mt-1 font-medium">Standalone accomplishments</span>
         </div>
 
-        {/* Card 5 */}
-        <div className="bg-white border border-slate-200 p-4 rounded-xl col-span-2 lg:col-span-1 shadow-xs">
+        {/* Metric 5 */}
+        <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-xs hover:shadow-md hover:border-slate-200/60 transition-all duration-300 relative overflow-hidden group col-span-2 lg:col-span-1">
+          <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-600 rounded-r" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase">Delivered Value</span>
-            <span className="p-1.5 bg-amber-50 text-amber-600 rounded-lg">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Delivered Value</span>
+            <span className="p-1.5 bg-teal-50 text-teal-600 rounded-xl transition-transform group-hover:scale-105 duration-300">
               <DollarSign className="h-4 w-4" />
             </span>
           </div>
-          <p className="text-2xl font-extrabold font-mono text-emerald-600 mt-2">
-            ${summaryMetrics.totalProjectsValue.toLocaleString()}
+          <p className="text-2xl font-black font-mono text-emerald-600 mt-2 tracking-tight">
+            ${(summaryMetrics.totalProjectsValue / 1000).toFixed(0)}k
           </p>
-          <span className="text-[10px] text-slate-400 block mt-1">Financial project sizing value</span>
+          <span className="text-[10px] text-slate-400 block mt-1 font-medium">Sized portfolio financial weight</span>
         </div>
-      </div>
+      </motion.div>
 
       {records.length === 0 ? (
-        <div className="bg-white border border-slate-200 rounded-xl p-12 text-center text-slate-500">
-          <p>Please record monthly metrics first to view interactive dashboard trend charts.</p>
-        </div>
+        <motion.div
+          variants={itemVariants}
+          className="bg-white border border-slate-100 rounded-2xl p-12 text-center text-slate-400 italic shadow-xs"
+        >
+          Please record monthly metrics first to view interactive dashboard trend charts.
+        </motion.div>
       ) : (
         <>
           {/* Charts Row */}
           <div className="grid md:grid-cols-2 gap-6">
             {/* Chart 1: Project value by Department */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
-              <h4 className="text-sm font-bold text-slate-800 mb-1 flex items-center gap-1.5">
-                <DollarSign className="h-4 w-4 text-emerald-500" />
-                Delivered Project Value by Department
-              </h4>
-              <p className="text-xs text-slate-400 mb-4">Financial volume distribution of closed deliverables</p>
-              <div className="h-[280px]">
+            <motion.div
+              variants={itemVariants}
+              className="bg-white border border-slate-100 rounded-2xl p-5 shadow-xs hover:shadow-sm transition-shadow relative overflow-hidden"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-indigo-500" />
+                    Project Sizing by Department
+                  </h4>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Value distribution ($k) per division</p>
+                </div>
+              </div>
+              <div className="h-[240px] mt-6">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={departmentData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="name" fontSize={11} stroke="#94a3b8" />
-                    <YAxis fontSize={11} stroke="#94a3b8" tickFormatter={(v) => `$${v >= 1000 ? v / 1000 + "k" : v}`} />
+                  <BarChart data={departmentData} barGap={0} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f8fafc" />
+                    <XAxis dataKey="name" fontSize={9} stroke="#94a3b8" tickLine={false} axisLine={false} />
+                    <YAxis fontSize={9} stroke="#94a3b8" tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}k`} />
                     <Tooltip
-                      formatter={(value: any) => [`$${value.toLocaleString()}`, "Total Value"]}
-                      contentStyle={{ background: "#0f172a", borderRadius: "10px", color: "#fff", border: "none" }}
+                      cursor={{ fill: '#f8fafc', opacity: 0.6 }}
+                      formatter={(value: any) => [`$${value}k`, "Total Value"]}
+                      contentStyle={{ background: "#0f172a", borderRadius: "12px", color: "#fff", border: "none", fontSize: "11px" }}
                     />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Bar dataKey="Total Value ($)" radius={[6, 6, 0, 0]}>
+                    <Bar dataKey="Value ($k)" radius={[6, 6, 0, 0]} maxBarSize={32}>
                       {departmentData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={barColors[index % barColors.length]} />
                       ))}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            </div>
+            </motion.div>
 
             {/* Chart 2: Project Delivery vs Meetings Over Time */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
-              <h4 className="text-sm font-bold text-slate-800 mb-1 flex items-center gap-1.5">
-                <TrendingUp className="h-4 w-4 text-blue-500" />
-                Team Delivery Progression Timeline
-              </h4>
-              <p className="text-xs text-slate-400 mb-4">Tracking shipped deliverables alongside team meetings</p>
-              <div className="h-[280px]">
+            <motion.div
+              variants={itemVariants}
+              className="bg-white border border-slate-100 rounded-2xl p-5 shadow-xs hover:shadow-sm transition-shadow"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-blue-500" />
+                    Engagement & Delivery Timeline
+                  </h4>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Comparing shipped items and run meetings over months</p>
+                </div>
+              </div>
+              <div className="h-[240px] mt-6">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={timelineData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="name" fontSize={11} stroke="#94a3b8" />
-                    <YAxis fontSize={11} stroke="#94a3b8" />
+                  <LineChart data={timelineData} margin={{ top: 10, right: 15, left: -25, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f8fafc" />
+                    <XAxis dataKey="name" fontSize={9} stroke="#94a3b8" tickLine={false} axisLine={false} />
+                    <YAxis fontSize={9} stroke="#94a3b8" tickLine={false} axisLine={false} />
                     <Tooltip
-                      contentStyle={{ background: "#0f172a", borderRadius: "10px", color: "#fff", border: "none" }}
+                      contentStyle={{ background: "#0f172a", borderRadius: "12px", color: "#fff", border: "none", fontSize: "11px" }}
                     />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
                     <Line
                       type="monotone"
                       dataKey="Projects Delivered"
-                      stroke="#2563eb"
-                      strokeWidth={3}
-                      activeDot={{ r: 8 }}
+                      stroke={COLORS.blue}
+                      strokeWidth={2.5}
+                      dot={{ r: 3, strokeWidth: 1.5, fill: "#fff" }}
+                      activeDot={{ r: 5 }}
                     />
-                    <Line type="monotone" dataKey="Meetings" stroke="#f59e0b" strokeWidth={2} />
+                    <Line
+                      type="monotone"
+                      dataKey="Meetings"
+                      stroke={COLORS.indigo}
+                      strokeWidth={1.5}
+                      strokeDasharray="4 4"
+                      dot={{ r: 2 }}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-            </div>
+            </motion.div>
           </div>
 
-          {/* Department Breakdown Grid */}
-          <div className="grid md:grid-cols-3 gap-6">
-            {/* Top Performers List */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs md:col-span-2">
-              <h4 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-1.5">
-                <Award className="h-4 w-4 text-amber-500" />
-                Key Team Contributors (Historical Cumulative)
+          {/* Lower Grid Row */}
+          <div className="grid md:grid-cols-12 gap-6">
+            {/* Sleek Contributors Bento */}
+            <motion.div
+              variants={itemVariants}
+              className="bg-white border border-slate-100 rounded-2xl p-5 shadow-xs md:col-span-7 lg:col-span-8 flex flex-col"
+            >
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 mb-1">
+                <Award className="h-4 w-4 text-amber-500 animate-pulse" />
+                Key Team Contributors
               </h4>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-slate-500">
-                  <thead className="bg-slate-50 uppercase text-slate-400 font-mono text-[10px]">
-                    <tr>
-                      <th className="px-4 py-3 rounded-l-lg">Employee</th>
-                      <th className="px-4 py-3">Department</th>
-                      <th className="px-4 py-3 text-right">Projects Delivered</th>
-                      <th className="px-4 py-3 text-right rounded-r-lg">Project Value Sizing</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {topPerformers.map((perf, index) => (
-                      <tr key={index} className="hover:bg-slate-50/50">
-                        <td className="px-4 py-3 font-semibold text-slate-800">{perf.name}</td>
-                        <td className="px-4 py-3">{perf.department}</td>
-                        <td className="px-4 py-3 text-right font-mono">{perf.totalProjects}</td>
-                        <td className="px-4 py-3 text-right font-mono font-bold text-emerald-600">
-                          ${perf.totalValue.toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Attendance & Engagement Breakdown */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
-              <h4 className="text-sm font-bold text-slate-800 mb-1 flex items-center gap-1.5">
-                <CalendarCheck className="h-4 w-4 text-blue-500" />
-                Workplace Attendance Avg
-              </h4>
-              <p className="text-xs text-slate-400 mb-4">Average attendance breakdown by department</p>
-              <div className="space-y-4 mt-2">
-                {departmentData.map((d, index) => (
-                  <div key={index} className="space-y-1">
-                    <div className="flex justify-between text-xs font-semibold text-slate-700">
-                      <span>{d.name}</span>
-                      <span className="font-mono">{d["Avg Attendance (%)"]}%</span>
+              <p className="text-[10px] text-slate-400 mb-4">Historical cumulative productivity ranking</p>
+              
+              <div className="flex-1 space-y-2.5">
+                {topPerformers.map((perf, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 rounded-xl border border-slate-50 hover:bg-slate-50/50 hover:border-slate-100 transition-all duration-300"
+                  >
+                    <div className="flex items-center gap-3">
+                      {/* Initials profile bubble */}
+                      <div className="w-9 h-9 rounded-lg bg-slate-100 border border-slate-200/40 flex items-center justify-center text-[10px] font-bold text-slate-600">
+                        {getInitials(perf.name)}
+                      </div>
+                      <div>
+                        <h5 className="text-xs font-bold text-slate-800">{perf.name}</h5>
+                        <p className="text-[9px] text-slate-400 mt-0.5">{perf.department}</p>
+                      </div>
                     </div>
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+
+                    <div className="flex items-center gap-6">
+                      <div className="text-right">
+                        <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold block">Shipped</span>
+                        <span className="text-xs font-mono font-bold text-slate-700">{perf.totalProjects} items</span>
+                      </div>
+                      <div className="text-right min-w-[70px]">
+                        <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold block">Weight</span>
+                        <span className="text-xs font-mono font-extrabold text-emerald-600">
+                          ${(perf.totalValue / 1000).toFixed(0)}k
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Attendance Bento Block */}
+            <motion.div
+              variants={itemVariants}
+              className="bg-white border border-slate-100 rounded-2xl p-5 shadow-xs md:col-span-5 lg:col-span-4"
+            >
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 mb-1">
+                <CalendarCheck className="h-4 w-4 text-emerald-500" />
+                Attendance Breakdown
+              </h4>
+              <p className="text-[10px] text-slate-400 mb-5">Average attendance rate by organizational unit</p>
+              
+              <div className="space-y-4">
+                {departmentData.map((d, index) => (
+                  <div key={index} className="space-y-1.5">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-bold text-slate-700 text-[11px]">{d.name}</span>
+                      <span className="font-mono text-[10px] font-bold text-slate-500">{d["Avg Attendance (%)"]}%</span>
+                    </div>
+                    {/* Sleek track and progress line */}
+                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200/20">
                       <div
-                        className="h-full bg-blue-600 rounded-full"
+                        className="h-full rounded-full bg-gradient-to-r from-blue-400 to-indigo-500 transition-all duration-500"
                         style={{ width: `${d["Avg Attendance (%)"]}%` }}
                       />
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
+            </motion.div>
           </div>
         </>
       )}
-    </div>
+    </motion.div>
   );
 }

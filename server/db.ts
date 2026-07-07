@@ -167,9 +167,21 @@ class DatabaseService {
     connectionType: "local",
     uriProvided: false
   };
+  private initPromise: Promise<void>;
+  
+  // Safe in-memory fallback for read-only filesystem environments (like Vercel serverless)
+  private memoryDb: LocalSchema = {
+    employees: initialEmployees,
+    performance: initialPerformance,
+    reports: initialReports
+  };
 
   constructor() {
-    this.initialize();
+    this.initPromise = this.initialize();
+  }
+
+  private async ensureInitialized() {
+    await this.initPromise;
   }
 
   private async initialize() {
@@ -180,16 +192,25 @@ class DatabaseService {
         console.log("Attempting to connect to MongoDB...");
         this.client = new MongoClient(mongoUri, { connectTimeoutMS: 5000 });
         await this.client.connect();
+        
+        // Dynamically use the database specified in the URI, defaulting to "employee-matrix"
         this.db = this.client.db();
+        if (!this.db.databaseName || this.db.databaseName === "test") {
+          this.db = this.client.db("employee-matrix");
+        }
+        
         this.dbStatus.isConnected = true;
         this.dbStatus.connectionType = "mongodb";
-        console.log("Successfully connected to MongoDB database.");
+        this.dbStatus.errorMessage = undefined;
+        console.log(`Successfully connected to MongoDB database: ${this.db.databaseName}`);
         
         // Seed MongoDB if collections are empty
         await this.seedMongoIfNeeded();
       } catch (err: any) {
-        console.error("MongoDB Connection Failed. Falling back to local storage.", err);
-        this.dbStatus.errorMessage = err.message || "Unknown error";
+        console.error("MongoDB Connection Failed. Falling back to local/in-memory storage.", err);
+        this.dbStatus.isConnected = false;
+        this.dbStatus.connectionType = "local";
+        this.dbStatus.errorMessage = err.message || String(err);
         this.setupLocalStorage();
       }
     } else {
@@ -208,23 +229,79 @@ class DatabaseService {
         performance: initialPerformance,
         reports: initialReports
       };
-      fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(initialData, null, 2));
-      console.log("Seeded local JSON database at", LOCAL_DB_PATH);
+      try {
+        fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(initialData, null, 2));
+        console.log("Seeded local JSON database at", LOCAL_DB_PATH);
+      } catch (err) {
+        console.warn("Could not write local JSON file (likely read-only serverless environment). Using in-memory store fallback instead.", err);
+      }
     }
   }
 
   private async seedMongoIfNeeded() {
     if (!this.db) return;
-    
-    const employeesColl = this.db.collection("employees");
-    const count = await employeesColl.countDocuments();
-    
-    if (count === 0) {
-      console.log("Seeding initial data into MongoDB...");
-      await this.db.collection("employees").insertMany(initialEmployees);
-      await this.db.collection("performance_records").insertMany(initialPerformance);
-      await this.db.collection("monthly_reports").insertMany(initialReports);
-      console.log("Seeding complete for MongoDB.");
+    try {
+      const employeesColl = this.db.collection("employees");
+      const count = await employeesColl.countDocuments();
+      
+      if (count === 0) {
+        console.log("Seeding initial employees into MongoDB...");
+        // Use JSON cloning to avoid mutating initial objects (MongoDB driver mutates passed objects to inject _id)
+        const cleanEmployees = JSON.parse(JSON.stringify(initialEmployees));
+        await this.db.collection("employees").insertMany(cleanEmployees);
+      }
+      
+      const perfColl = this.db.collection("performance_records");
+      const perfCount = await perfColl.countDocuments();
+      if (perfCount === 0) {
+        console.log("Seeding initial performance records into MongoDB...");
+        const cleanPerformance = JSON.parse(JSON.stringify(initialPerformance));
+        await this.db.collection("performance_records").insertMany(cleanPerformance);
+      }
+
+      const reportsColl = this.db.collection("monthly_reports");
+      const reportsCount = await reportsColl.countDocuments();
+      if (reportsCount === 0) {
+        console.log("Seeding initial monthly reports into MongoDB...");
+        const cleanReports = JSON.parse(JSON.stringify(initialReports));
+        await this.db.collection("monthly_reports").insertMany(cleanReports);
+      }
+      
+      console.log("MongoDB initialization/seeding check complete.");
+    } catch (err) {
+      console.error("Error checking/seeding MongoDB collections:", err);
+    }
+  }
+
+  public async resetDatabase(): Promise<boolean> {
+    await this.ensureInitialized();
+    if (this.db && this.dbStatus.connectionType === "mongodb") {
+      try {
+        console.log("Resetting MongoDB database from scratch...");
+        await this.db.collection("employees").deleteMany({});
+        await this.db.collection("performance_records").deleteMany({});
+        await this.db.collection("monthly_reports").deleteMany({});
+        
+        await this.seedMongoIfNeeded();
+        return true;
+      } catch (err) {
+        console.error("Failed to reset MongoDB:", err);
+        throw err;
+      }
+    } else {
+      console.log("Resetting Local JSON/Memory database from scratch...");
+      const initialData: LocalSchema = {
+        employees: initialEmployees,
+        performance: initialPerformance,
+        reports: initialReports
+      };
+      this.memoryDb = JSON.parse(JSON.stringify(initialData));
+      try {
+        fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(initialData, null, 2));
+      } catch (err) {
+        console.warn("Unable to write reset file. State saved to in-memory store.", err);
+      }
+      return true;
     }
   }
 
@@ -241,22 +318,26 @@ class DatabaseService {
     } catch (e) {
       console.error("Error reading local db", e);
     }
-    return { employees: [], performance: [], reports: [] };
+    // Fall back to memoryDb which contains preloaded initial seed data
+    return this.memoryDb;
   }
 
   // Writing Local Storage Data helper
   private writeLocal(data: LocalSchema) {
+    this.memoryDb = data;
     try {
       fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(data, null, 2));
     } catch (e) {
-      console.error("Error writing local db", e);
+      console.warn("Unable to write local JSON file (read-only filesystem). State saved to in-memory store instead.", e);
     }
   }
 
   // --- EMPLOYEES API ---
   public async getEmployees(): Promise<Employee[]> {
+    await this.ensureInitialized();
     if (this.db && this.dbStatus.connectionType === "mongodb") {
-      const docs = await this.db.collection("employees").find({}).toArray();
+      // Ignore soft-deleted employees (active: false)
+      const docs = await this.db.collection("employees").find({ active: { $ne: false } }).toArray();
       return docs.map(doc => {
         const { _id, ...rest } = doc;
         return { ...rest, id: rest.id || _id.toString() } as Employee;
@@ -268,6 +349,7 @@ class DatabaseService {
   }
 
   public async saveEmployee(emp: Omit<Employee, "id" | "createdAt">): Promise<Employee> {
+    await this.ensureInitialized();
     const newEmp: Employee = {
       ...emp,
       id: "emp-" + generateId(),
@@ -286,6 +368,7 @@ class DatabaseService {
   }
 
   public async updateEmployee(id: string, emp: Partial<Employee>): Promise<Employee | null> {
+    await this.ensureInitialized();
     if (this.db && this.dbStatus.connectionType === "mongodb") {
       const result = await this.db.collection("employees").findOneAndUpdate(
         { id: id },
@@ -293,8 +376,19 @@ class DatabaseService {
         { returnDocument: "after" }
       );
       if (!result) return null;
-      const { _id, ...rest } = result as any;
-      return { ...rest } as Employee;
+      
+      // Handle MongoDB Driver v4/v5 which wraps the document in `{ value: Doc }`
+      // versus MongoDB Driver v6 which returns the document directly.
+      let doc: any = null;
+      if ("value" in result) {
+        doc = (result as any).value;
+      } else {
+        doc = result;
+      }
+      
+      if (!doc) return null;
+      const { _id, ...rest } = doc;
+      return { ...rest, id: rest.id || _id.toString() } as Employee;
     } else {
       const data = this.readLocal();
       const idx = data.employees.findIndex(e => e.id === id);
@@ -307,6 +401,7 @@ class DatabaseService {
 
   // --- PERFORMANCE RECORDS API ---
   public async getPerformance(month?: string): Promise<PerformanceRecord[]> {
+    await this.ensureInitialized();
     if (this.db && this.dbStatus.connectionType === "mongodb") {
       const query = month ? { month } : {};
       const docs = await this.db.collection("performance_records").find(query).toArray();
@@ -324,6 +419,7 @@ class DatabaseService {
   }
 
   public async savePerformance(record: Omit<PerformanceRecord, "id" | "updatedAt">): Promise<PerformanceRecord> {
+    await this.ensureInitialized();
     const existing = await this.findPerformance(record.employeeId, record.month);
     
     const recordToSave = {
@@ -366,6 +462,7 @@ class DatabaseService {
   }
 
   private async findPerformance(employeeId: string, month: string): Promise<PerformanceRecord | null> {
+    await this.ensureInitialized();
     if (this.db && this.dbStatus.connectionType === "mongodb") {
       const doc = await this.db.collection("performance_records").findOne({ employeeId, month });
       if (!doc) return null;
@@ -380,6 +477,7 @@ class DatabaseService {
 
   // --- MONTHLY REPORTS API ---
   public async getReports(employeeId?: string, month?: string): Promise<MonthlyReport[]> {
+    await this.ensureInitialized();
     if (this.db && this.dbStatus.connectionType === "mongodb") {
       const query: any = {};
       if (employeeId) query.employeeId = employeeId;
@@ -399,6 +497,7 @@ class DatabaseService {
   }
 
   public async saveReport(report: Omit<MonthlyReport, "id" | "generatedAt">): Promise<MonthlyReport> {
+    await this.ensureInitialized();
     const existing = await this.findReport(report.employeeId, report.month);
     
     const reportToSave = {
@@ -439,6 +538,7 @@ class DatabaseService {
   }
 
   private async findReport(employeeId: string, month: string): Promise<MonthlyReport | null> {
+    await this.ensureInitialized();
     if (this.db && this.dbStatus.connectionType === "mongodb") {
       const doc = await this.db.collection("monthly_reports").findOne({ employeeId, month });
       if (!doc) return null;
