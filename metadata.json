@@ -1,0 +1,6 @@
+{
+  "name": "Employee Matrix",
+  "description": "An intelligent full-stack performance tracking and workforce visualization matrix. Enables managers to log precise monthly attendance counts, analyze project pipeline value, and automatically generate data-driven monthly roadmaps powered by Gemini AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
