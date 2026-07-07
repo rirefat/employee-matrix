@@ -889,9 +889,17 @@ export default function App() {
           {/* TAB CONTENT: PROFILE (Individual analytics + AI Report) */}
           {activeTab === "profile" && (
             <div className="space-y-6">
-              {selectedReportEmployeeObj ? (
-                <>
-                  {/* Glassmorphic Selected employee info card with ambient blur backdrops */}
+              <AnimatePresence mode="wait">
+                {selectedReportEmployeeObj ? (
+                  <motion.div
+                    key={selectedReportEmployeeObj.id}
+                    initial={{ opacity: 0, x: 24, filter: "blur(4px)" }}
+                    animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                    exit={{ opacity: 0, x: -24, filter: "blur(4px)" }}
+                    transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                    className="space-y-6"
+                  >
+                    {/* Glassmorphic Selected employee info card with ambient blur backdrops */}
                   <div className="relative overflow-hidden rounded-2xl border border-slate-200/50 shadow-xl p-6 bg-white/70 backdrop-blur-md">
                     {/* Atmospheric color nodes under glass to enhance depth */}
                     <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-gradient-to-br from-indigo-500/15 to-purple-500/15 blur-3xl pointer-events-none" />
@@ -1247,12 +1255,20 @@ export default function App() {
                       Export PDF / Save →
                     </button>
                   </div>
-                </>
+                </motion.div>
               ) : (
-                <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-500">
+                <motion.div
+                  key="no-employee"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-500"
+                >
                   <p>Please select an employee from the Direct Reports roster to view their profile.</p>
-                </div>
+                </motion.div>
               )}
+              </AnimatePresence>
             </div>
           )}
 
