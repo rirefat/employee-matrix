@@ -52,7 +52,6 @@ import {
   Legend
 } from "recharts";
 import { Employee, PerformanceRecord, MonthlyReport, MonthlyTarget } from "./types";
-import { DBStatusBanner } from "./components/DBStatusBanner";
 import { ReportViewer } from "./components/ReportViewer";
 import { DashboardTab } from "./components/DashboardTab";
 import { EmployeeCard } from "./components/EmployeeCard";
@@ -2373,7 +2372,6 @@ export default function App() {
         </div>
       )}
 
-      <DBStatusBanner />
     </div>
   );
 }
