@@ -3,6 +3,8 @@ import { Employee, PerformanceRecord, MonthlyTarget } from "../types";
 import { Calendar, Users, Briefcase, Sparkles, TrendingUp, AlertCircle } from "lucide-react";
 import { motion } from "motion/react";
 
+import { get3DAvatarUrl } from "../utils";
+
 interface EmployeeCardProps {
   employee: Employee;
   isActive: boolean;
@@ -24,16 +26,6 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
   target,
   targetProjectValueMin = 25000,
 }) => {
-  // Extract initials
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase();
-  };
-
   const attendance = performanceRecord ? performanceRecord.attendance : null;
   const meetings = performanceRecord ? performanceRecord.conductedMeetings : null;
   const projects = performanceRecord ? performanceRecord.deliveredProjectsAmount : null;
@@ -108,15 +100,15 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
       {/* Main Row Content */}
       <div className="relative z-10 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          {/* Compact Profile Initials */}
+          {/* Compact Profile Avatar */}
           <div
-            className={`w-9 h-9 rounded-lg flex-shrink-0 flex items-center justify-center font-bold text-[10px] transition-all duration-300 ${
+            className={`w-9 h-9 rounded-lg flex-shrink-0 flex items-center justify-center transition-all duration-300 overflow-hidden ${
               isActive
-                ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-2xs"
-                : "bg-slate-100/80 text-slate-600 border border-slate-200/40 group-hover:bg-slate-200/50"
+                ? "bg-slate-50 shadow-2xs border border-slate-200"
+                : "bg-slate-100/80 border border-slate-200/40 group-hover:bg-slate-200/50"
             }`}
           >
-            <span className="tracking-wider">{getInitials(employee.name)}</span>
+            <img src={get3DAvatarUrl(employee.name)} alt={employee.name} className="w-full h-full object-cover" />
           </div>
 
           <div className="min-w-0">

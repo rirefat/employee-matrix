@@ -16,7 +16,6 @@ import {
   AlertTriangle,
   X,
   FileSpreadsheet,
-  Settings,
   HelpCircle,
   Video,
   Award,
@@ -31,7 +30,8 @@ import {
   Key,
   SlidersHorizontal,
   Mail,
-  Building
+  Building,
+  ArrowLeftRight
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -40,7 +40,15 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip
+  Tooltip,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  BarChart,
+  Bar,
+  Legend
 } from "recharts";
 import { Employee, PerformanceRecord, MonthlyReport, MonthlyTarget } from "./types";
 import { DBStatusBanner } from "./components/DBStatusBanner";
@@ -72,8 +80,12 @@ const getTeamIcon = (team: string) => {
   }
 };
 
+import { get3DAvatarUrl } from "./utils";
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState<"profile" | "team" | "roster">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "team" | "roster" | "compare">("profile");
+  const [compareEmp1, setCompareEmp1] = useState<string>("");
+  const [compareEmp2, setCompareEmp2] = useState<string>("");
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [performance, setPerformance] = useState<PerformanceRecord[]>([]);
   const [reports, setReports] = useState<MonthlyReport[]>([]);
@@ -88,7 +100,6 @@ export default function App() {
     const saved = localStorage.getItem("universalProjectValueTarget");
     return saved ? Number(saved) : 25000;
   });
-  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
   useEffect(() => {
     localStorage.setItem("universalProjectValueTarget", universalProjectValueTarget.toString());
@@ -591,16 +602,6 @@ export default function App() {
     effectiveProjectValueMin
   ]);
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .filter(Boolean)
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   const employeeHistoryData = useMemo(() => {
     if (!reportEmployeeId) return [];
     return performance
@@ -696,111 +697,6 @@ export default function App() {
               <span className="sm:hidden">Targets</span>
             </motion.button>
 
-            {/* Portal Settings Dropdown */}
-            <div className="relative">
-              <motion.button
-                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all duration-200 shadow-2xs cursor-pointer ${
-                  isSettingsOpen 
-                    ? "bg-slate-950 border-slate-950 text-white" 
-                    : "bg-white hover:bg-slate-50 text-slate-700 border-slate-200"
-                }`}
-                whileHover={{ y: -1 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Settings className={`h-3.5 w-3.5 ${isSettingsOpen ? "text-white" : "text-slate-500"}`} />
-                <span className="hidden sm:inline">Settings</span>
-                <span className="sm:hidden">Set</span>
-              </motion.button>
-
-              <AnimatePresence>
-                {isSettingsOpen && (
-                  <>
-                    {/* Backdrop to close settings */}
-                    <div 
-                      className="fixed inset-0 z-40 cursor-default" 
-                      onClick={() => setIsSettingsOpen(false)} 
-                    />
-                    
-                    <motion.div
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-4 space-y-3.5"
-                    >
-                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                        <div className="flex items-center gap-1.5 text-slate-800">
-                          <Settings className="h-4 w-4 text-slate-500" />
-                          <span className="text-xs font-extrabold uppercase tracking-wider font-display">System Config</span>
-                        </div>
-                        <button 
-                          onClick={() => setIsSettingsOpen(false)}
-                          className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-all cursor-pointer"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-
-                      {/* Attendance Warning Configuration Panel */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1.5 text-slate-700">
-                            <AlertTriangle className="h-3.5 w-3.5 text-rose-500 animate-pulse" />
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Attendance Warning</span>
-                          </div>
-                          <span className="text-xs font-mono font-bold text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-lg">
-                            &lt; {attendanceWarningThreshold}%
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2.5">
-                          <span className="text-[9px] font-bold text-slate-400 font-mono">70%</span>
-                          <input
-                            type="range"
-                            min="70"
-                            max="100"
-                            value={attendanceWarningThreshold}
-                            onChange={(e) => setAttendanceWarningThreshold(Number(e.target.value))}
-                            className="w-full accent-rose-500 h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer"
-                          />
-                          <span className="text-[9px] font-bold text-slate-400 font-mono">100%</span>
-                        </div>
-                        <p className="text-[10px] text-slate-500 leading-normal">
-                          Configures the threshold below which employee records are flagged for poor attendance. Rows with attendance below this value will highlight in red on the 'Database Records' table.
-                        </p>
-                      </div>
-
-                      <div className="border-t border-slate-100 pt-2" />
-
-                      {/* Universal Delivered Value Target Panel */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1.5 text-slate-700">
-                            <TrendingUp className="h-3.5 w-3.5 text-indigo-500" />
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Universal Value Target</span>
-                          </div>
-                        </div>
-                        <div className="relative mt-1">
-                          <span className="absolute left-3 top-2 text-slate-400 text-xs font-bold">$</span>
-                          <input
-                            type="number"
-                            min="0"
-                            step="1000"
-                            value={universalProjectValueTarget}
-                            onChange={(e) => setUniversalProjectValueTarget(Math.max(0, Number(e.target.value)))}
-                            className="w-full pl-6 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition-all"
-                          />
-                        </div>
-                        <p className="text-[10px] text-slate-500 leading-normal">
-                          Configures the default minimum delivered value target for all members. This is used when no month-specific target is defined.
-                        </p>
-                      </div>
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
-
             {/* Profile area */}
             <div className="flex items-center gap-3">
               <div className="hidden md:flex flex-col items-end text-right">
@@ -811,11 +707,11 @@ export default function App() {
                 className="relative p-[1.5px] rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600"
                 whileHover={{ scale: 1.05 }}
               >
-                <div className="w-8.5 h-8.5 bg-slate-100 rounded-full flex items-center justify-center font-extrabold text-xs text-blue-600 border border-white">
-                  RR
+                <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center font-extrabold text-xs text-blue-600 border border-white overflow-hidden shrink-0">
+                  <img src={get3DAvatarUrl("Rafiul")} alt="Rafiul Refat" className="w-full h-full object-cover" />
                 </div>
                 {/* Active Indicator Pulse */}
-                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white animate-pulse" />
+                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white animate-pulse z-10" />
               </motion.div>
             </div>
           </div>
@@ -921,6 +817,15 @@ export default function App() {
               <Users className="h-3.5 w-3.5" />
               Database Records
             </button>
+            <button
+              onClick={() => setActiveTab("compare")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+                activeTab === "compare" ? "bg-white text-blue-600 shadow-xs font-bold" : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              <ArrowLeftRight className="h-3.5 w-3.5" />
+              Compare
+            </button>
           </div>
 
           {/* TAB CONTENT: PROFILE (Individual analytics + AI Report) */}
@@ -955,8 +860,8 @@ export default function App() {
                     <div className="relative z-10 flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
                       <div className="flex gap-4">
                         {/* Avatar block with active state glowing borders */}
-                        <div className="w-16 h-16 bg-gradient-to-tr from-blue-500 to-indigo-600 text-white rounded-2xl flex items-center justify-center font-bold text-2xl shadow-md border border-white/20">
-                          {getInitials(selectedReportEmployeeObj.name)}
+                        <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center shadow-md border border-slate-200 overflow-hidden shrink-0">
+                          <img src={get3DAvatarUrl(selectedReportEmployeeObj.name)} alt={selectedReportEmployeeObj.name} className="w-full h-full object-cover" />
                         </div>
                         <div>
                           <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">{selectedReportEmployeeObj.name}</h1>
@@ -1603,34 +1508,28 @@ export default function App() {
                             >
                               {/* Employee Profile Cell */}
                               <td className="px-6 py-4">
-                                <div className="flex items-center gap-3.5">
-                                  {/* Custom Initials Avatar */}
-                                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs border tracking-wide shrink-0 relative ${style.avatar}`}>
-                                    {getInitials(emp.name)}
+                                <div className="flex items-center gap-3">
+                                  {/* Custom Avatar */}
+                                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 relative overflow-hidden bg-slate-100 ${style.avatar}`}>
+                                    <img src={get3DAvatarUrl(emp.name)} alt={emp.name} className="w-full h-full object-cover relative z-10" />
                                     {hasLowAttendance && (
-                                      <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                                      <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 z-20">
                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
                                         <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
                                       </span>
                                     )}
                                   </div>
                                   <div className="min-w-0">
-                                    <span className="block font-bold text-slate-800 text-xs tracking-tight flex items-center gap-1.5 flex-wrap">
-                                      {emp.name}
-                                      {hasLowAttendance && (
-                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-rose-100 text-rose-700 border border-rose-200/50 animate-pulse">
-                                          <AlertTriangle className="h-2.5 w-2.5 text-rose-600" />
-                                          Low Attendance
-                                        </span>
-                                      )}
+                                    <span className="block font-bold text-slate-800 text-xs tracking-tight">
+                                      <span className="truncate">{emp.name}</span>
                                     </span>
-                                    <span className="block text-[11px] text-slate-500 font-medium mt-0.5">
+                                    <span className="block text-[11px] text-slate-500 font-medium mt-0.5 truncate">
                                       {emp.role} {rec ? (
-                                        <span className="text-slate-400 font-normal">
+                                        <span className="text-slate-400 font-normal ml-1">
                                           &middot; Attendance: <strong className={hasLowAttendance ? "text-rose-600 font-bold font-mono text-[10px]" : "text-slate-600 font-semibold font-mono text-[10px]"}>{rec.attendance}%</strong>
                                         </span>
                                       ) : (
-                                        <span className="text-slate-400 font-normal italic">
+                                        <span className="text-slate-400 font-normal italic ml-1">
                                           &middot; Attendance: not set
                                         </span>
                                       )}
@@ -1641,69 +1540,38 @@ export default function App() {
 
                               {/* Division Cell */}
                               <td className="px-6 py-4">
-                                <div className="flex flex-col gap-1 sm:flex-row sm:items-center">
-                                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border ${style.badge}`}>
-                                    <Building className="h-3 w-3 opacity-70" />
-                                    {emp.department}
-                                  </span>
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-xs font-bold text-slate-800">{emp.department}</span>
                                   {emp.team && (
-                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border bg-indigo-50 text-indigo-700 border-indigo-100">
-                                      {emp.team}
-                                    </span>
+                                    <span className="text-[10px] font-medium text-slate-500">{emp.team}</span>
                                   )}
                                 </div>
                               </td>
 
                               {/* Registry Credentials Cell (Combined Email & ID) */}
-                              <td className="px-6 py-4 space-y-1.5">
-                                {/* Monospace Email */}
-                                <div className="flex items-center gap-1.5">
-                                  <Mail className="h-3 w-3 text-slate-400 shrink-0" />
-                                  <span className="font-mono text-[11px] text-slate-600 font-medium select-all">{emp.email}</span>
+                              <td className="px-6 py-4">
+                                <div className="flex flex-col gap-0.5">
+                                  <div className="flex items-center gap-1.5 group/email">
+                                    <span className="text-[11px] text-slate-600">{emp.email}</span>
+                                    <button
+                                      onClick={() => handleCopyToClipboard(emp.email)}
+                                      className="opacity-0 group-hover/email:opacity-100 hover:text-indigo-600 text-slate-400 transition-opacity"
+                                      title="Copy Email"
+                                    >
+                                      {isEmailCopied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                                    </button>
+                                  </div>
                                   
-                                  <button
-                                    onClick={() => handleCopyToClipboard(emp.email)}
-                                    className={`p-1 rounded-md transition-all cursor-pointer ${
-                                      isEmailCopied 
-                                        ? "bg-emerald-50 text-emerald-600 border border-emerald-200/40" 
-                                        : "opacity-0 group-hover:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-slate-700"
-                                    }`}
-                                    title={isEmailCopied ? "Copied!" : "Copy Email"}
-                                  >
-                                    {isEmailCopied ? (
-                                      <Check className="h-2.5 w-2.5" />
-                                    ) : (
-                                      <Copy className="h-2.5 w-2.5" />
-                                    )}
-                                  </button>
-                                  {isEmailCopied && (
-                                    <span className="text-[9px] font-bold text-emerald-600 animate-fade-in">Copied</span>
-                                  )}
-                                </div>
-
-                                {/* Monospace Security ID */}
-                                <div className="flex items-center gap-1.5">
-                                  <Key className="h-3 w-3 text-slate-400 shrink-0" />
-                                  <span className="font-mono text-[10px] text-slate-400 tracking-tighter select-all">ID: {emp.id}</span>
-                                  
-                                  <button
-                                    onClick={() => handleCopyToClipboard(emp.id)}
-                                    className={`p-1 rounded-md transition-all cursor-pointer ${
-                                      isIdCopied 
-                                        ? "bg-emerald-50 text-emerald-600 border border-emerald-200/40" 
-                                        : "opacity-0 group-hover:opacity-100 hover:bg-slate-100 text-slate-400 hover:text-slate-700"
-                                    }`}
-                                    title={isIdCopied ? "Copied!" : "Copy Security ID"}
-                                  >
-                                    {isIdCopied ? (
-                                      <Check className="h-2.5 w-2.5" />
-                                    ) : (
-                                      <Copy className="h-2.5 w-2.5" />
-                                    )}
-                                  </button>
-                                  {isIdCopied && (
-                                    <span className="text-[9px] font-bold text-emerald-600 animate-fade-in">Copied</span>
-                                  )}
+                                  <div className="flex items-center gap-1.5 group/id">
+                                    <span className="font-mono text-[10px] text-slate-400">ID: {emp.id}</span>
+                                    <button
+                                      onClick={() => handleCopyToClipboard(emp.id)}
+                                      className="opacity-0 group-hover/id:opacity-100 hover:text-indigo-600 text-slate-400 transition-opacity"
+                                      title="Copy ID"
+                                    >
+                                      {isIdCopied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                                    </button>
+                                  </div>
                                 </div>
                               </td>
 
@@ -1762,6 +1630,207 @@ export default function App() {
                   </table>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* TAB CONTENT: COMPARE */}
+          {activeTab === "compare" && (
+            <div className="space-y-6">
+              {/* Header Section */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900 tracking-tight font-display flex items-center gap-2">
+                    <ArrowLeftRight className="h-5 w-5 text-indigo-600" />
+                    Team Member Comparison
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Select two employees to compare their performance metrics for <span className="font-semibold text-slate-700">{selectedMonth}</span>.
+                  </p>
+                </div>
+              </div>
+
+              {/* Selectors */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
+                  <label className="block text-xs font-bold text-slate-600 uppercase mb-3 flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center">1</span>
+                    First Employee
+                  </label>
+                  <select 
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    value={compareEmp1}
+                    onChange={(e) => setCompareEmp1(e.target.value)}
+                  >
+                    <option value="">-- Select Employee --</option>
+                    {employees.map(e => (
+                      <option key={e.id} value={e.id}>{e.name} ({e.department})</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
+                  <label className="block text-xs font-bold text-slate-600 uppercase mb-3 flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">2</span>
+                    Second Employee
+                  </label>
+                  <select 
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    value={compareEmp2}
+                    onChange={(e) => setCompareEmp2(e.target.value)}
+                  >
+                    <option value="">-- Select Employee --</option>
+                    {employees.map(e => (
+                      <option key={e.id} value={e.id}>{e.name} ({e.department})</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Compare Data Display */}
+              {(() => {
+                if (!compareEmp1 || !compareEmp2) return (
+                  <div className="text-center py-12 bg-white rounded-2xl border border-slate-200 border-dashed text-slate-400">
+                    <ArrowLeftRight className="h-8 w-8 mx-auto mb-3 opacity-30" />
+                    <p className="text-sm font-medium">Please select two employees to compare their metrics side-by-side.</p>
+                  </div>
+                );
+
+                const emp1 = employees.find(e => e.id === compareEmp1);
+                const emp2 = employees.find(e => e.id === compareEmp2);
+                if (!emp1 || !emp2) return null;
+
+                const perf1 = performance.find(p => p.employeeId === emp1.id && p.month === selectedMonth);
+                const perf2 = performance.find(p => p.employeeId === emp2.id && p.month === selectedMonth);
+
+                const data = [
+                  { 
+                    metric: 'Attendance', 
+                    [emp1.name]: perf1?.attendance || 0, 
+                    [emp2.name]: perf2?.attendance || 0,
+                    fullMark: 100
+                  },
+                  { 
+                    metric: 'Proj. Value (k$)', 
+                    [emp1.name]: Number(((perf1?.deliveredProjectsValue || 0) / 1000).toFixed(1)), 
+                    [emp2.name]: Number(((perf2?.deliveredProjectsValue || 0) / 1000).toFixed(1)),
+                    fullMark: Math.max(50, ((perf1?.deliveredProjectsValue || 0) / 1000) * 1.2, ((perf2?.deliveredProjectsValue || 0) / 1000) * 1.2)
+                  },
+                  { 
+                    metric: 'Projects', 
+                    [emp1.name]: perf1?.deliveredProjectsAmount || 0, 
+                    [emp2.name]: perf2?.deliveredProjectsAmount || 0,
+                    fullMark: Math.max(10, (perf1?.deliveredProjectsAmount || 0) * 1.5, (perf2?.deliveredProjectsAmount || 0) * 1.5)
+                  },
+                  { 
+                    metric: 'Meetings', 
+                    [emp1.name]: perf1?.conductedMeetings || 0, 
+                    [emp2.name]: perf2?.conductedMeetings || 0,
+                    fullMark: Math.max(20, (perf1?.conductedMeetings || 0) * 1.5, (perf2?.conductedMeetings || 0) * 1.5)
+                  }
+                ];
+
+                return (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in zoom-in-95 duration-300">
+                    {/* Metrics Cards */}
+                    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
+                      <h4 className="text-sm font-bold text-slate-800 mb-6 flex items-center gap-2">
+                        <UserCheck className="h-4 w-4 text-slate-400" />
+                        Metric Breakdown
+                      </h4>
+                      <div className="space-y-4">
+                        {[
+                          { label: "Attendance Rate", key: "attendance", icon: Calendar, unit: "%" },
+                          { label: "Delivered Value", key: "deliveredProjectsValue", icon: DollarSign, unit: "$", isCurrency: true },
+                          { label: "Projects Delivered", key: "deliveredProjectsAmount", icon: Briefcase, unit: "" },
+                          { label: "Meetings Conducted", key: "conductedMeetings", icon: Users, unit: "" }
+                        ].map((metric) => {
+                          const val1 = perf1?.[metric.key as keyof PerformanceRecord] as number || 0;
+                          const val2 = perf2?.[metric.key as keyof PerformanceRecord] as number || 0;
+                          const max = Math.max(val1, val2);
+                          const isCurrency = metric.isCurrency;
+
+                          return (
+                            <div key={metric.key} className="p-4 bg-slate-50 border border-slate-100 rounded-xl relative overflow-hidden">
+                              <div className="flex justify-between items-center mb-3">
+                                <span className="text-xs font-bold text-slate-600 uppercase flex items-center gap-1.5">
+                                  <metric.icon className="h-3.5 w-3.5 text-slate-400" />
+                                  {metric.label}
+                                </span>
+                              </div>
+                              <div className="space-y-3 relative z-10">
+                                {/* Emp 1 */}
+                                <div>
+                                  <div className="flex justify-between text-[11px] mb-1">
+                                    <span className="font-semibold text-blue-700">{emp1.name}</span>
+                                    <span className="font-mono font-bold text-slate-700">
+                                      {isCurrency ? `$${val1.toLocaleString()}` : `${val1}${metric.unit}`}
+                                    </span>
+                                  </div>
+                                  <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                                    <motion.div 
+                                      className="h-full bg-blue-500 rounded-full" 
+                                      initial={{ width: 0 }} 
+                                      animate={{ width: max > 0 ? `${(val1 / max) * 100}%` : '0%' }} 
+                                      transition={{ duration: 0.8, ease: "easeOut" }}
+                                    />
+                                  </div>
+                                </div>
+                                {/* Emp 2 */}
+                                <div>
+                                  <div className="flex justify-between text-[11px] mb-1">
+                                    <span className="font-semibold text-emerald-700">{emp2.name}</span>
+                                    <span className="font-mono font-bold text-slate-700">
+                                      {isCurrency ? `$${val2.toLocaleString()}` : `${val2}${metric.unit}`}
+                                    </span>
+                                  </div>
+                                  <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                                    <motion.div 
+                                      className="h-full bg-emerald-500 rounded-full" 
+                                      initial={{ width: 0 }} 
+                                      animate={{ width: max > 0 ? `${(val2 / max) * 100}%` : '0%' }} 
+                                      transition={{ duration: 0.8, ease: "easeOut" }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Radar Chart */}
+                    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col items-center">
+                       <h4 className="text-sm font-bold text-slate-800 mb-6 flex items-center gap-2 self-start">
+                        <Compass className="h-4 w-4 text-slate-400" />
+                        Performance Radar
+                      </h4>
+                      <div className="w-full h-80">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RadarChart cx="50%" cy="50%" outerRadius="75%" data={data}>
+                            <PolarGrid stroke="#e2e8f0" />
+                            <PolarAngleAxis dataKey="metric" tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} />
+                            <PolarRadiusAxis angle={30} domain={[0, 'dataMax']} tick={false} axisLine={false} />
+                            <Radar name={emp1.name} dataKey={emp1.name} stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.4} />
+                            <Radar name={emp2.name} dataKey={emp2.name} stroke="#10b981" fill="#10b981" fillOpacity={0.4} />
+                            <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 600, paddingTop: '10px' }} />
+                            <Tooltip 
+                              contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                              itemStyle={{ fontSize: '12px', fontWeight: 600 }}
+                              labelStyle={{ fontSize: '10px', color: '#64748b', marginBottom: '4px' }}
+                            />
+                          </RadarChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <p className="text-[10px] text-slate-400 text-center mt-4">
+                        * Comparison metrics are normalized for this visualization based on the highest performer in each category.
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>
@@ -2131,9 +2200,9 @@ export default function App() {
           />
 
           {/* Modal Container */}
-          <div className="relative bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
+          <div className="relative bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col overflow-visible z-10 animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 pb-4 border-b border-slate-100 shrink-0">
+            <div className="flex items-center justify-between p-6 pb-4 border-b border-slate-100 shrink-0 rounded-t-2xl">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-indigo-600" />
@@ -2153,8 +2222,8 @@ export default function App() {
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSaveTarget} className="flex-1 flex flex-col overflow-hidden">
-              <div className="p-6 overflow-y-auto space-y-4 flex-1">
+            <form onSubmit={handleSaveTarget} className="flex-1 flex flex-col overflow-visible">
+              <div className="p-6 overflow-visible space-y-4 flex-1">
                 {/* Selected Month */}
                 <div>
                   <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
@@ -2217,7 +2286,7 @@ export default function App() {
               </div>
 
               {/* Action Buttons */}
-              <div className="p-6 pt-4 border-t border-slate-100 flex justify-end gap-2 text-xs shrink-0 bg-slate-50/50">
+              <div className="p-6 pt-4 border-t border-slate-100 flex justify-end gap-2 text-xs shrink-0 bg-slate-50/50 rounded-b-2xl">
                 <button
                   type="button"
                   onClick={() => setIsTargetsModalOpen(false)}

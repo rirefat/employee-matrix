@@ -112,7 +112,7 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
     }));
   }, [employees, records]);
 
-  // 3. Month over Month Progression
+  // 3. Month over Month Progression & Forecast
   const timelineData = useMemo(() => {
     const map: Record<string, {
       month: string;
@@ -143,7 +143,7 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
       map[month].count += 1;
     });
 
-    return Object.keys(map)
+    const baseData = Object.keys(map)
       .sort()
       .map((m) => {
         const d = map[m];
@@ -156,8 +156,51 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
           "Projects Delivered": d.amount,
           "Meetings": d.meetings,
           "Avg Attendance (%)": Math.round((d.attendanceSum / d.count) * 10) / 10,
+          Forecast: null as number | null,
+          isForecast: false,
         };
       });
+
+    if (baseData.length >= 2) {
+      const n = baseData.length;
+      let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+      baseData.forEach((d, i) => {
+        sumX += i;
+        sumY += d["Projects Delivered"];
+        sumXY += i * d["Projects Delivered"];
+        sumXX += i * i;
+      });
+      const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+      const intercept = (sumY - slope * sumX) / n;
+      
+      const nextX = n;
+      const forecastedProjects = Math.max(0, Math.round(slope * nextX + intercept));
+      
+      const lastMonthCode = baseData[n - 1].monthCode;
+      const [lastYear, lastMonth] = lastMonthCode.split("-").map(Number);
+      let nextYear = lastYear;
+      let nextMonth = lastMonth + 1;
+      if (nextMonth > 12) {
+        nextYear++;
+        nextMonth = 1;
+      }
+      const nextMonthName = new Date(nextYear, nextMonth - 1, 1).toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+      
+      baseData[n - 1].Forecast = baseData[n - 1]["Projects Delivered"];
+      
+      baseData.push({
+        monthCode: `${nextYear}-${nextMonth.toString().padStart(2, '0')}`,
+        name: `${nextMonthName} (Est)`,
+        "Value ($k)": null as any,
+        "Projects Delivered": null as any,
+        "Meetings": null as any,
+        "Avg Attendance (%)": null as any,
+        Forecast: forecastedProjects,
+        isForecast: true,
+      });
+    }
+
+    return baseData;
   }, [records]);
 
   // 4. Employee Top Performers
@@ -468,6 +511,16 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
                       strokeWidth={2}
                       fillOpacity={1}
                       fill="url(#colorValue)"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="Forecast"
+                      stroke={COLORS.emerald}
+                      strokeWidth={2}
+                      strokeDasharray="4 4"
+                      dot={{ r: 3, fill: COLORS.emerald, stroke: '#fff', strokeWidth: 1.5 }}
+                      activeDot={{ r: 5 }}
+                      connectNulls={true}
                     />
                     <Area
                       type="monotone"
