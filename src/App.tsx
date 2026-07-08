@@ -30,6 +30,7 @@ import {
   Key,
   SlidersHorizontal,
   Mail,
+  LogOut,
   Building,
   ArrowLeftRight
 } from "lucide-react";
@@ -55,11 +56,12 @@ import { DBStatusBanner } from "./components/DBStatusBanner";
 import { ReportViewer } from "./components/ReportViewer";
 import { DashboardTab } from "./components/DashboardTab";
 import { EmployeeCard } from "./components/EmployeeCard";
+import { LoginPage, Manager } from "./components/LoginPage";
 import { MonthPicker } from "./components/MonthPicker";
 import { motion, AnimatePresence } from "motion/react";
 
 const DEPARTMENTS = ["Sales", "Operations"];
-const TEAMS = ["Custom", "Shopify", "WordPress"];
+const TEAMS = ["Custom", "Shopify", "WordPress", "UI/UX"];
 
 const getDeptIcon = (dept: string) => {
   switch (dept) {
@@ -86,11 +88,13 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<"profile" | "team" | "roster" | "compare">("profile");
   const [compareEmp1, setCompareEmp1] = useState<string>("");
   const [compareEmp2, setCompareEmp2] = useState<string>("");
+  const [loggedInManager, setLoggedInManager] = useState<Manager | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [performance, setPerformance] = useState<PerformanceRecord[]>([]);
   const [reports, setReports] = useState<MonthlyReport[]>([]);
   const [targets, setTargets] = useState<MonthlyTarget[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>("2026-06");
+  const myEmployees = useMemo(() => employees.filter(emp => loggedInManager?.teams.includes(emp.team)), [employees, loggedInManager]);
   const [rosterSearchQuery, setRosterSearchQuery] = useState<string>("");
   const [rosterDeptFilter, setRosterDeptFilter] = useState<string>("All");
   const [rosterTeamFilter, setRosterTeamFilter] = useState<string>("All");
@@ -500,7 +504,7 @@ export default function App() {
   };
 
   // Filter employees
-  const filteredEmployees = employees.filter(emp => {
+  const filteredEmployees = myEmployees.filter(emp => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
     return (
@@ -528,11 +532,11 @@ export default function App() {
     p => p.employeeId === reportEmployeeId && p.month === selectedMonth
   );
 
-  const selectedReportEmployeeObj = employees.find(e => e.id === reportEmployeeId);
+  const selectedReportEmployeeObj = myEmployees.find(e => e.id === reportEmployeeId);
 
   const activeEmployeesCount = useMemo(() => {
-    return employees.filter(e => e.active !== false).length || 1;
-  }, [employees]);
+    return myEmployees.filter(e => e.active !== false).length || 1;
+  }, [myEmployees]);
 
   const effectiveProjectValueMin = useMemo(() => {
     const totalTarget = currentTarget?.projectValueMin !== undefined ? currentTarget.projectValueMin : universalProjectValueTarget;
@@ -550,7 +554,7 @@ export default function App() {
 
   // Filter & Sort roster database
   const rosterFilteredEmployees = useMemo(() => {
-    const filtered = employees.filter(emp => {
+    const filtered = myEmployees.filter(emp => {
       const q = rosterSearchQuery.toLowerCase().trim();
       const matchesSearch =
         !q ||
@@ -591,7 +595,7 @@ export default function App() {
       }
     });
   }, [
-    employees,
+    myEmployees,
     rosterSearchQuery,
     rosterDeptFilter,
     rosterTeamFilter,
@@ -623,6 +627,9 @@ export default function App() {
       });
   }, [performance, reportEmployeeId]);
 
+  if (!loggedInManager) {
+    return <LoginPage onLogin={setLoggedInManager} />;
+  }
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 flex flex-col">
       {/* Toast Notification */}
@@ -698,21 +705,34 @@ export default function App() {
             </motion.button>
 
             {/* Profile area */}
-            <div className="flex items-center gap-3">
-              <div className="hidden md:flex flex-col items-end text-right">
-                <span className="text-xs font-bold text-slate-800 font-display">Rafiul Refat</span>
-                <span className="text-[10px] text-slate-400 font-mono font-medium">Lead / System Node</span>
-              </div>
-              <motion.div 
-                className="relative p-[1.5px] rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600"
-                whileHover={{ scale: 1.05 }}
-              >
-                <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center font-extrabold text-xs text-blue-600 border border-white overflow-hidden shrink-0">
-                  <img src={get3DAvatarUrl("Rafiul")} alt="Rafiul Refat" className="w-full h-full object-cover" />
+            <div className="flex items-center gap-4 relative group">
+              <div className="flex items-center gap-3 cursor-pointer">
+                <div className="hidden md:flex flex-col items-end text-right">
+                  <span className="text-xs font-bold text-slate-800 font-display group-hover:text-blue-600 transition-colors">{loggedInManager.name}</span>
+                  <span className="text-[10px] text-slate-400 font-mono font-medium">{loggedInManager.role}</span>
                 </div>
-                {/* Active Indicator Pulse */}
-                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white animate-pulse z-10" />
-              </motion.div>
+                <motion.div 
+                  className="relative p-[1.5px] rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600"
+                  whileHover={{ scale: 1.05 }}
+                >
+                  <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center font-extrabold text-xs text-blue-600 border border-white overflow-hidden shrink-0">
+                    <img src={get3DAvatarUrl(loggedInManager.name)} alt={loggedInManager.name} className="w-full h-full object-cover" />
+                  </div>
+                  {/* Active Indicator Pulse */}
+                  <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white animate-pulse z-10" />
+                </motion.div>
+              </div>
+              
+              {/* Creative Sign Out Button - Revealed on hover */}
+              <div className="absolute right-0 top-full mt-2 w-full flex justify-end opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 translate-y-[-10px] group-hover:translate-y-0 z-50">
+                <button
+                  onClick={() => setLoggedInManager(null)}
+                  className="flex items-center gap-2 px-4 py-2 bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-xl shadow-lg shadow-rose-500/10 text-xs font-bold text-slate-600 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 transition-all cursor-pointer w-auto whitespace-nowrap"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  Sign Out
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -729,7 +749,7 @@ export default function App() {
               Direct Reports
             </h2>
             <span className="px-2.5 py-0.5 bg-slate-100 border border-slate-200 rounded-full text-[10px] font-semibold text-slate-600">
-              {employees.length} Total
+              {myEmployees.length} Total
             </span>
           </div>
 
@@ -796,7 +816,7 @@ export default function App() {
                 activeTab === "profile" ? "bg-white text-blue-600 shadow-xs font-bold" : "text-slate-500 hover:text-slate-900"
               }`}
             >
-              <Sparkles className="h-3.5 w-3.5" />
+              <Briefcase className="h-3.5 w-3.5" />
               Employee Profile & AI Roadmap
             </button>
             <button
@@ -815,7 +835,7 @@ export default function App() {
               }`}
             >
               <Users className="h-3.5 w-3.5" />
-              Database Records
+              Roster
             </button>
             <button
               onClick={() => setActiveTab("compare")}
@@ -960,20 +980,31 @@ export default function App() {
                       {/* Action buttons inside Profile Card */}
                       <div className="flex gap-2 w-full md:w-auto relative z-20">
                         <button
-                          onClick={() => handleOpenPerformanceLog(selectedReportEmployeeObj)}
-                          className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-white/60 border border-white/50 text-slate-700 hover:bg-white/80 rounded-xl text-xs font-semibold transition-all shadow-xs backdrop-blur-xs"
+                          onClick={() => {
+                            setEditingEmployee(selectedReportEmployeeObj);
+                            setIsEmployeeModalOpen(true);
+                          }}
+                          className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg border border-slate-200 transition-all shadow-xs"
                         >
-                          <Plus className="h-3.5 w-3.5 text-blue-500" />
-                          Log Metrics
+                          <Edit3 className="h-3.5 w-3.5" />
+                          Edit Profile
                         </button>
 
                         <button
-                          onClick={handleGenerateReport}
-                          disabled={isGeneratingReport || !activeRecord}
-                          className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-blue-300 disabled:to-indigo-300 text-white rounded-xl text-xs font-bold transition-all shadow-md border border-white/10"
+                          onClick={() => {
+                            setSelectedPerfEmployee(selectedReportEmployeeObj);
+                            setPerfFormData({
+                              attendance: 100,
+                              conductedMeetings: 0,
+                              deliveredProjectsAmount: 0,
+                              deliveredProjectsValue: 0
+                            });
+                            setIsPerformanceModalOpen(true);
+                          }}
+                          className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-200 transition-all shadow-xs"
                         >
-                          <Sparkles className="h-3.5 w-3.5" />
-                          Generate Report
+                          <TrendingUp className="h-3.5 w-3.5" />
+                          Log Activity
                         </button>
                       </div>
                     </div>
@@ -1189,12 +1220,9 @@ export default function App() {
                       </span>
                     </div>
                     <button
-                      onClick={() => {
-                        window.print();
-                      }}
-                      className="text-blue-600 text-xs font-bold uppercase tracking-wider hover:underline animate-pulse"
+                      className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-[10px] uppercase font-bold rounded-lg transition-all"
                     >
-                      Export PDF / Save →
+                      View Path
                     </button>
                   </div>
                 </motion.div>
@@ -1221,7 +1249,7 @@ export default function App() {
                 <h3 className="text-lg font-bold text-slate-800">Team-Wide Trends & Aggregate Metrics</h3>
                 <p className="text-xs text-slate-500">A comprehensive analytics view of corporate sync count, attendance rates, and team deliverables.</p>
               </div>
-              <DashboardTab employees={employees} records={performance} />
+              <DashboardTab employees={myEmployees} records={performance} />
             </div>
           )}
 
@@ -1270,7 +1298,7 @@ export default function App() {
                   </div>
                   <div>
                     <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Roster Size</span>
-                    <span className="text-xs font-bold text-slate-800 mt-0.5 font-mono">{employees.length} Active Profiles</span>
+                    <span className="text-xs font-bold text-slate-800 mt-0.5 font-mono">{myEmployees.length} Active Profiles</span>
                   </div>
                 </div>
 
@@ -1304,9 +1332,9 @@ export default function App() {
                     {rosterSearchQuery && (
                       <button
                         onClick={() => setRosterSearchQuery("")}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 text-[10px] font-bold cursor-pointer"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 bg-slate-200 hover:bg-slate-300 rounded-md text-slate-500 hover:text-slate-700 transition-all cursor-pointer"
                       >
-                        Clear
+                        <X className="h-3 w-3" />
                       </button>
                     )}
                   </div>
@@ -1344,8 +1372,8 @@ export default function App() {
                       {["All", ...DEPARTMENTS].map((dept) => {
                         const isActive = rosterDeptFilter === dept;
                         const count = dept === "All" 
-                          ? employees.length 
-                          : employees.filter(e => e.department === dept).length;
+                          ? myEmployees.length 
+                          : myEmployees.filter(e => e.department === dept).length;
 
                         return (
                           <button
@@ -1355,24 +1383,21 @@ export default function App() {
                               isActive ? "text-indigo-950" : "text-slate-500 hover:text-slate-800"
                             }`}
                           >
-                            {/* Sliding Active Indicator */}
                             {isActive && (
                               <motion.div
-                                layoutId="activeDept"
-                                className="absolute inset-0 bg-indigo-50 border border-indigo-100/50 rounded-lg z-0"
-                                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                layoutId="rosterDeptTab"
+                                className="absolute inset-0 bg-white border border-indigo-200/60 rounded-lg shadow-sm"
+                                transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
                               />
                             )}
                             <span className="relative z-10 flex items-center gap-1.5">
-                              <span className={`${isActive ? "text-indigo-600" : "text-slate-400"}`}>
-                                {getDeptIcon(dept)}
-                              </span>
-                              <span>{dept}</span>
-                              <span className={`text-[8px] font-bold px-1.5 py-0.2 rounded font-mono ${
-                                isActive ? "bg-indigo-150 text-indigo-800" : "bg-slate-200/40 text-slate-500"
-                              }`}>
-                                {count}
-                              </span>
+                              {getDeptIcon(dept)}
+                              {dept}
+                            </span>
+                            <span className={`relative z-10 text-[9px] font-mono px-1.5 py-0.5 rounded-full ${
+                              isActive ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"
+                            }`}>
+                              {count}
                             </span>
                           </button>
                         );
@@ -1396,8 +1421,8 @@ export default function App() {
                       {["All", ...TEAMS].map((t) => {
                         const isActive = rosterTeamFilter === t;
                         const count = t === "All"
-                          ? employees.length
-                          : employees.filter(e => e.team === t).length;
+                          ? myEmployees.length
+                          : myEmployees.filter(e => e.team === t).length;
 
                         return (
                           <button
@@ -1407,24 +1432,18 @@ export default function App() {
                               isActive ? "text-blue-950" : "text-slate-500 hover:text-slate-800"
                             }`}
                           >
-                            {/* Sliding Active Indicator */}
                             {isActive && (
                               <motion.div
-                                layoutId="activeTeam"
-                                className="absolute inset-0 bg-blue-50 border border-blue-100/50 rounded-lg z-0"
-                                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                layoutId="rosterTeamTab"
+                                className="absolute inset-0 bg-white border border-blue-200/60 rounded-lg shadow-sm"
+                                transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
                               />
                             )}
-                            <span className="relative z-10 flex items-center gap-1.5">
-                              <span className={`${isActive ? "text-blue-600" : "text-slate-400"}`}>
-                                {getTeamIcon(t)}
-                              </span>
-                              <span>{t}</span>
-                              <span className={`text-[8px] font-bold px-1.5 py-0.2 rounded font-mono ${
-                                isActive ? "bg-blue-150 text-blue-800" : "bg-slate-200/40 text-slate-500"
-                              }`}>
-                                {count}
-                              </span>
+                            <span className="relative z-10">{t}</span>
+                            <span className={`relative z-10 text-[9px] font-mono px-1.5 py-0.5 rounded-full ${
+                              isActive ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"
+                            }`}>
+                              {count}
                             </span>
                           </button>
                         );
@@ -1554,22 +1573,22 @@ export default function App() {
                                   <div className="flex items-center gap-1.5 group/email">
                                     <span className="text-[11px] text-slate-600">{emp.email}</span>
                                     <button
-                                      onClick={() => handleCopyToClipboard(emp.email)}
-                                      className="opacity-0 group-hover/email:opacity-100 hover:text-indigo-600 text-slate-400 transition-opacity"
+                                      onClick={() => navigator.clipboard.writeText(emp.email)}
+                                      className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-700 transition-colors opacity-0 group-hover/email:opacity-100 cursor-pointer"
                                       title="Copy Email"
                                     >
-                                      {isEmailCopied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                                      {isEmailCopied ? <CheckCircle className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
                                     </button>
                                   </div>
                                   
                                   <div className="flex items-center gap-1.5 group/id">
                                     <span className="font-mono text-[10px] text-slate-400">ID: {emp.id}</span>
                                     <button
-                                      onClick={() => handleCopyToClipboard(emp.id)}
-                                      className="opacity-0 group-hover/id:opacity-100 hover:text-indigo-600 text-slate-400 transition-opacity"
+                                      onClick={() => navigator.clipboard.writeText(emp.id)}
+                                      className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-700 transition-colors opacity-0 group-hover/id:opacity-100 cursor-pointer"
                                       title="Copy ID"
                                     >
-                                      {isIdCopied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                                      {isIdCopied ? <CheckCircle className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
                                     </button>
                                   </div>
                                 </div>
@@ -1578,16 +1597,19 @@ export default function App() {
                               {/* Action Items */}
                               <td className="px-6 py-4 text-right pr-6 space-x-1 shrink-0">
                                 <button
-                                  onClick={() => handleOpenEditEmployee(emp)}
-                                  className="p-2 hover:bg-slate-100 rounded-xl text-slate-500 hover:text-indigo-600 hover:border-indigo-100 border border-transparent transition-all inline-flex items-center justify-center cursor-pointer"
-                                  title="Edit Profile"
+                                  onClick={() => {
+                                    setEditingEmployee(emp);
+                                    setIsEmployeeModalOpen(true);
+                                  }}
+                                  className="p-2 text-slate-400 hover:bg-white hover:text-slate-700 rounded-lg shadow-none hover:shadow-xs border border-transparent hover:border-slate-200 transition-all cursor-pointer inline-flex items-center justify-center"
+                                  title="Edit Employee"
                                 >
                                   <Edit3 className="h-3.5 w-3.5" />
                                 </button>
                                 <button
-                                  onClick={() => handleDeleteEmployeeClick(emp)}
-                                  className="p-2 hover:bg-rose-50 rounded-xl text-slate-400 hover:text-rose-600 hover:border-rose-100 border border-transparent transition-all inline-flex items-center justify-center cursor-pointer"
-                                  title="Delete Profile"
+                                  onClick={() => setEmployeeToDelete(emp)}
+                                  className="p-2 text-slate-400 hover:bg-white hover:text-rose-600 rounded-lg shadow-none hover:shadow-xs border border-transparent hover:border-rose-100 transition-all cursor-pointer inline-flex items-center justify-center"
+                                  title="Delete Employee"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </button>
@@ -1617,10 +1639,11 @@ export default function App() {
                                 onClick={() => {
                                   setRosterSearchQuery("");
                                   setRosterDeptFilter("All");
+                                  setRosterTeamFilter("All");
                                 }}
-                                className="mt-4 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[10px] font-bold transition-all cursor-pointer"
+                                className="mt-3 text-[10px] font-bold uppercase tracking-wider text-indigo-500 hover:text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
                               >
-                                Clear All Filters
+                                Clear Filters
                               </button>
                             </motion.div>
                           </td>
@@ -1663,7 +1686,7 @@ export default function App() {
                     onChange={(e) => setCompareEmp1(e.target.value)}
                   >
                     <option value="">-- Select Employee --</option>
-                    {employees.map(e => (
+                    {myEmployees.map(e => (
                       <option key={e.id} value={e.id}>{e.name} ({e.department})</option>
                     ))}
                   </select>
@@ -1681,7 +1704,7 @@ export default function App() {
                     onChange={(e) => setCompareEmp2(e.target.value)}
                   >
                     <option value="">-- Select Employee --</option>
-                    {employees.map(e => (
+                    {myEmployees.map(e => (
                       <option key={e.id} value={e.id}>{e.name} ({e.department})</option>
                     ))}
                   </select>
@@ -1697,8 +1720,8 @@ export default function App() {
                   </div>
                 );
 
-                const emp1 = employees.find(e => e.id === compareEmp1);
-                const emp2 = employees.find(e => e.id === compareEmp2);
+                const emp1 = myEmployees.find(e => e.id === compareEmp1);
+                const emp2 = myEmployees.find(e => e.id === compareEmp2);
                 if (!emp1 || !emp2) return null;
 
                 const perf1 = performance.find(p => p.employeeId === emp1.id && p.month === selectedMonth);
@@ -1837,18 +1860,18 @@ export default function App() {
       </main>
 
       {/* FOOTER */}
-      <footer className="mt-12 bg-slate-900 border-t border-slate-800 text-slate-400 py-6 px-6 text-xs font-mono text-center">
-        <div className="w-[85%] max-w-[85%] mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <span>&copy; 2026 Employee Performance Cards. Built for Managers.</span>
-          <div className="flex gap-4">
-            <span className="flex items-center gap-1">
-              <CheckCircle className="h-4 w-4 text-emerald-500" />
-              Secure MongoDB Client
-            </span>
-            <span className="flex items-center gap-1">
-              <Sparkles className="h-4 w-4 text-blue-500 animate-pulse" />
-              Gemini 3.5 Flash Active
-            </span>
+      <footer className="mt-auto py-8 text-center text-slate-400 text-xs font-medium bg-transparent border-t border-slate-200/50">
+        <div className="w-[85%] max-w-[85%] mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
+            <div className="flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 border border-slate-200 shadow-xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+            </div>
+            <span className="tracking-wide">Nexus Portal &copy; {new Date().getFullYear()}</span>
+          </div>
+          <div className="flex gap-6 text-[11px] uppercase tracking-wider font-semibold">
+            <a href="#" className="hover:text-slate-800 transition-colors">Privacy</a>
+            <a href="#" className="hover:text-slate-800 transition-colors">Terms</a>
+            <a href="#" className="hover:text-slate-800 transition-colors">Support</a>
           </div>
         </div>
       </footer>
@@ -1864,9 +1887,9 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setIsEmployeeModalOpen(false)}
-                className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition-all cursor-pointer"
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -1964,15 +1987,17 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setIsEmployeeModalOpen(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-lg cursor-pointer"
+                  className="px-4 py-2 text-slate-600 hover:text-slate-800 font-semibold transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-sm cursor-pointer"
+                  
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  Save Profile
+                  <Check className="h-3.5 w-3.5" />
+                  {editingEmployee ? "Save Changes" : "Create Profile"}
                 </button>
               </div>
             </form>
@@ -1994,9 +2019,9 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setIsPerformanceModalOpen(false)}
-                className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition-all cursor-pointer"
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -2174,15 +2199,17 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setIsPerformanceModalOpen(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-lg cursor-pointer"
+                  className="px-4 py-2 text-slate-600 hover:text-slate-800 font-semibold transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-sm cursor-pointer"
+                  
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-70"
                 >
-                  Record Card Metrics
+                  <Check className="h-3.5 w-3.5" />
+                  Save Metrics
                 </button>
               </div>
             </form>
@@ -2212,10 +2239,10 @@ export default function App() {
                   Define expectations for <span className="font-semibold text-slate-600 font-mono">{selectedMonth}</span> to flag under-performance
                 </p>
               </div>
-              <button 
+              <button
                 type="button"
                 onClick={() => setIsTargetsModalOpen(false)}
-                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer shrink-0"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -2290,15 +2317,17 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setIsTargetsModalOpen(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-lg transition-colors cursor-pointer"
+                  className="px-4 py-2 text-slate-600 hover:text-slate-800 font-semibold transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-lg shadow-md hover:shadow-lg transition-all cursor-pointer"
+                  
+                  className="px-5 py-2 bg-slate-900 hover:bg-slate-950 text-white font-bold rounded-lg shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-70"
                 >
-                  Save Target
+                  <Check className="h-3.5 w-3.5" />
+                  Save Targets
                 </button>
               </div>
             </form>
@@ -2326,21 +2355,18 @@ export default function App() {
             {/* Action Buttons */}
             <div className="p-6 pt-2 border-t border-slate-100 flex gap-2 text-xs shrink-0 bg-slate-50/50 justify-end">
               <button
-                type="button"
-                onClick={() => {
-                  setIsDeleteConfirmOpen(false);
-                  setEmployeeToDelete(null);
-                }}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-lg transition-colors cursor-pointer"
+                onClick={() => setEmployeeToDelete(null)}
+                className="px-4 py-2 text-slate-600 hover:text-slate-800 font-semibold transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
-                type="button"
                 onClick={handleConfirmDeleteEmployee}
-                className="px-4 py-2 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white font-bold rounded-lg shadow-md hover:shadow-lg transition-all cursor-pointer"
+                
+                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-70"
               >
-                Delete Profile
+                <Trash2 className="h-3.5 w-3.5" />
+                Confirm Deletion
               </button>
             </div>
           </div>

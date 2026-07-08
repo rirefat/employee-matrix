@@ -1,0 +1,154 @@
+import React, { useState } from 'react';
+import { motion } from 'motion/react';
+import { Lock, Mail, ArrowRight, ShieldCheck, Zap, AlertCircle } from 'lucide-react';
+import { get3DAvatarUrl } from '../utils';
+
+export interface Manager {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  teams: string[];
+}
+
+export const dummyManagers: Manager[] = [
+  { id: 'm1', name: 'Alice Smith', email: 'alice@nexus.com', role: 'Custom Dev Manager', teams: ['Custom'] },
+  { id: 'm2', name: 'Bob Johnson', email: 'bob@nexus.com', role: 'Shopify Manager', teams: ['Shopify'] },
+  { id: 'm3', name: 'Charlie Davis', email: 'charlie@nexus.com', role: 'WordPress Manager', teams: ['WordPress'] },
+  { id: 'm4', name: 'Diana Prince', email: 'diana@nexus.com', role: 'UI/UX Manager', teams: ['UI/UX'] },
+];
+
+interface LoginPageProps {
+  onLogin: (manager: Manager) => void;
+}
+
+export function LoginPage({ onLogin }: LoginPageProps) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const manager = dummyManagers.find(m => m.email === email && password === 'admin123');
+    if (manager) {
+      onLogin(manager);
+    } else {
+      setError('Invalid credentials. Use one of the dummy accounts below.');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] rounded-full bg-blue-400/10 blur-[100px]" />
+        <div className="absolute top-[20%] -right-[10%] w-[50%] h-[50%] rounded-full bg-indigo-400/10 blur-[120px]" />
+        <div className="absolute -bottom-[10%] left-[20%] w-[40%] h-[40%] rounded-full bg-emerald-400/10 blur-[100px]" />
+      </div>
+
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-8 bg-white/70 backdrop-blur-xl border border-white/50 rounded-3xl shadow-xl overflow-hidden z-10"
+      >
+        <div className="p-10 md:p-14 flex flex-col justify-center border-r border-slate-100">
+          <div className="mb-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <ShieldCheck className="h-5 w-5 text-white" />
+              </div>
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Nexus Portal</h1>
+            </div>
+            <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight leading-tight mb-2">Welcome Back.</h2>
+            <p className="text-sm text-slate-500">Sign in to manage your dedicated teams and track performance metrics.</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Work Email</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                  <Mail className="h-4 w-4" />
+                </div>
+                <input 
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="manager@nexus.com"
+                  className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all placeholder:text-slate-400 shadow-sm"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Password</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                  <Lock className="h-4 w-4" />
+                </div>
+                <input 
+                  type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all placeholder:text-slate-400 shadow-sm"
+                  required
+                />
+              </div>
+            </div>
+
+            {error && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="text-xs text-rose-500 font-semibold flex items-center gap-1.5 bg-rose-50 p-2.5 rounded-lg border border-rose-100">
+                <AlertCircle className="h-3.5 w-3.5" />
+                {error}
+              </motion.div>
+            )}
+
+            <button 
+              type="submit"
+              className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-blue-500/25 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+            >
+              Secure Login <ArrowRight className="h-4 w-4" />
+            </button>
+          </form>
+        </div>
+
+        <div className="bg-slate-50/50 p-10 md:p-14 flex flex-col justify-center">
+          <div className="mb-8">
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest mb-1 flex items-center gap-2">
+              <Zap className="h-4 w-4 text-emerald-500" /> Demo Accounts
+            </h3>
+            <p className="text-xs text-slate-500">Use these credentials to preview different role-based views. Password for all is <strong className="text-slate-700">admin123</strong>.</p>
+          </div>
+
+          <div className="space-y-3">
+            {dummyManagers.slice(0, 3).map((manager, idx) => (
+              <motion.div 
+                key={manager.id}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                onClick={() => {
+                  setEmail(manager.email);
+                  setPassword('admin123');
+                }}
+                className="group p-3.5 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-blue-300 hover:shadow-md transition-all flex items-center gap-3"
+              >
+                <div className="w-10 h-10 rounded-full bg-slate-100 border-2 border-white shadow-sm overflow-hidden shrink-0">
+                  <img src={get3DAvatarUrl(manager.name)} alt={manager.name} className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{manager.name}</h4>
+                  <p className="text-xs text-slate-500">{manager.email}</p>
+                </div>
+                <div className="px-2.5 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-md uppercase tracking-wide group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                  {manager.role}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
