@@ -42,7 +42,7 @@ app.get("/api/employees", async (req, res) => {
 // Create Employee
 app.post("/api/employees", async (req, res) => {
   try {
-    const { name, role, department, team, email, id } = req.body;
+    const { name, role, department, team, email, id, leaveBalance } = req.body;
     if (!name || !role || !department || !team || !email) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -53,7 +53,8 @@ app.post("/api/employees", async (req, res) => {
       team,
       email,
       id,
-      active: true
+      active: true,
+      leaveBalance
     });
     res.status(201).json(newEmp);
   } catch (err: any) {
@@ -191,7 +192,34 @@ app.post("/api/reports/generate", async (req, res) => {
   }
 });
 
+
+// --- LEAVE REQUESTS API ---
+app.get("/api/leave-requests", async (req, res) => {
+  try {
+    const requests = await dbService.getLeaveRequests();
+    res.json(requests);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to fetch leave requests" });
+  }
+});
+
+app.post("/api/leave-requests", async (req, res) => {
+  try {
+    const { employeeId, type, startDate, endDate, days, status, requestedAt } = req.body;
+    if (!employeeId || !type || !startDate || !endDate || !days || !status || !requestedAt) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    const saved = await dbService.saveLeaveRequest({
+      employeeId, type, startDate, endDate, days, status, requestedAt
+    });
+    res.json(saved);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to save leave request" });
+  }
+});
+
 // --- TARGETS API ---
+
 app.get("/api/targets", async (req, res) => {
   try {
     const { month } = req.query;

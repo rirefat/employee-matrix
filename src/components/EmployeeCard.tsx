@@ -173,6 +173,35 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
         </div>
       )}
 
+      {/* Visual Progress Bar for Leave Balances */}
+      {employee.leaveBalance && (
+        <div className="relative z-10 mt-2.5 pt-2 border-t border-slate-100/80">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Leave Capacity</span>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: "Sick", used: employee.leaveBalance.sickLeaveUsed, total: 7, colorClass: "bg-rose-500" },
+                { label: "Casual", used: employee.leaveBalance.casualLeaveUsed, total: 7, colorClass: "bg-amber-500" },
+                { label: "Gov/Fest", used: employee.leaveBalance.govFestHolidaysUsed, total: 14, colorClass: "bg-blue-500" }
+              ].map(leave => (
+                <div key={leave.label} className="flex flex-col gap-0.5">
+                  <div className="flex justify-between items-center text-[8px] font-mono">
+                    <span className="text-slate-500 font-semibold">{leave.label}</span>
+                    <span className="text-slate-700 font-bold">{leave.used}<span className="text-slate-400 font-normal">/{leave.total}</span></span>
+                  </div>
+                  <div className="h-1 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
+                    <div 
+                      className={`h-full ${leave.colorClass} rounded-full transition-all duration-500`} 
+                      style={{ width: `${Math.min(100, (leave.used / leave.total) * 100)}%` }} 
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Decorative dynamic edge-aligned progress bar */}
       {performanceRecord && (
         <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-slate-100/50 overflow-hidden">

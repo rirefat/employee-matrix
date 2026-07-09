@@ -319,7 +319,7 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
               <Users className="h-4 w-4" />
             </span>
           </div>
-          <p className="text-3xl font-bold font-display text-slate-900 mt-2 tracking-tight">
+          <p className="text-xl font-bold font-display text-slate-900 mt-2 tracking-tight">
             {summaryMetrics.totalEmployees}
           </p>
           <span className="text-[10px] text-slate-400 block mt-1 font-medium font-sans">Active profiles in matrix</span>
@@ -337,7 +337,7 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
               <CalendarCheck className="h-4 w-4" />
             </span>
           </div>
-          <p className="text-3xl font-bold font-display text-slate-900 mt-2 tracking-tight">
+          <p className="text-xl font-bold font-display text-slate-900 mt-2 tracking-tight">
             {summaryMetrics.avgAttendance}%
           </p>
           <span className="text-[10px] text-slate-400 block mt-1 font-medium font-sans">Workplace presence rate</span>
@@ -355,7 +355,7 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
               <Video className="h-4 w-4" />
             </span>
           </div>
-          <p className="text-3xl font-bold font-display text-slate-900 mt-2 tracking-tight">
+          <p className="text-xl font-bold font-display text-slate-900 mt-2 tracking-tight">
             {summaryMetrics.totalMeetings}
           </p>
           <span className="text-[10px] text-slate-400 block mt-1 font-medium font-sans">Syncs & reviews conducted</span>
@@ -373,7 +373,7 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
               <Briefcase className="h-4 w-4" />
             </span>
           </div>
-          <p className="text-3xl font-bold font-display text-slate-900 mt-2 tracking-tight">
+          <p className="text-xl font-bold font-display text-slate-900 mt-2 tracking-tight">
             {summaryMetrics.totalProjectsAmount}
           </p>
           <span className="text-[10px] text-slate-400 block mt-1 font-medium font-sans">Standalone accomplishments</span>

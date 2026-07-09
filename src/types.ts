@@ -6,6 +6,11 @@ export interface Employee {
   team: string;
   email: string;
   active: boolean;
+  leaveBalance?: {
+    sickLeaveUsed: number;
+    casualLeaveUsed: number;
+    govFestHolidaysUsed: number;
+  };
   createdAt: string;
 }
 
@@ -42,6 +47,17 @@ export interface MonthlyTarget {
   attendanceMin: number; // percentage, e.g. 95 for 95%
   projectValueMin: number; // value in USD, e.g. 30000
   updatedAt: string;
+}
+
+export interface LeaveRequest {
+  id: string;
+  employeeId: string;
+  type: 'Sick' | 'Casual' | 'Gov/Fest';
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  days: number;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  requestedAt: string; // ISO date string
 }
 
 export interface DBStatus {

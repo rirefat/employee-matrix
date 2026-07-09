@@ -1,7 +1,7 @@
 import { MongoClient, Db, Collection } from "mongodb";
 import fs from "fs";
 import path from "path";
-import { Employee, PerformanceRecord, MonthlyReport, DBStatus, MonthlyTarget } from "../src/types";
+import { Employee, PerformanceRecord, MonthlyReport, MonthlyTarget, DBStatus, LeaveRequest } from "../src/types";
 
 const LOCAL_DB_PATH = path.join(process.cwd(), "data.json");
 
@@ -9,6 +9,40 @@ const LOCAL_DB_PATH = path.join(process.cwd(), "data.json");
 const generateId = () => Math.random().toString(36).substring(2, 11);
 
 // Seed data
+
+const initialLeaveRequests: LeaveRequest[] = [
+  {
+    id: "lr-1x9a2b3c",
+    employeeId: "emp-alpha-001",
+    type: "Sick",
+    startDate: "2026-06-10",
+    endDate: "2026-06-11",
+    days: 2,
+    status: "Approved",
+    requestedAt: new Date("2026-06-05T09:30:00Z").toISOString()
+  },
+  {
+    id: "lr-4y8b5d6e",
+    employeeId: "emp-beta-002",
+    type: "Casual",
+    startDate: "2026-07-15",
+    endDate: "2026-07-15",
+    days: 1,
+    status: "Pending",
+    requestedAt: new Date("2026-07-08T14:15:00Z").toISOString()
+  },
+  {
+    id: "lr-7z6c8f9g",
+    employeeId: "emp-gamma-003",
+    type: "Gov/Fest",
+    startDate: "2026-05-01",
+    endDate: "2026-05-01",
+    days: 1,
+    status: "Approved",
+    requestedAt: new Date("2026-04-20T10:00:00Z").toISOString()
+  }
+];
+
 const initialTargets: MonthlyTarget[] = [
   {
     id: "target-default",
@@ -1378,6 +1412,7 @@ interface LocalSchema {
   performance: PerformanceRecord[];
   reports: MonthlyReport[];
   targets: MonthlyTarget[];
+  leaveRequests: LeaveRequest[];
 }
 
 class DatabaseService {
@@ -1395,7 +1430,8 @@ class DatabaseService {
     employees: initialEmployees,
     performance: initialPerformance,
     reports: initialReports,
-    targets: initialTargets
+    targets: initialTargets,
+    leaveRequests: initialLeaveRequests
   };
 
   constructor() {
@@ -1450,7 +1486,8 @@ class DatabaseService {
         employees: initialEmployees,
         performance: initialPerformance,
         reports: initialReports,
-        targets: initialTargets
+        targets: initialTargets,
+        leaveRequests: initialLeaveRequests
       };
       try {
         fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(initialData, null, 2));
@@ -1526,7 +1563,8 @@ class DatabaseService {
         employees: initialEmployees,
         performance: initialPerformance,
         reports: initialReports,
-        targets: initialTargets
+        targets: initialTargets,
+        leaveRequests: initialLeaveRequests
       };
       this.memoryDb = JSON.parse(JSON.stringify(initialData));
       try {
@@ -1611,6 +1649,11 @@ class DatabaseService {
       email: emp.email,
       id: targetId,
       active: true,
+      leaveBalance: emp.leaveBalance || {
+        sickLeaveUsed: 0,
+        casualLeaveUsed: 0,
+        govFestHolidaysUsed: 0
+      },
       createdAt: new Date().toISOString()
     };
 
@@ -1898,6 +1941,41 @@ class DatabaseService {
       const tar = targets.find(t => t.month === month);
       return tar || null;
     }
+  }
+
+
+
+
+  // --- LEAVE REQUESTS API ---
+  public async getLeaveRequests(): Promise<LeaveRequest[]> {
+    await this.ensureInitialized();
+    if (this.db && this.dbStatus.connectionType === "mongodb") {
+      const docs = await this.db.collection("leave_requests").find({}).toArray();
+      return docs.map(doc => {
+        const { _id, ...rest } = doc;
+        return { ...rest, id: rest.id || _id.toString() } as LeaveRequest;
+      });
+    } else {
+      const data = this.readLocal();
+      return data.leaveRequests || [];
+    }
+  }
+
+  public async saveLeaveRequest(request: Omit<LeaveRequest, "id">): Promise<LeaveRequest> {
+    await this.ensureInitialized();
+    const newRequest: LeaveRequest = {
+      ...request,
+      id: "lr-" + generateId()
+    };
+    if (this.db && this.dbStatus.connectionType === "mongodb") {
+      await this.db.collection("leave_requests").insertOne({ ...newRequest });
+    } else {
+      const data = this.readLocal();
+      if (!data.leaveRequests) data.leaveRequests = [];
+      data.leaveRequests.push(newRequest);
+      this.writeLocal(data);
+    }
+    return newRequest;
   }
 }
 

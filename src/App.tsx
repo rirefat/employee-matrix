@@ -32,7 +32,8 @@ import {
   Mail,
   LogOut,
   Building,
-  ArrowLeftRight
+  ArrowLeftRight,
+  ChevronDown
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -51,7 +52,7 @@ import {
   Bar,
   Legend
 } from "recharts";
-import { Employee, PerformanceRecord, MonthlyReport, MonthlyTarget } from "./types";
+import { Employee, PerformanceRecord, MonthlyReport, MonthlyTarget, LeaveRequest } from "./types";
 import { ReportViewer } from "./components/ReportViewer";
 import { DashboardTab } from "./components/DashboardTab";
 import { EmployeeCard } from "./components/EmployeeCard";
@@ -84,6 +85,7 @@ const getTeamIcon = (team: string) => {
 import { get3DAvatarUrl } from "./utils";
 
 export default function App() {
+  const [activePortal, setActivePortal] = useState<"performance" | "leaves" | "employees">("performance");
   const [activeTab, setActiveTab] = useState<"profile" | "team" | "roster" | "compare">("profile");
   const [compareEmp1, setCompareEmp1] = useState<string>("");
   const [compareEmp2, setCompareEmp2] = useState<string>("");
@@ -92,6 +94,7 @@ export default function App() {
   const [performance, setPerformance] = useState<PerformanceRecord[]>([]);
   const [reports, setReports] = useState<MonthlyReport[]>([]);
   const [targets, setTargets] = useState<MonthlyTarget[]>([]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>("2026-06");
   const myEmployees = useMemo(() => employees.filter(emp => loggedInManager?.teams.includes(emp.team)), [employees, loggedInManager]);
   const [rosterSearchQuery, setRosterSearchQuery] = useState<string>("");
@@ -134,11 +137,17 @@ export default function App() {
     role: "",
     department: DEPARTMENTS[0],
     team: TEAMS[0],
-    email: ""
+    email: "",
+    leaveBalance: {
+      sickLeaveUsed: 0,
+      casualLeaveUsed: 0,
+      govFestHolidaysUsed: 0
+    }
   });
 
   const [isPerformanceModalOpen, setIsPerformanceModalOpen] = useState(false);
   const [selectedPerfEmployee, setSelectedPerfEmployee] = useState<Employee | null>(null);
+  const [entryMode, setEntryMode] = useState<"overwrite" | "add">("overwrite");
   const [perfFormData, setPerfFormData] = useState({
     attendance: 100,
     conductedMeetings: 10,
@@ -150,6 +159,92 @@ export default function App() {
     leaveDays: 0,
     managerRemarks: ""
   });
+
+  const [kudos, setKudos] = useState<Record<string, { velocity: number; innovation: number; team: number; precision: number; growth: number; empathy: number }>>({});
+
+  const getInitialKudos = (name: string) => {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return {
+      velocity: Math.abs((hash) % 15) + 3,
+      innovation: Math.abs((hash >> 2) % 12) + 2,
+      team: Math.abs((hash >> 4) % 18) + 5,
+      precision: Math.abs((hash >> 6) % 10) + 4,
+      growth: Math.abs((hash >> 8) % 14) + 3,
+      empathy: Math.abs((hash >> 10) % 16) + 4,
+    };
+  };
+
+  const getEmployeeKudos = (empId: string, empName: string) => {
+    if (!kudos[empId]) {
+      return getInitialKudos(empName);
+    }
+    return kudos[empId];
+  };
+
+  const handleAddKudos = (empId: string, empName: string, type: 'velocity' | 'innovation' | 'team' | 'precision' | 'growth' | 'empathy') => {
+    const current = getEmployeeKudos(empId, empName);
+    setKudos(prev => ({
+      ...prev,
+      [empId]: {
+        ...current,
+        [type]: current[type] + 1
+      }
+    }));
+    showToast(`Awarded +1 Kudos to ${empName}!`, "success");
+  };
+
+  const existingRecordForSelected = useMemo(() => {
+    if (!selectedPerfEmployee) return null;
+    return performance.find(p => p.employeeId === selectedPerfEmployee.id && p.month === selectedMonth) || null;
+  }, [performance, selectedPerfEmployee, selectedMonth]);
+
+  useEffect(() => {
+    if (!selectedPerfEmployee) return;
+
+    if (entryMode === "add") {
+      setPerfFormData(prev => ({
+        ...prev,
+        conductedMeetings: 0,
+        deliveredProjectsAmount: 0,
+        deliveredProjectsValue: 0,
+        managerRemarks: ""
+      }));
+    } else {
+      if (existingRecordForSelected) {
+        const working = existingRecordForSelected.totalWorkingDays || 22;
+        const present = existingRecordForSelected.presentDays !== undefined ? existingRecordForSelected.presentDays : Math.round(working * (existingRecordForSelected.attendance / 100));
+        const absent = existingRecordForSelected.absentDays !== undefined ? existingRecordForSelected.absentDays : (working - present);
+        const leave = existingRecordForSelected.leaveDays || 0;
+
+        setPerfFormData({
+          attendance: existingRecordForSelected.attendance,
+          conductedMeetings: existingRecordForSelected.conductedMeetings,
+          deliveredProjectsAmount: existingRecordForSelected.deliveredProjectsAmount,
+          deliveredProjectsValue: existingRecordForSelected.deliveredProjectsValue,
+          totalWorkingDays: working,
+          presentDays: present,
+          absentDays: absent,
+          leaveDays: leave,
+          managerRemarks: existingRecordForSelected.managerRemarks || ""
+        });
+      } else {
+        setPerfFormData({
+          attendance: 100,
+          conductedMeetings: 0,
+          deliveredProjectsAmount: 0,
+          deliveredProjectsValue: 0,
+          totalWorkingDays: 22,
+          presentDays: 22,
+          absentDays: 0,
+          leaveDays: 0,
+          managerRemarks: ""
+        });
+      }
+    }
+  }, [entryMode, selectedPerfEmployee, selectedMonth]);
 
   // Report specific selection
   const [reportEmployeeId, setReportEmployeeId] = useState<string>("");
@@ -292,14 +387,15 @@ export default function App() {
   };
 
   const handleOpenEditEmployee = (emp: Employee) => {
-    setEditingEmployee(emp);
+    console.log("Edit", emp);
     setEmployeeFormData({
       id: emp.id,
       name: emp.name,
       role: emp.role,
       department: emp.department,
       team: emp.team || TEAMS[0],
-      email: emp.email
+      email: emp.email,
+      leaveBalance: emp.leaveBalance || { sickLeaveUsed: 0, casualLeaveUsed: 0, govFestHolidaysUsed: 0 }
     });
     setIsEmployeeModalOpen(true);
   };
@@ -429,6 +525,7 @@ export default function App() {
   // --- PERFORMANCE ENTRY LOGIC ---
   const handleOpenPerformanceLog = (emp: Employee) => {
     setSelectedPerfEmployee(emp);
+    setEntryMode("overwrite");
     
     // Check if performance metrics already exist for selected month
     const existing = performance.find(p => p.employeeId === emp.id && p.month === selectedMonth);
@@ -451,13 +548,13 @@ export default function App() {
       });
     } else {
       setPerfFormData({
-        attendance: 95,
-        conductedMeetings: 12,
-        deliveredProjectsAmount: 2,
-        deliveredProjectsValue: 15000,
+        attendance: 100,
+        conductedMeetings: 0,
+        deliveredProjectsAmount: 0,
+        deliveredProjectsValue: 0,
         totalWorkingDays: 22,
-        presentDays: 21,
-        absentDays: 1,
+        presentDays: 22,
+        absentDays: 0,
         leaveDays: 0,
         managerRemarks: ""
       });
@@ -489,13 +586,13 @@ export default function App() {
       });
     } else {
       setPerfFormData({
-        attendance: 95,
-        conductedMeetings: 12,
-        deliveredProjectsAmount: 2,
-        deliveredProjectsValue: 15000,
+        attendance: 100,
+        conductedMeetings: 0,
+        deliveredProjectsAmount: 0,
+        deliveredProjectsValue: 0,
         totalWorkingDays: 22,
-        presentDays: 21,
-        absentDays: 1,
+        presentDays: 22,
+        absentDays: 0,
         leaveDays: 0,
         managerRemarks: ""
       });
@@ -507,10 +604,26 @@ export default function App() {
     if (!selectedPerfEmployee) return;
 
     try {
+      let finalData = { ...perfFormData };
+
+      if (entryMode === "add" && existingRecordForSelected) {
+        finalData.conductedMeetings = (existingRecordForSelected.conductedMeetings || 0) + perfFormData.conductedMeetings;
+        finalData.deliveredProjectsAmount = (existingRecordForSelected.deliveredProjectsAmount || 0) + perfFormData.deliveredProjectsAmount;
+        finalData.deliveredProjectsValue = (existingRecordForSelected.deliveredProjectsValue || 0) + perfFormData.deliveredProjectsValue;
+        
+        if (perfFormData.managerRemarks) {
+          finalData.managerRemarks = existingRecordForSelected.managerRemarks
+            ? `${existingRecordForSelected.managerRemarks} | ${perfFormData.managerRemarks}`
+            : perfFormData.managerRemarks;
+        } else {
+          finalData.managerRemarks = existingRecordForSelected.managerRemarks || "";
+        }
+      }
+
       const payload = {
         employeeId: selectedPerfEmployee.id,
         month: selectedMonth,
-        ...perfFormData
+        ...finalData
       };
 
       const res = await fetch("/api/performance", {
@@ -520,7 +633,12 @@ export default function App() {
       });
 
       if (res.ok) {
-        showToast(`Performance card logged for ${selectedPerfEmployee.name} for ${selectedMonth}`, "success");
+        showToast(
+          entryMode === "add"
+            ? `Successfully added new metrics to ${selectedPerfEmployee.name}'s profile!`
+            : `Performance card logged for ${selectedPerfEmployee.name} for ${selectedMonth}`,
+          "success"
+        );
         fetchData();
         setIsPerformanceModalOpen(false);
       } else {
@@ -687,7 +805,97 @@ export default function App() {
     return <LoginPage onLogin={setLoggedInManager} />;
   }
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 flex flex-col">
+    <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
+      {/* GLOBAL SIDEBAR */}
+      <aside className="w-64 flex-shrink-0 bg-white border-r border-slate-200 flex flex-col z-50">
+        <div className="h-20 flex items-center px-6 border-b border-slate-100/50 bg-white/50 backdrop-blur-xl">
+          <div className="flex items-center gap-3 w-full">
+            <div className="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center shadow-lg shadow-slate-900/10 shrink-0 relative overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <Layers className="h-5 w-5 text-white" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-base font-extrabold text-slate-900 tracking-tight leading-none">
+                Employee<span className="text-blue-600 font-light">Matrix</span>
+              </span>
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                Workspace
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto py-8 px-4 space-y-8">
+          <div className="space-y-2">
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-3">Main Navigation</div>
+              
+            <button
+              onClick={() => setActivePortal("performance")}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all group relative ${
+                activePortal === "performance" ? "bg-slate-900 text-white font-medium shadow-md shadow-slate-900/10" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+              }`}
+            >
+              <div className={`p-1.5 rounded-lg ${activePortal === "performance" ? "bg-white/10" : "bg-slate-200 group-hover:bg-white"} transition-colors`}>
+                <TrendingUp className="h-4 w-4" />
+              </div>
+              Performance
+            </button>
+
+            <button
+              onClick={() => setActivePortal("leaves")}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all group relative ${
+                activePortal === "leaves" ? "bg-slate-900 text-white font-medium shadow-md shadow-slate-900/10" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+              }`}
+            >
+              <div className={`p-1.5 rounded-lg ${activePortal === "leaves" ? "bg-white/10" : "bg-slate-200 group-hover:bg-white"} transition-colors`}>
+                <Calendar className="h-4 w-4" />
+              </div>
+              Leave Mgmt
+            </button>
+            
+            <button
+              onClick={() => setActivePortal("employees")}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all group relative ${
+                activePortal === "employees" ? "bg-slate-900 text-white font-medium shadow-md shadow-slate-900/10" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+              }`}
+            >
+              <div className={`p-1.5 rounded-lg ${activePortal === "employees" ? "bg-white/10" : "bg-slate-200 group-hover:bg-white"} transition-colors`}>
+                <Users className="h-4 w-4" />
+              </div>
+              Employees
+            </button>
+          </div>
+        </div>
+        
+        <div className="p-4 border-t border-slate-100/50 mt-auto bg-slate-50/50 space-y-4">
+          <div className="flex items-center justify-between px-2">
+            <div className="flex items-center gap-2 group cursor-pointer">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span className="text-[10px] font-semibold text-slate-500 group-hover:text-slate-900 transition-colors uppercase tracking-widest">All Systems Operational</span>
+            </div>
+          </div>
+          
+          <div className="flex flex-wrap gap-x-4 gap-y-2 text-[10px] font-medium text-slate-500 px-2">
+            <a href="#" className="hover:text-slate-900 transition-colors">Documentation</a>
+            <a href="#" className="hover:text-slate-900 transition-colors">Support</a>
+            <a href="#" className="hover:text-slate-900 transition-colors">API</a>
+          </div>
+          
+          <div className="flex items-center gap-2 px-2 pt-2 border-t border-slate-200/60">
+            <div className="flex flex-col text-left">
+              <span className="text-[10px] font-bold text-slate-700 leading-tight">Employee Matrix</span>
+              <span className="text-[9px] text-slate-400 font-medium">v1.0.0 &copy; {new Date().getFullYear()}</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* MAIN CONTENT WRAPPER */}
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+
       {/* Toast Notification */}
       {toast && (
         <div id="toast-notif" className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border transition-all animate-bounce ${
@@ -703,38 +911,18 @@ export default function App() {
         {/* Glow-bar Accent Line */}
         <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 opacity-90" />
         
-        <div className="w-[85%] max-w-[85%] mx-auto h-16 px-4 sm:px-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {/* Animated Geometric Emblem */}
-            <motion.div 
-              className="relative w-9 h-9 flex items-center justify-center"
-              whileHover={{ scale: 1.05 }}
-            >
-              {/* Pulsing Outer Aura */}
-              <div className="absolute inset-0 bg-blue-500/10 rounded-xl blur-[6px] animate-pulse" />
-              
-              {/* Rotating Tech Ring */}
-              <motion.div 
-                className="absolute inset-0 border-2 border-dashed border-blue-500/40 rounded-xl"
-                animate={{ rotate: 360 }}
-                transition={{ repeat: Infinity, duration: 25, ease: "linear" }}
-              />
-              
-              {/* Core Symbol */}
-              <div className="w-6 h-6 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-md shadow-blue-500/20 text-white">
-                <Cpu className="h-3.5 w-3.5 animate-pulse" />
-              </div>
-            </motion.div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2.5">
-              <span className="text-lg font-bold font-display text-slate-950 tracking-tight leading-none">
-                Employee Matrix
-              </span>
-              <div className="flex items-center gap-1.5">
-                <span className="hidden sm:inline-block h-3 w-[1px] bg-slate-300" />
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-mono tracking-widest font-extrabold uppercase bg-indigo-50 border border-indigo-100/60 text-indigo-600">
-                  <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
-                  Manager Portal
+        <div className="w-full h-16 px-6 lg:px-10 xl:px-12 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex flex-col">
+              <h1 className="text-lg font-medium text-slate-800 tracking-tight">
+                {activePortal === "performance" && "Performance Overview"}
+                {activePortal === "leaves" && "Leave Management"}
+                {activePortal === "employees" && "Employee Directory"}
+              </h1>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                  Live View
                 </span>
               </div>
             </div>
@@ -749,43 +937,36 @@ export default function App() {
             />
 
             {/* Set Monthly Targets Button */}
-            <motion.button
+            <button
               onClick={() => setIsTargetsModalOpen(true)}
-              className="flex items-center gap-1.5 bg-indigo-50/90 hover:bg-indigo-100/90 text-indigo-700 px-3 py-1.5 rounded-xl border border-indigo-200 text-xs font-bold transition-all duration-200 shadow-2xs cursor-pointer animate-fade-in"
-              whileHover={{ y: -1 }}
-              whileTap={{ scale: 0.98 }}
+              className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-full text-xs font-medium transition-all shadow-sm shadow-slate-900/10 cursor-pointer group"
             >
-              <TrendingUp className="h-3.5 w-3.5 text-indigo-600" />
+              <TrendingUp className="h-3.5 w-3.5 text-slate-300 group-hover:text-white transition-colors" />
               <span className="hidden sm:inline">Set Targets</span>
-              <span className="sm:hidden">Targets</span>
-            </motion.button>
+            </button>
 
             {/* Profile area */}
-            <div className="flex items-center gap-4 relative group">
+            <div className="flex items-center gap-4 relative group ml-2">
               <div className="flex items-center gap-3 cursor-pointer">
                 <div className="hidden md:flex flex-col items-end text-right">
-                  <span className="text-xs font-bold text-slate-800 font-display group-hover:text-blue-600 transition-colors">{loggedInManager.name}</span>
-                  <span className="text-[10px] text-slate-400 font-mono font-medium">{loggedInManager.role}</span>
+                  <span className="text-xs font-semibold text-slate-700 group-hover:text-slate-900 transition-colors">{loggedInManager.name}</span>
+                  <span className="text-[10px] text-slate-400 font-medium">{loggedInManager.role}</span>
                 </div>
-                <motion.div 
-                  className="relative p-[1.5px] rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600"
-                  whileHover={{ scale: 1.05 }}
-                >
-                  <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center font-extrabold text-xs text-blue-600 border border-white overflow-hidden shrink-0">
+                <div className="relative">
+                  <div className="w-9 h-9 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200 overflow-hidden shrink-0 group-hover:border-slate-300 transition-colors">
                     <img src={get3DAvatarUrl(loggedInManager.name)} alt={loggedInManager.name} className="w-full h-full object-cover" />
                   </div>
-                  {/* Active Indicator Pulse */}
-                  <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white animate-pulse z-10" />
-                </motion.div>
+                  <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white z-10" />
+                </div>
               </div>
               
-              {/* Creative Sign Out Button - Revealed on hover */}
+              {/* Sign Out Button - Revealed on hover */}
               <div className="absolute right-0 top-full mt-2 w-full flex justify-end opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 translate-y-[-10px] group-hover:translate-y-0 z-50">
                 <button
                   onClick={() => setLoggedInManager(null)}
-                  className="flex items-center gap-2 px-4 py-2 bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-xl shadow-lg shadow-rose-500/10 text-xs font-bold text-slate-600 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 transition-all cursor-pointer w-auto whitespace-nowrap"
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-md text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-all cursor-pointer whitespace-nowrap"
                 >
-                  <LogOut className="h-3.5 w-3.5" />
+                  <LogOut className="h-3.5 w-3.5 text-slate-400" />
                   Sign Out
                 </button>
               </div>
@@ -794,78 +975,11 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Grid Content */}
-      <main className="flex-1 w-[85%] max-w-[85%] mx-auto p-4 md:p-6 grid grid-cols-12 gap-6 items-start">
-
-        {/* LEFT COLUMN: Direct Reports Sidebar */}
-        <aside className="col-span-12 lg:col-span-4 lg:sticky lg:top-20 z-30 flex flex-col gap-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
-              <Users className="h-4 w-4 text-blue-600" />
-              Direct Reports
-            </h2>
-            <span className="px-2.5 py-0.5 bg-slate-100 border border-slate-200 rounded-full text-[10px] font-semibold text-slate-600">
-              {myEmployees.length} Total
-            </span>
-          </div>
-
-          {/* Search bar matching mockup precisely */}
-          <div className="relative w-full">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-              <Search className="h-3.5 w-3.5" />
-            </span>
-            <input
-              type="text"
-              placeholder="Search employees by name or role..."
-              value={searchQuery === " " ? "" : searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all placeholder:text-slate-400"
-            />
-          </div>
-
-          {/* Direct Reports List */}
-          <div className="space-y-3 max-h-[500px] overflow-y-auto no-scrollbar p-2 -m-2">
-            {filteredEmployees.length === 0 ? (
-              <div className="py-8 text-center text-slate-400 text-xs italic">
-                No matching team members found.
-              </div>
-            ) : (
-              filteredEmployees.map((emp, index) => {
-                const isSelected = emp.id === reportEmployeeId;
-                const rec = performance.find(p => p.employeeId === emp.id && p.month === selectedMonth);
-                const hasReport = reports.some(r => r.employeeId === emp.id && r.month === selectedMonth);
-
-                return (
-                  <EmployeeCard
-                    key={emp.id}
-                    index={index}
-                    employee={emp}
-                    isActive={isSelected}
-                    performanceRecord={rec}
-                    hasReport={hasReport}
-                    target={currentTarget}
-                    targetProjectValueMin={effectiveProjectValueMin}
-                    onClick={() => setReportEmployeeId(emp.id)}
-                  />
-                );
-              })
-            )}
-          </div>
-
-          {/* Quick interactive sidebar footer */}
-          <button
-            onClick={handleOpenAddEmployee}
-            className="w-full flex items-center justify-center gap-2 mt-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all"
-          >
-            <UserPlus className="h-3.5 w-3.5" />
-            Add Team Profile
-          </button>
-        </aside>
-
-        {/* RIGHT COLUMN: Interactive Tabs & Detail View */}
-        <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
+      {activePortal === "performance" && (
+        <>
+      <main className="flex-1 w-full px-6 lg:px-10 xl:px-12 py-8 flex flex-col gap-8 overflow-y-auto overflow-x-hidden">
           {/* Content tabs selector */}
-          <div className="flex bg-slate-100 p-1 rounded-xl gap-1 w-fit border border-slate-200/50">
+          <div className="flex flex-wrap bg-slate-100 p-1 rounded-xl gap-1 w-fit border border-slate-200/50">
             <button
               onClick={() => setActiveTab("profile")}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
@@ -899,14 +1013,56 @@ export default function App() {
                 activeTab === "compare" ? "bg-white text-blue-600 shadow-xs font-bold" : "text-slate-500 hover:text-slate-900"
               }`}
             >
-              <ArrowLeftRight className="h-3.5 w-3.5" />
+                <ArrowLeftRight className="h-3.5 w-3.5" />
               Compare
             </button>
+
           </div>
 
           {/* TAB CONTENT: PROFILE (Individual analytics + AI Report) */}
           {activeTab === "profile" && (
-            <div className="space-y-6">
+            <div className="space-y-8">
+              {/* Clean Minimal Team Member Header */}
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 pb-2">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-1 font-display">Employee Profile</h2>
+                  <p className="text-xs text-slate-500 font-medium">Review AI-driven insights and performance roadmap.</p>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <div className="relative group min-w-[220px]">
+                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                      <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200 overflow-hidden">
+                        {selectedReportEmployeeObj ? (
+                          <img src={get3DAvatarUrl(selectedReportEmployeeObj.name)} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <Users className="h-3 w-3 text-slate-400" />
+                        )}
+                      </div>
+                    </div>
+                    <select 
+                      className="w-full appearance-none bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-sm font-medium rounded-full pl-10 pr-10 py-2 outline-none transition-all cursor-pointer shadow-xs focus:border-slate-300 focus:ring-4 focus:ring-slate-50"
+                      value={reportEmployeeId || ""}
+                      onChange={(e) => setReportEmployeeId(e.target.value)}
+                    >
+                      <option value="" disabled>Select Team Member</option>
+                      {myEmployees.map(emp => (
+                        <option key={emp.id} value={emp.id}>{emp.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none group-hover:text-slate-600 transition-colors" />
+                  </div>
+                  
+                  <button 
+                    onClick={handleOpenAddEmployee}
+                    className="p-2.5 bg-slate-900 text-white hover:bg-slate-800 rounded-full transition-all shadow-sm flex items-center justify-center group"
+                    title="Add Team Profile"
+                  >
+                    <UserPlus className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                  </button>
+                </div>
+              </div>
+
               <AnimatePresence mode="wait">
                 {selectedReportEmployeeObj ? (
                   <motion.div
@@ -917,153 +1073,152 @@ export default function App() {
                     transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
                     className="space-y-6"
                   >
-                    {/* Glassmorphic Selected employee info card with ambient blur backdrops */}
-                  <div className="relative overflow-hidden rounded-2xl border border-slate-200/50 shadow-xl p-6 bg-white/70 backdrop-blur-md">
-                    {/* Atmospheric color nodes under glass to enhance depth */}
-                    <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-gradient-to-br from-indigo-500/15 to-purple-500/15 blur-3xl pointer-events-none" />
-                    <div className="absolute -bottom-24 -left-24 w-48 h-48 rounded-full bg-gradient-to-br from-emerald-500/10 to-teal-500/15 blur-3xl pointer-events-none" />
-                    <div className="absolute top-1/2 left-1/3 w-32 h-32 rounded-full bg-blue-500/5 blur-3xl pointer-events-none" />
+                    {/* Grid Layout: Main info card (70%) + Interesting Kudos & DNA panel (30%) */}
+                    <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
+                      
+                      {/* Left Block: Main Profile Card (70%) */}
+                      <div className="lg:col-span-7 relative overflow-hidden rounded-2xl border border-slate-200/50 shadow-xl p-6 bg-white/70 backdrop-blur-md flex flex-col justify-between">
+                        {/* Atmospheric color nodes under glass to enhance depth */}
+                        <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-gradient-to-br from-indigo-500/15 to-purple-500/15 blur-3xl pointer-events-none" />
+                        <div className="absolute -bottom-24 -left-24 w-48 h-48 rounded-full bg-gradient-to-br from-emerald-500/10 to-teal-500/15 blur-3xl pointer-events-none" />
+                        <div className="absolute top-1/2 left-1/3 w-32 h-32 rounded-full bg-blue-500/5 blur-3xl pointer-events-none" />
 
-                    {/* Creative technical background gridlines */}
-                    <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.06)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none" />
-                    
-                    {/* Technical decorative crosshairs and corner lines for a premium aesthetic */}
-                    <div className="absolute top-3 left-3 w-1.5 h-1.5 border-t border-l border-slate-300 pointer-events-none" />
-                    <div className="absolute top-3 right-3 w-1.5 h-1.5 border-t border-r border-slate-300 pointer-events-none" />
-                    <div className="absolute bottom-3 left-3 w-1.5 h-1.5 border-b border-l border-slate-300 pointer-events-none" />
-                    <div className="absolute bottom-3 right-3 w-1.5 h-1.5 border-b border-r border-slate-300 pointer-events-none" />
+                        {/* Creative technical background gridlines */}
+                        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.06)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none" />
+                        
+                        {/* Technical decorative crosshairs and corner lines for a premium aesthetic */}
+                        <div className="absolute top-3 left-3 w-1.5 h-1.5 border-t border-l border-slate-300 pointer-events-none" />
+                        <div className="absolute top-3 right-3 w-1.5 h-1.5 border-t border-r border-slate-300 pointer-events-none" />
+                        <div className="absolute bottom-3 left-3 w-1.5 h-1.5 border-b border-l border-slate-300 pointer-events-none" />
+                        <div className="absolute bottom-3 right-3 w-1.5 h-1.5 border-b border-r border-slate-300 pointer-events-none" />
 
-                    <div className="relative z-10 flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
-                      <div className="flex gap-4">
-                        {/* Avatar block with active state glowing borders */}
-                        <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center shadow-md border border-slate-200 overflow-hidden shrink-0">
-                          <img src={get3DAvatarUrl(selectedReportEmployeeObj.name)} alt={selectedReportEmployeeObj.name} className="w-full h-full object-cover" />
-                        </div>
-                        <div>
-                          <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">{selectedReportEmployeeObj.name}</h1>
-                          <p className="text-xs text-slate-600 mt-1 flex items-center gap-1.5">
-                            <span className="font-medium">Matrix Tier:</span>
-                            {activeRecord ? (
-                              activeRecord.attendance >= (currentTarget?.attendanceMin || 95) && activeRecord.deliveredProjectsValue >= effectiveProjectValueMin ? (
-                                <span className="text-emerald-700 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full text-[10px]">Exceeds Expectations</span>
-                              ) : (overallPerformance || 0) >= 80 ? (
-                                <span className="text-blue-700 font-bold bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full text-[10px]">Meets Expectations</span>
-                              ) : (
-                                <span className="text-amber-600 font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full text-[10px]">Development Required</span>
-                              )
-                            ) : (
-                              <span className="text-slate-400 italic font-medium">No metrics registered yet</span>
-                            )}
-                          </p>
-                          <div className="mt-4 pt-4 border-t border-slate-200/40 space-y-3">
-                            {/* Header Info */}
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-sans">
-                                  Overall Performance Rating
-                                </span>
-                                {activeRecord && overallPerformance !== null ? (
-                                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold border transition-colors ${
-                                    overallPerformance >= 90
-                                      ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                                      : overallPerformance >= 70
-                                      ? "bg-amber-50 text-amber-700 border-amber-100"
-                                      : "bg-rose-50 text-rose-700 border-rose-100"
-                                  }`}>
-                                    <span className={`h-1.5 w-1.5 rounded-full ${
-                                      overallPerformance >= 90 
-                                        ? "bg-emerald-500 animate-pulse" 
-                                        : overallPerformance >= 70 
-                                        ? "bg-amber-500" 
-                                        : "bg-rose-500 animate-ping"
-                                    }`} />
-                                    {overallPerformance >= 90 ? "On Track" : overallPerformance >= 70 ? "Needs Attention" : "At Risk"}
-                                  </span>
-                                ) : null}
-                              </div>
-                              
-                              {activeRecord && overallPerformance !== null ? (
-                                <span className="text-sm font-bold font-mono text-slate-800">
-                                  {overallPerformance}%
-                                </span>
-                              ) : (
-                                <span className="text-xs text-slate-400 italic">No metrics registered yet</span>
-                              )}
+                        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
+                          <div className="flex gap-4">
+                            {/* Avatar block with active state glowing borders */}
+                            <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center shadow-md border border-slate-200 overflow-hidden shrink-0">
+                              <img src={get3DAvatarUrl(selectedReportEmployeeObj.name)} alt={selectedReportEmployeeObj.name} className="w-full h-full object-cover" />
                             </div>
-
-                            {/* Creative Horizontal Segmented Rating Line */}
-                            {activeRecord && overallPerformance !== null && (
-                              <div className="space-y-2">
-                                <div className="relative w-full h-1.5 bg-slate-100/80 rounded-full overflow-hidden flex">
-                                  {/* Background segment colors under layer */}
-                                  <div className="w-[70%] h-full bg-rose-500/10 border-r border-white/40" />
-                                  <div className="w-[20%] h-full bg-amber-500/10 border-r border-white/40" />
-                                  <div className="w-[10%] h-full bg-emerald-500/10" />
+                            <div>
+                              <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">{selectedReportEmployeeObj.name}</h1>
+                              <p className="text-xs text-slate-600 mt-1 flex items-center gap-1.5">
+                                <span className="font-medium">Matrix Tier:</span>
+                                {activeRecord ? (
+                                  activeRecord.attendance >= (currentTarget?.attendanceMin || 95) && activeRecord.deliveredProjectsValue >= effectiveProjectValueMin ? (
+                                    <span className="text-emerald-700 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full text-[10px]">Exceeds Expectations</span>
+                                  ) : (overallPerformance || 0) >= 80 ? (
+                                    <span className="text-blue-700 font-bold bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full text-[10px]">Meets Expectations</span>
+                                  ) : (
+                                    <span className="text-amber-600 font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full text-[10px]">Development Required</span>
+                                  )
+                                ) : (
+                                  <span className="text-slate-400 italic font-medium">No metrics registered yet</span>
+                                )}
+                              </p>
+                              <div className="mt-4 pt-4 border-t border-slate-200/40 space-y-3">
+                                {/* Header Info */}
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-sans">
+                                      Overall Performance Rating
+                                    </span>
+                                    {activeRecord && overallPerformance !== null ? (
+                                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold border transition-colors ${
+                                        overallPerformance >= 90
+                                          ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                                          : overallPerformance >= 70
+                                          ? "bg-amber-50 text-amber-700 border-amber-100"
+                                          : "bg-rose-50 text-rose-700 border-rose-100"
+                                      }`}>
+                                        <span className={`h-1.5 w-1.5 rounded-full ${
+                                          overallPerformance >= 90 
+                                            ? "bg-emerald-500 animate-pulse" 
+                                            : overallPerformance >= 70 
+                                            ? "bg-amber-500" 
+                                            : "bg-rose-500 animate-ping"
+                                        }`} />
+                                        {overallPerformance >= 90 ? "On Track" : overallPerformance >= 70 ? "Needs Attention" : "At Risk"}
+                                      </span>
+                                    ) : null}
+                                  </div>
                                   
-                                  {/* Animated Progress Overlay */}
-                                  <motion.div
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${overallPerformance}%` }}
-                                    transition={{ duration: 0.8, ease: "easeOut" }}
-                                    className={`absolute top-0 left-0 h-full rounded-full ${
-                                      overallPerformance >= 90 
-                                        ? "bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]" 
-                                        : overallPerformance >= 70 
-                                        ? "bg-gradient-to-r from-amber-400 to-amber-500" 
-                                        : "bg-gradient-to-r from-rose-400 to-rose-500"
-                                    }`}
-                                  />
+                                  {activeRecord && overallPerformance !== null ? (
+                                    <span className="text-sm font-bold font-mono text-slate-800">
+                                      {overallPerformance}%
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs text-slate-400 italic">No metrics registered yet</span>
+                                  )}
                                 </div>
 
-                                {/* Minimal Status Key Legend */}
-                                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 pt-1 text-[9px] font-semibold text-slate-400 font-mono">
-                                  <span className="flex items-center gap-1">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-rose-400" /> At Risk (&lt;70%)
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> Needs Attention (70%-89%)
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> On Track (90%+)
-                                  </span>
-                                </div>
+                                {/* Creative Horizontal Segmented Rating Line */}
+                                {activeRecord && overallPerformance !== null && (
+                                  <div className="space-y-2">
+                                    <div className="relative w-full h-1.5 bg-slate-100/80 rounded-full overflow-hidden flex">
+                                      {/* Background segment colors under layer */}
+                                      <div className="w-[70%] h-full bg-rose-500/10 border-r border-white/40" />
+                                      <div className="w-[20%] h-full bg-amber-500/10 border-r border-white/40" />
+                                      <div className="w-[10%] h-full bg-emerald-500/10" />
+                                      
+                                      {/* Animated Progress Overlay */}
+                                      <motion.div
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${overallPerformance}%` }}
+                                        transition={{ duration: 0.8, ease: "easeOut" }}
+                                        className={`absolute top-0 left-0 h-full rounded-full ${
+                                          overallPerformance >= 90 
+                                            ? "bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]" 
+                                            : overallPerformance >= 70 
+                                            ? "bg-gradient-to-r from-amber-400 to-amber-500" 
+                                            : "bg-gradient-to-r from-rose-400 to-rose-500"
+                                        }`}
+                                      />
+                                    </div>
+
+                                    {/* Minimal Status Key Legend */}
+                                    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 pt-1 text-[9px] font-semibold text-slate-400 font-mono">
+                                      <span className="flex items-center gap-1">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-rose-400" /> At Risk (&lt;70%)
+                                      </span>
+                                      <span className="flex items-center gap-1">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> Needs Attention (70%-89%)
+                                      </span>
+                                      <span className="flex items-center gap-1">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> On Track (90%+)
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                            )}
+                            </div>
+                          </div>
+
+                          {/* Action buttons inside Profile Card */}
+                          <div className="flex gap-2 w-full md:w-auto relative z-20">
+                            <button
+                              onClick={() => {
+                                if (selectedReportEmployeeObj) {
+                                  handleOpenEditEmployee(selectedReportEmployeeObj);
+                                }
+                              }}
+                              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg border border-slate-200 transition-all shadow-xs cursor-pointer"
+                            >
+                              <Edit3 className="h-3.5 w-3.5" />
+                              Edit Profile
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                if (selectedReportEmployeeObj) {
+                                  handleOpenPerformanceLog(selectedReportEmployeeObj);
+                                }
+                              }}
+                              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-200 transition-all shadow-xs cursor-pointer"
+                            >
+                              <TrendingUp className="h-3.5 w-3.5" />
+                              Log Activity
+                            </button>
                           </div>
                         </div>
-                      </div>
-
-                      {/* Action buttons inside Profile Card */}
-                      <div className="flex gap-2 w-full md:w-auto relative z-20">
-                        <button
-                          onClick={() => {
-                            setEditingEmployee(selectedReportEmployeeObj);
-                            setIsEmployeeModalOpen(true);
-                          }}
-                          className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg border border-slate-200 transition-all shadow-xs"
-                        >
-                          <Edit3 className="h-3.5 w-3.5" />
-                          Edit Profile
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            setSelectedPerfEmployee(selectedReportEmployeeObj);
-                            setPerfFormData({
-                              attendance: 100,
-                              conductedMeetings: 0,
-                              deliveredProjectsAmount: 0,
-                              deliveredProjectsValue: 0
-                            });
-                            setIsPerformanceModalOpen(true);
-                          }}
-                          className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-200 transition-all shadow-xs"
-                        >
-                          <TrendingUp className="h-3.5 w-3.5" />
-                          Log Activity
-                        </button>
-                      </div>
-                    </div>
 
                     {/* Four metrics boxes redesigned as frosted glass panels with target comparisons */}
                     <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1180,6 +1335,99 @@ export default function App() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Right Block: DNA & Peer Kudos Indicator (30%) */}
+                  <div className="lg:col-span-3 relative overflow-hidden rounded-2xl border border-slate-200/50 shadow-xl p-5 bg-white/70 backdrop-blur-md flex flex-col justify-between">
+                    {/* Ambient decorative lighting */}
+                    <div className="absolute -top-12 -left-12 w-32 h-32 rounded-full bg-indigo-500/10 blur-2xl pointer-events-none" />
+                    <div className="absolute -bottom-12 -right-12 w-32 h-32 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" />
+                    
+                    {/* Grid decorative background */}
+                    <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.04)_1px,transparent_1px)] bg-[size:15px_15px] pointer-events-none" />
+
+                    {/* Top-3/Right-3 indicators */}
+                    <div className="absolute top-3 left-3 w-1 h-1 border-t border-l border-slate-300 pointer-events-none" />
+                    <div className="absolute top-3 right-3 w-1 h-1 border-t border-r border-slate-300 pointer-events-none" />
+                    <div className="absolute bottom-3 left-3 w-1 h-1 border-b border-l border-slate-300 pointer-events-none" />
+                    <div className="absolute bottom-3 right-3 w-1 h-1 border-b border-r border-slate-300 pointer-events-none" />
+
+                    <div className="relative z-10 space-y-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                            <Sparkles className="h-3.5 w-3.5 text-indigo-500 animate-pulse" />
+                            DNA Kudos Hub
+                          </h3>
+                          <p className="text-[10px] text-slate-400 font-medium">Click tags to award peer recognition.</p>
+                        </div>
+                        <span className="text-[9px] font-bold text-indigo-600 bg-indigo-500/10 px-1.5 py-0.5 rounded-md font-mono animate-pulse">
+                          Live
+                        </span>
+                      </div>
+
+                      {/* Kudos Upvote Items */}
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { key: "velocity" as const, label: "Velocity", icon: "🚀", color: "hover:border-amber-200 hover:bg-amber-500/5 hover:text-amber-700 text-amber-600 border-amber-100" },
+                          { key: "innovation" as const, label: "Innovation", icon: "💡", color: "hover:border-purple-200 hover:bg-purple-500/5 hover:text-purple-700 text-purple-600 border-purple-100" },
+                          { key: "team" as const, label: "Collaboration", icon: "🤝", color: "hover:border-emerald-200 hover:bg-emerald-500/5 hover:text-emerald-700 text-emerald-600 border-emerald-100" },
+                          { key: "precision" as const, label: "Precision", icon: "🎯", color: "hover:border-indigo-200 hover:bg-indigo-500/5 hover:text-indigo-700 text-indigo-600 border-indigo-100" },
+                          { key: "growth" as const, label: "Growth", icon: "🌱", color: "hover:border-teal-200 hover:bg-teal-500/5 hover:text-teal-700 text-teal-600 border-teal-100" },
+                          { key: "empathy" as const, label: "Empathy", icon: "💖", color: "hover:border-rose-200 hover:bg-rose-500/5 hover:text-rose-700 text-rose-600 border-rose-100" }
+                        ].map((item) => {
+                          const points = getEmployeeKudos(selectedReportEmployeeObj.id, selectedReportEmployeeObj.name)[item.key];
+                          return (
+                            <button
+                              key={item.key}
+                              type="button"
+                              onClick={() => handleAddKudos(selectedReportEmployeeObj.id, selectedReportEmployeeObj.name, item.key)}
+                              className={`flex flex-col items-center justify-center p-2 rounded-xl border bg-white/50 text-center transition-all hover:scale-105 active:scale-95 shadow-2xs group cursor-pointer ${item.color}`}
+                            >
+                              <span className="text-base group-hover:animate-bounce">{item.icon}</span>
+                              <span className="text-[10px] font-bold text-slate-700 mt-1">{item.label}</span>
+                              <span className="text-[10px] font-extrabold font-mono text-slate-500 mt-0.5 bg-slate-100 px-1.5 py-0.2 rounded">
+                                {points}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Creative Operational DNA Pulse wave */}
+                    <div className="relative z-10 pt-3 border-t border-slate-100 mt-3 flex items-center justify-between gap-3">
+                      <div className="flex flex-col">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Synergy Wave</span>
+                        <span className="text-[10px] font-bold text-slate-800 font-mono">
+                          {(Object.values(getEmployeeKudos(selectedReportEmployeeObj.id, selectedReportEmployeeObj.name)) as number[]).reduce((a, b) => a + b, 0)} pts total
+                        </span>
+                      </div>
+                      
+                      {/* Animated micro sine-wave */}
+                      <div className="h-8 w-24 overflow-hidden relative opacity-80">
+                        <svg className="w-full h-full" viewBox="0 0 100 30" preserveAspectRatio="none">
+                          <path
+                            d="M0 15 Q25 5, 50 15 T100 15"
+                            fill="none"
+                            stroke="rgb(99, 102, 241)"
+                            strokeWidth="2"
+                            className="animate-pulse"
+                          />
+                          <path
+                            d="M0 15 Q25 25, 50 15 T100 15"
+                            fill="none"
+                            stroke="rgb(16, 185, 129)"
+                            strokeWidth="1"
+                            strokeDasharray="3,3"
+                            className="animate-pulse opacity-60"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+
+                  </div>
+
+                </div>
 
                   {/* Individual Monthly Progress Trend Chart */}
                   <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
@@ -1710,8 +1958,7 @@ export default function App() {
                               <td className="px-6 py-4 text-right pr-6 space-x-1 shrink-0">
                                 <button
                                   onClick={() => {
-                                    setEditingEmployee(emp);
-                                    setIsEmployeeModalOpen(true);
+                                    handleOpenEditEmployee(emp);
                                   }}
                                   className="p-2 text-slate-400 hover:bg-white hover:text-slate-700 rounded-lg shadow-none hover:shadow-xs border border-transparent hover:border-slate-200 transition-all cursor-pointer inline-flex items-center justify-center"
                                   title="Edit Employee"
@@ -1775,7 +2022,7 @@ export default function App() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-xl font-bold text-slate-900 tracking-tight font-display flex items-center gap-2">
-                    <ArrowLeftRight className="h-5 w-5 text-indigo-600" />
+                      <ArrowLeftRight className="h-5 w-5 text-indigo-600" />
                     Team Member Comparison
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
@@ -1827,7 +2074,7 @@ export default function App() {
               {(() => {
                 if (!compareEmp1 || !compareEmp2) return (
                   <div className="text-center py-12 bg-white rounded-2xl border border-slate-200 border-dashed text-slate-400">
-                    <ArrowLeftRight className="h-8 w-8 mx-auto mb-3 opacity-30" />
+                      <ArrowLeftRight className="h-8 w-8 mx-auto mb-3 opacity-30" />
                     <p className="text-sm font-medium">Please select two employees to compare their metrics side-by-side.</p>
                   </div>
                 );
@@ -1934,31 +2181,6 @@ export default function App() {
                           );
                         })}
                       </div>
-                    </div>
-
-                    {/* Radar Chart */}
-                    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col items-center">
-                       <h4 className="text-sm font-bold text-slate-800 mb-6 flex items-center gap-2 self-start">
-                        <Compass className="h-4 w-4 text-slate-400" />
-                        Performance Radar
-                      </h4>
-                      <div className="w-full h-80">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <RadarChart cx="50%" cy="50%" outerRadius="75%" data={data}>
-                            <PolarGrid stroke="#e2e8f0" />
-                            <PolarAngleAxis dataKey="metric" tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }} />
-                            <PolarRadiusAxis angle={30} domain={[0, 'dataMax']} tick={false} axisLine={false} />
-                            <Radar name={emp1.name} dataKey={emp1.name} stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.4} />
-                            <Radar name={emp2.name} dataKey={emp2.name} stroke="#10b981" fill="#10b981" fillOpacity={0.4} />
-                            <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 600, paddingTop: '10px' }} />
-                            <Tooltip 
-                              contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                              itemStyle={{ fontSize: '12px', fontWeight: 600 }}
-                              labelStyle={{ fontSize: '10px', color: '#64748b', marginBottom: '4px' }}
-                            />
-                          </RadarChart>
-                        </ResponsiveContainer>
-                      </div>
                       <p className="text-[10px] text-slate-400 text-center mt-4">
                         * Comparison metrics are normalized for this visualization based on the highest performer in each category.
                       </p>
@@ -1968,654 +2190,472 @@ export default function App() {
               })()}
             </div>
           )}
-        </div>
       </main>
+      </>
+      )}
 
-      {/* FOOTER */}
-      <footer className="mt-auto py-8 text-center text-slate-400 text-xs font-medium bg-transparent border-t border-slate-200/50">
-        <div className="w-[85%] max-w-[85%] mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
-            <div className="flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 border border-slate-200 shadow-xs">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-            </div>
-            <span className="tracking-wide">Nexus Portal &copy; {new Date().getFullYear()}</span>
-          </div>
-          <div className="flex gap-6 text-[11px] uppercase tracking-wider font-semibold">
-            <a href="#" className="hover:text-slate-800 transition-colors">Privacy</a>
-            <a href="#" className="hover:text-slate-800 transition-colors">Terms</a>
-            <a href="#" className="hover:text-slate-800 transition-colors">Support</a>
-          </div>
-        </div>
-      </footer>
-
-      
-      {/* Floating Bulk Action Toolbar */}
-      <AnimatePresence>
-        {activeTab === "roster" && selectedEmployeeIds.size > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 50, scale: 0.9 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center justify-center group"
-          >
-            {/* Animated glowing backdrop */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full blur-md opacity-25 group-hover:opacity-40 transition-opacity duration-500 animate-pulse"></div>
-            
-            <div className="relative bg-slate-900 text-white px-5 py-2.5 rounded-full shadow-2xl flex items-center gap-5 border border-slate-700/80 backdrop-blur-xl bg-slate-900/90 overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-              <div className="flex items-center gap-2 font-semibold text-sm">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500/20 text-blue-400 text-xs font-bold font-mono shadow-[inset_0_0_8px_rgba(59,130,246,0.3)]">
-                  {selectedEmployeeIds.size}
-                </span>
-                Selected
+      {activePortal === "leaves" && (
+        <main className="flex-1 w-full px-6 lg:px-10 xl:px-12 py-8 overflow-y-auto">
+          {/* TAB CONTENT: LEAVE MANAGEMENT */}
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 tracking-tight font-display">Leave Balance Engine</h2>
+                  <p className="text-sm text-slate-500 mt-1">Manage and track employee leave capacities.</p>
+                </div>
               </div>
-              <div className="h-4 w-px bg-slate-700"></div>
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => setIsBulkUpdateModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold hover:bg-slate-800 rounded-lg transition-all text-slate-300 hover:text-white cursor-pointer active:scale-95"
-                >
-                  <Edit3 className="h-3.5 w-3.5 text-blue-400" />
-                  Update
-                </button>
-                <button
-                  onClick={handleBulkDelete}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold hover:bg-rose-500/10 rounded-lg transition-all text-rose-400 hover:text-rose-300 cursor-pointer active:scale-95"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <span className="w-3.5 h-3.5 border-2 border-rose-500/30 border-t-rose-500 rounded-full animate-spin"></span>
-                  ) : (
-                    <Trash2 className="h-3.5 w-3.5" />
-                  )}
-                  Delete
-                </button>
-                <div className="h-4 w-px bg-slate-700 mx-1"></div>
-                <button
-                  onClick={() => setSelectedEmployeeIds(new Set())}
-                  className="flex items-center justify-center p-1.5 hover:bg-slate-800 rounded-full transition-all text-slate-400 hover:text-white cursor-pointer hover:rotate-90"
-                  title="Clear Selection"
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-rose-50 rounded-lg text-rose-600">
+                      <AlertCircle className="h-5 w-5" />
+                    </div>
+                    <h3 className="font-semibold text-slate-800">Sick Leave</h3>
+                  </div>
+                  <p className="text-2xl font-bold text-slate-900 mt-2">7 <span className="text-sm font-medium text-slate-500">days/yr</span></p>
+                  <p className="text-xs text-slate-500 mt-1">For medical emergencies</p>
+                </div>
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-amber-50 rounded-lg text-amber-600">
+                      <Sparkles className="h-5 w-5" />
+                    </div>
+                    <h3 className="font-semibold text-slate-800">Casual Leave</h3>
+                  </div>
+                  <p className="text-2xl font-bold text-slate-900 mt-2">7 <span className="text-sm font-medium text-slate-500">days/yr</span></p>
+                  <p className="text-xs text-slate-500 mt-1">For personal matters</p>
+                </div>
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
+                      <Calendar className="h-5 w-5" />
+                    </div>
+                    <h3 className="font-semibold text-slate-800">Gov & Fest</h3>
+                  </div>
+                  <p className="text-2xl font-bold text-slate-900 mt-2">14 <span className="text-sm font-medium text-slate-500">days/yr</span></p>
+                  <p className="text-xs text-slate-500 mt-1">Public & cultural holidays</p>
+                </div>
+              </div>
+
+              <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                  <h3 className="text-sm font-bold text-slate-800">Employee Leave Balances</h3>
+                  <div className="flex gap-2">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-600">
+                      <span>Total Leave Balance:</span>
+                      <span className="text-blue-600">28 days</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-500">
+                    <thead className="bg-slate-50/70 uppercase text-slate-400 font-mono text-[9px] tracking-wider border-b border-slate-100">
+                      <tr>
+                        <th className="px-6 py-4">Employee</th>
+                        <th className="px-6 py-4">Department</th>
+                        <th className="px-6 py-4 text-center">Sick (7)</th>
+                        <th className="px-6 py-4 text-center">Casual (7)</th>
+                        <th className="px-6 py-4 text-center">Gov/Fest (14)</th>
+                        <th className="px-6 py-4 text-center">Total Remaining</th>
+                        <th className="px-6 py-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100/80">
+                      {employees.map(emp => {
+                        const leave = emp.leaveBalance || { sickLeaveUsed: 0, casualLeaveUsed: 0, govFestHolidaysUsed: 0 };
+                        const sickRemain = 7 - leave.sickLeaveUsed;
+                        const casRemain = 7 - leave.casualLeaveUsed;
+                        const govRemain = 14 - leave.govFestHolidaysUsed;
+                        const totalRemain = sickRemain + casRemain + govRemain;
+                        return (
+                          <tr key={emp.id} className="hover:bg-slate-50/40 transition-colors">
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0">
+                                  <img src={get3DAvatarUrl(emp.name)} alt={emp.name} className="w-full h-full object-cover" />
+                                </div>
+                                <div>
+                                  <div className="font-bold text-slate-800">{emp.name}</div>
+                                  <div className="text-[10px] text-slate-400">{emp.role}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="text-xs font-semibold text-slate-700">{emp.department}</span>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <span className={`font-mono font-bold ${sickRemain <= 2 ? 'text-rose-600' : 'text-slate-600'}`}>{sickRemain}</span>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <span className={`font-mono font-bold ${casRemain <= 2 ? 'text-amber-600' : 'text-slate-600'}`}>{casRemain}</span>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <span className={`font-mono font-bold ${govRemain <= 4 ? 'text-blue-600' : 'text-slate-600'}`}>{govRemain}</span>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                                  <div 
+                                    className={`h-full rounded-full ${totalRemain < 10 ? 'bg-rose-500' : totalRemain < 20 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                                    style={{ width: `${(totalRemain / 28) * 100}%` }}
+                                  />
+                                </div>
+                                <span className="font-mono font-bold text-slate-700 w-6">{totalRemain}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <button 
+                                onClick={() => {
+                                  console.log("Edit", emp);
+                                  alert("Manage leaves coming soon!");
+                                }}
+                                className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors"
+                              >
+                                Manage Leaves
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+        </main>
+      )}
+
+      {activePortal === "employees" && (
+        <main className="flex-1 w-full px-6 lg:px-10 xl:px-12 py-8 overflow-y-auto">
+          <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+            <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-4 border border-slate-200">
+              <Users className="h-8 w-8 text-slate-400" />
+            </div>
+            <h2 className="text-lg font-bold text-slate-900 tracking-tight font-display">Employee Directory</h2>
+            <p className="text-slate-500 mt-2 max-w-md">
+              This module is not yet implemented. It will provide a comprehensive list of all employees, their roles, contact information, and hierarchy.
+            </p>
+          </div>
+        </main>
+      )}
+
+
+
+
+      {/* MODALS */}
+      <AnimatePresence>
+        {isEmployeeModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col border border-slate-100"
+            >
+              <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div>
+                  <h3 className="text-base font-bold text-slate-800">
+                    {editingEmployee ? "Edit Employee Profile" : "Add New Employee"}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Define corporate record and division mapping.</p>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => setIsEmployeeModalOpen(false)} 
+                  className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
-            </div>
-          </motion.div>
+              <form onSubmit={handleSaveEmployee} className="p-5 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Full Name</label>
+                  <input 
+                    type="text" 
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none" 
+                    value={employeeFormData.name || ''} 
+                    onChange={(e) => setEmployeeFormData({...employeeFormData, name: e.target.value})} 
+                    placeholder="e.g. Jane Doe" 
+                    required 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Corporate Email</label>
+                  <input 
+                    type="email" 
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none" 
+                    value={employeeFormData.email || ''} 
+                    onChange={(e) => setEmployeeFormData({...employeeFormData, email: e.target.value})} 
+                    placeholder="e.g. jane.doe@company.com" 
+                    required 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Corporate Role</label>
+                  <input 
+                    type="text" 
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none" 
+                    value={employeeFormData.role || ''} 
+                    onChange={(e) => setEmployeeFormData({...employeeFormData, role: e.target.value})} 
+                    placeholder="e.g. Senior Software Engineer" 
+                    required 
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Department</label>
+                    <select 
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none cursor-pointer" 
+                      value={employeeFormData.department || DEPARTMENTS[0]} 
+                      onChange={(e) => setEmployeeFormData({...employeeFormData, department: e.target.value})}
+                    >
+                      {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Team Hub</label>
+                    <select 
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none cursor-pointer" 
+                      value={employeeFormData.team || TEAMS[0]} 
+                      onChange={(e) => setEmployeeFormData({...employeeFormData, team: e.target.value})}
+                    >
+                      {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <button 
+                  type="submit" 
+                  className="w-full py-2.5 bg-slate-950 hover:bg-slate-900 text-white font-bold rounded-lg transition-colors mt-2 shadow-sm cursor-pointer"
+                >
+                  {editingEmployee ? "Save Profile Changes" : "Create Profile"}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
+        {isPerformanceModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col border border-slate-100"
+            >
+              <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-indigo-50/40">
+                <div>
+                  <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-indigo-600 animate-pulse" />
+                    Log Activity: {selectedPerfEmployee?.name}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Logging metrics for period: <span className="font-semibold text-indigo-600 font-mono">{selectedMonth}</span></p>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => setIsPerformanceModalOpen(false)} 
+                  className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <form onSubmit={handleSavePerformance} className="p-5 space-y-4">
+                
+                {/* Logging Mode selector: Add to existing vs Overwrite */}
+                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-700">Logging Mode</span>
+                    <div className="flex items-center gap-1 bg-slate-200/50 p-0.5 rounded-lg text-[10px] font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setEntryMode("overwrite")}
+                        className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                          entryMode === "overwrite"
+                            ? "bg-white text-slate-800 shadow-xs"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        Overwrite / Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEntryMode("add")}
+                        className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                          entryMode === "add"
+                            ? "bg-indigo-600 text-white shadow-xs"
+                            : "text-slate-500 hover:text-indigo-600"
+                        }`}
+                      >
+                        Add to Existing
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-500 leading-relaxed">
+                    {entryMode === "overwrite"
+                      ? "Directly replace the logged values. Fetched active data is shown in fields."
+                      : "Input new numbers to add them on top of the currently recorded values."}
+                  </p>
+                </div>
+
+                {/* Display Current Recorded metrics in Add Mode */}
+                {entryMode === "add" && existingRecordForSelected && (
+                  <div className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-3 text-xs text-slate-700">
+                    <span className="font-semibold text-indigo-700">Currently Recorded for {selectedMonth}:</span>
+                    <div className="grid grid-cols-3 gap-2 mt-1.5 font-mono text-[10px] text-slate-600">
+                      <div>• Meetings: <span className="font-bold text-slate-800">{existingRecordForSelected.conductedMeetings}</span></div>
+                      <div>• Projects: <span className="font-bold text-slate-800">{existingRecordForSelected.deliveredProjectsAmount}</span></div>
+                      <div>• Value: <span className="font-bold text-slate-800">${existingRecordForSelected.deliveredProjectsValue.toLocaleString()}</span></div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">
+                      {entryMode === "add" ? "Attendance Rate (%)" : "Attendance Rate (%)"}
+                    </label>
+                    <input 
+                      type="number" 
+                      min="0" 
+                      max="100"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm font-mono outline-none" 
+                      value={perfFormData.attendance} 
+                      onChange={(e) => setPerfFormData({...perfFormData, attendance: parseFloat(e.target.value) || 0})} 
+                      required
+                    />
+                    {entryMode === "add" && (
+                      <span className="text-[9px] text-slate-400 block mt-0.5 font-mono">Absolute percentage rate</span>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1 text-ellipsis overflow-hidden whitespace-nowrap">
+                      {entryMode === "add" ? "Meetings to Add" : "Meetings Conducted"}
+                    </label>
+                    <input 
+                      type="number" 
+                      min="0"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm font-mono outline-none" 
+                      value={perfFormData.conductedMeetings} 
+                      onChange={(e) => setPerfFormData({...perfFormData, conductedMeetings: parseInt(e.target.value) || 0})} 
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1 text-ellipsis overflow-hidden whitespace-nowrap">
+                      {entryMode === "add" ? "Projects to Add" : "Projects Shipped"}
+                    </label>
+                    <input 
+                      type="number" 
+                      min="0"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm font-mono outline-none" 
+                      value={perfFormData.deliveredProjectsAmount} 
+                      onChange={(e) => setPerfFormData({...perfFormData, deliveredProjectsAmount: parseInt(e.target.value) || 0})} 
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1 text-ellipsis overflow-hidden whitespace-nowrap">
+                      {entryMode === "add" ? "Value to Add ($)" : "Total Shipped Value ($)"}
+                    </label>
+                    <input 
+                      type="number" 
+                      min="0"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm font-mono outline-none" 
+                      value={perfFormData.deliveredProjectsValue} 
+                      onChange={(e) => setPerfFormData({...perfFormData, deliveredProjectsValue: parseInt(e.target.value) || 0})} 
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">
+                    {entryMode === "add" ? "Additional Remarks (Optional)" : "Manager Remarks (Optional)"}
+                  </label>
+                  <textarea 
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm outline-none resize-none h-16 transition-all"
+                    value={perfFormData.managerRemarks || ""}
+                    onChange={(e) => setPerfFormData({...perfFormData, managerRemarks: e.target.value})}
+                    placeholder={
+                      entryMode === "add"
+                        ? "e.g. Added details for the new product launch..."
+                        : "e.g. Exhibited exceptional project leadership and consistency..."
+                    }
+                  />
+                </div>
+
+                <button 
+                  type="submit" 
+                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors mt-2 shadow-sm cursor-pointer"
+                >
+                  {entryMode === "add" ? "Add to Monthly Record" : "Save All Changes"}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
+        {isTargetsModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col border border-slate-100"
+            >
+              <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div>
+                  <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                    <SlidersHorizontal className="h-4 w-4 text-slate-700" />
+                    Set Monthly Targets
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Apply expectations for <span className="font-semibold text-slate-700 font-mono">{selectedMonth}</span></p>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => setIsTargetsModalOpen(false)} 
+                  className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <form onSubmit={handleSaveTarget} className="p-5 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Min Attendance Expected (%)</label>
+                  <input 
+                    type="number" 
+                    min="0" 
+                    max="100"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm font-mono outline-none" 
+                    value={targetFormData.attendanceMin} 
+                    onChange={(e) => setTargetFormData({...targetFormData, attendanceMin: parseFloat(e.target.value) || 0})} 
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Min Project Value Target ($)</label>
+                  <input 
+                    type="number" 
+                    min="0"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm font-mono outline-none" 
+                    value={targetFormData.projectValueMin} 
+                    onChange={(e) => setTargetFormData({...targetFormData, projectValueMin: parseInt(e.target.value) || 0})} 
+                    required
+                  />
+                </div>
+                <button 
+                  type="submit" 
+                  className="w-full py-2.5 bg-slate-950 hover:bg-slate-900 text-white font-bold rounded-lg transition-colors mt-2 shadow-sm cursor-pointer"
+                >
+                  Update Period Targets
+                </button>
+              </form>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
-      {/* MODAL: BULK UPDATE */}
-      {isBulkUpdateModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-xs">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md flex flex-col shadow-xl animate-in fade-in zoom-in-95 overflow-hidden">
-            <div className="flex justify-between items-center p-6 pb-4 border-b border-slate-100 shrink-0">
-              <h3 className="text-md font-bold text-slate-800">
-                Bulk Update Division
-              </h3>
-              <button
-                onClick={() => setIsBulkUpdateModalOpen(false)}
-                className="p-1 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
-              >
-                <X className="h-4 w-4 text-slate-500" />
-              </button>
-            </div>
-            
-            <div className="p-6 overflow-y-auto space-y-4">
-              <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100 text-xs text-blue-800 font-medium flex items-start gap-2">
-                <Users className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
-                Updating {selectedEmployeeIds.size} selected employee profiles.
-              </div>
-              
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">New Corporate Division</label>
-                <select
-                  value={bulkUpdateDept}
-                  onChange={(e) => setBulkUpdateDept(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all cursor-pointer shadow-sm"
-                  required
-                >
-                  {DEPARTMENTS.map(d => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">New Team Category</label>
-                <select
-                  value={bulkUpdateTeam}
-                  onChange={(e) => setBulkUpdateTeam(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all cursor-pointer shadow-sm"
-                  required
-                >
-                  {TEAMS.map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2 shrink-0">
-              <button
-                onClick={() => setIsBulkUpdateModalOpen(false)}
-                className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
-                disabled={isSubmitting}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleBulkUpdate}
-                disabled={isSubmitting}
-                className="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-lg shadow-sm shadow-blue-500/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-70 text-sm"
-              >
-                {isSubmitting ? (
-                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                ) : (
-                  <Check className="h-3.5 w-3.5" />
-                )}
-                Confirm Bulk Update
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 1: ADD / EDIT EMPLOYEE */}
-      {isEmployeeModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-xs">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col shadow-xl animate-in fade-in zoom-in-95 overflow-hidden">
-            <div className="flex justify-between items-center p-6 pb-4 border-b border-slate-100 shrink-0">
-              <h3 className="text-md font-bold text-slate-800">
-                {editingEmployee ? "Edit Performance Profile" : "Create Team Profile"}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsEmployeeModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveEmployee} className="flex-1 flex flex-col overflow-hidden">
-              <div className="p-6 overflow-y-auto space-y-4 flex-1">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">
-                    Security ID {editingEmployee ? "" : "(Optional)"}
-                  </label>
-                  <input
-                    type="text"
-                    disabled={!!editingEmployee}
-                    placeholder="e.g. emp-99 or leave blank to autogenerate"
-                    value={employeeFormData.id}
-                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, id: e.target.value.replace(/\s+/g, '') })}
-                    className={`w-full px-3 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:outline-none transition-all font-mono ${
-                      editingEmployee 
-                        ? "bg-slate-100/80 border-slate-200/80 text-slate-400 cursor-not-allowed" 
-                        : "bg-slate-50 border-slate-200 text-slate-800"
-                    }`}
-                  />
-                  {!editingEmployee && (
-                    <p className="text-[10px] text-slate-400 mt-1">
-                      Set a custom unique identifier or leave blank to autogenerate a secure ID.
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Full Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. John Doe"
-                    value={employeeFormData.name}
-                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, name: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Professional Role *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Senior Software Architect"
-                    value={employeeFormData.role}
-                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, role: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Department *</label>
-                  <select
-                    value={employeeFormData.department}
-                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, department: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                  >
-                    {DEPARTMENTS.map((dept) => (
-                      <option key={dept} value={dept}>{dept}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Team *</label>
-                  <select
-                    value={employeeFormData.team}
-                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, team: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                  >
-                    {TEAMS.map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Corporate Email *</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="john.doe@company.com"
-                    value={employeeFormData.email}
-                    onChange={(e) => setEmployeeFormData({ ...employeeFormData, email: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-
-
-              </div>
-
-              <div className="p-6 pt-4 border-t border-slate-100 flex justify-end gap-2 text-xs shrink-0 bg-slate-50/50">
-                <button
-                  type="button"
-                  onClick={() => setIsEmployeeModalOpen(false)}
-                  className="px-4 py-2 text-slate-600 hover:text-slate-800 font-semibold transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
-                >
-                  <Check className="h-3.5 w-3.5" />
-                  {editingEmployee ? "Save Changes" : "Create Profile"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 2: LOG PERFORMANCE METRICS */}
-      {isPerformanceModalOpen && selectedPerfEmployee && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-xs">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col shadow-xl animate-in fade-in zoom-in-95 overflow-hidden">
-            <div className="flex justify-between items-center p-6 pb-4 border-b border-slate-100 shrink-0">
-              <div>
-                <h3 className="text-md font-bold text-slate-800">Record Performance Card</h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  For {selectedPerfEmployee.name} &bull; {selectedMonth}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsPerformanceModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSavePerformance} className="flex-1 flex flex-col overflow-hidden">
-              <div className="p-6 overflow-y-auto space-y-4 flex-1">
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center justify-between gap-4">
-                  <span className="text-[11px] font-semibold text-slate-600">Month Code:</span>
-                  <MonthPicker
-                    value={selectedMonth}
-                    onChange={handleMonthChangeInPerfLog}
-                    align="right"
-                  />
-                </div>
-
-                <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-3">
-                  <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                    <span className="text-xs font-bold text-slate-700 uppercase">Workplace Attendance Tracker</span>
-                    <span className="text-xs font-mono font-bold px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
-                      Avg: {perfFormData.attendance}%
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Working Days</label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="31"
-                        required
-                        value={perfFormData.totalWorkingDays}
-                        onChange={(e) => {
-                          const working = Number(e.target.value);
-                          const present = Math.min(working, perfFormData.presentDays);
-                          const rate = working > 0 ? Math.round((present / working) * 100) : 100;
-                          setPerfFormData({
-                            ...perfFormData,
-                            totalWorkingDays: working,
-                            presentDays: present,
-                            attendance: rate
-                          });
-                        }}
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Days Present</label>
-                      <input
-                        type="number"
-                        min="0"
-                        max={perfFormData.totalWorkingDays}
-                        required
-                        value={perfFormData.presentDays}
-                        onChange={(e) => {
-                          const present = Number(e.target.value);
-                          const working = perfFormData.totalWorkingDays;
-                          const rate = working > 0 ? Math.round((present / working) * 100) : 100;
-                          setPerfFormData({
-                            ...perfFormData,
-                            presentDays: present,
-                            attendance: rate
-                          });
-                        }}
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Days Absent</label>
-                      <input
-                        type="number"
-                        min="0"
-                        max={perfFormData.totalWorkingDays}
-                        required
-                        value={perfFormData.absentDays}
-                        onChange={(e) => {
-                          setPerfFormData({
-                            ...perfFormData,
-                            absentDays: Number(e.target.value)
-                          });
-                        }}
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Leaves / Other</label>
-                      <input
-                        type="number"
-                        min="0"
-                        max={perfFormData.totalWorkingDays}
-                        required
-                        value={perfFormData.leaveDays}
-                        onChange={(e) => {
-                          setPerfFormData({
-                            ...perfFormData,
-                            leaveDays: Number(e.target.value)
-                          });
-                        }}
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none font-mono"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Balance validation alert */}
-                  {perfFormData.presentDays + perfFormData.absentDays + perfFormData.leaveDays !== perfFormData.totalWorkingDays && (
-                    <div className="text-[10px] text-amber-600 bg-amber-50 border border-amber-100 p-2 rounded-lg">
-                      <span>Note: Present + Absent + Leaves ({perfFormData.presentDays + perfFormData.absentDays + perfFormData.leaveDays} days) doesn't match Total Working Days ({perfFormData.totalWorkingDays} days).</span>
-                    </div>
-                  )}
-                  {perfFormData.presentDays + perfFormData.absentDays + perfFormData.leaveDays === perfFormData.totalWorkingDays && (
-                    <div className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 p-2 rounded-lg">
-                      <span>✓ Day counts sum up correctly to {perfFormData.totalWorkingDays} working days.</span>
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Conducted Meetings Count</label>
-                  <input
-                    type="number"
-                    min="0"
-                    required
-                    value={perfFormData.conductedMeetings}
-                    onChange={(e) => setPerfFormData({ ...perfFormData, conductedMeetings: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none font-mono"
-                  />
-                  <span className="text-[10px] text-slate-400">Total operational syncs or stakeholder calls.</span>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Delivered Projects Count</label>
-                  <input
-                    type="number"
-                    min="0"
-                    required
-                    value={perfFormData.deliveredProjectsAmount}
-                    onChange={(e) => setPerfFormData({ ...perfFormData, deliveredProjectsAmount: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none font-mono"
-                  />
-                  <span className="text-[10px] text-slate-400">Number of discrete projects or major features shipped.</span>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Delivered Projects Financial Value ($)</label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-mono text-xs">$</span>
-                    <input
-                      type="number"
-                      min="0"
-                      required
-                      value={perfFormData.deliveredProjectsValue}
-                      onChange={(e) => setPerfFormData({ ...perfFormData, deliveredProjectsValue: Number(e.target.value) })}
-                      className="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none font-mono"
-                    />
-                  </div>
-                  <span className="text-[10px] text-slate-400">Estimated value impact of deliverables (in USD).</span>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Manager Remarks (Qualitative Feedback)</label>
-                  <textarea
-                    rows={3}
-                    value={perfFormData.managerRemarks}
-                    onChange={(e) => setPerfFormData({ ...perfFormData, managerRemarks: e.target.value })}
-                    placeholder="e.g., Led the Q3 planning session, resolved high-priority support ticket backlogs, showed outstanding leadership under pressure..."
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all placeholder:text-slate-400 font-sans"
-                  />
-                  <span className="text-[10px] text-slate-400">Attach descriptive, qualitative highlights to supplement the metrics.</span>
-                </div>
-              </div>
-
-              <div className="p-6 pt-4 border-t border-slate-100 flex justify-end gap-2 text-xs shrink-0 bg-slate-50/50">
-                <button
-                  type="button"
-                  onClick={() => setIsPerformanceModalOpen(false)}
-                  className="px-4 py-2 text-slate-600 hover:text-slate-800 font-semibold transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-70"
-                >
-                  <Check className="h-3.5 w-3.5" />
-                  Save Metrics
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Set Monthly Targets Modal */}
-      {isTargetsModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Glassmorphism Backdrop */}
-          <div 
-            className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300"
-            onClick={() => setIsTargetsModalOpen(false)}
-          />
-
-          {/* Modal Container */}
-          <div className="relative bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col overflow-visible z-10 animate-in fade-in zoom-in-95 duration-200">
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 pb-4 border-b border-slate-100 shrink-0 rounded-t-2xl">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-indigo-600" />
-                  Set Monthly Targets
-                </h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">
-                  Define expectations for <span className="font-semibold text-slate-600 font-mono">{selectedMonth}</span> to flag under-performance
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsTargetsModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer shrink-0"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleSaveTarget} className="flex-1 flex flex-col overflow-visible">
-              <div className="p-6 overflow-visible space-y-4 flex-1">
-                {/* Selected Month */}
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                    Target Month
-                  </label>
-                  <div>
-                    <MonthPicker
-                      value={selectedMonth}
-                      onChange={setSelectedMonth}
-                      fullWidth={true}
-                    />
-                  </div>
-                  <span className="text-[9px] text-slate-400 mt-0.5 block">
-                    Choose the performance tracking month
-                  </span>
-                </div>
-
-                {/* Attendance Target */}
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                    Min Attendance Rate (%)
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      required
-                      value={targetFormData.attendanceMin}
-                      onChange={(e) => setTargetFormData({ ...targetFormData, attendanceMin: Number(e.target.value) })}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none font-mono font-semibold"
-                    />
-                    <span className="absolute inset-y-0 right-3 flex items-center text-slate-400 text-[10px] font-bold">%</span>
-                  </div>
-                  <span className="text-[9px] text-slate-400 mt-0.5 block">
-                    Attendance percentage expectations. Standard baseline: 95%
-                  </span>
-                </div>
-
-                {/* Project Value Target */}
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                    Min Delivered Value ($)
-                  </label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-3 flex items-center text-slate-400 font-mono text-xs">$</span>
-                    <input
-                      type="number"
-                      min="0"
-                      required
-                      value={targetFormData.projectValueMin}
-                      onChange={(e) => setTargetFormData({ ...targetFormData, projectValueMin: Number(e.target.value) })}
-                      className="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none font-mono font-semibold"
-                    />
-                  </div>
-                  <span className="text-[9px] text-slate-400 mt-0.5 block">
-                    Delivered project financial worth in dollars. Standard: $25,000
-                  </span>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="p-6 pt-4 border-t border-slate-100 flex justify-end gap-2 text-xs shrink-0 bg-slate-50/50 rounded-b-2xl">
-                <button
-                  type="button"
-                  onClick={() => setIsTargetsModalOpen(false)}
-                  className="px-4 py-2 text-slate-600 hover:text-slate-800 font-semibold transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  
-                  className="px-5 py-2 bg-slate-900 hover:bg-slate-950 text-white font-bold rounded-lg shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-70"
-                >
-                  <Check className="h-3.5 w-3.5" />
-                  Save Targets
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 4: DELETE CONFIRMATION */}
-      {isDeleteConfirmOpen && employeeToDelete && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-xs">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md flex flex-col shadow-xl animate-in fade-in zoom-in-95 overflow-hidden">
-            <div className="p-6 text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-rose-50 text-rose-600 mb-4 border border-rose-100">
-                <AlertTriangle className="h-6 w-6 animate-bounce" />
-              </div>
-              <h3 className="text-md font-bold text-slate-800 mb-2">
-                Delete Employee Profile?
-              </h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Are you sure you want to permanently delete <strong className="text-slate-800 font-semibold">{employeeToDelete.name}</strong>'s performance profile?
-                This action cannot be undone, and all their historical performance records, targets, and reports will be removed from the database.
-              </p>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="p-6 pt-2 border-t border-slate-100 flex gap-2 text-xs shrink-0 bg-slate-50/50 justify-end">
-              <button
-                onClick={() => setEmployeeToDelete(null)}
-                className="px-4 py-2 text-slate-600 hover:text-slate-800 font-semibold transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmDeleteEmployee}
-                
-                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-70"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                Confirm Deletion
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      </div>
     </div>
   );
 }

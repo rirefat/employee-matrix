@@ -96,13 +96,13 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 bg-slate-50/90 hover:bg-slate-100/90 active:bg-slate-200/50 border border-slate-200 px-3.5 py-2 rounded-xl text-slate-700 transition-all duration-150 shadow-2xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500/20 ${
+        className={`flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 px-4 py-2 rounded-full text-slate-700 transition-all duration-150 shadow-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-200 ${
           fullWidth ? "w-full justify-between" : ""
         }`}
       >
         <div className="flex items-center gap-2">
-          <Calendar className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
-          <span className="text-slate-900 font-sans text-xs font-semibold leading-none select-none">
+          <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+          <span className="text-slate-700 font-sans text-xs font-medium leading-none select-none">
             {selectedMonthName} {initialYear}
           </span>
         </div>
