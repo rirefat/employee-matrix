@@ -95,6 +95,11 @@ export default function App() {
   const [selectedMonth, setSelectedMonth] = useState<string>("2026-06");
   const myEmployees = useMemo(() => employees.filter(emp => loggedInManager?.teams.includes(emp.team)), [employees, loggedInManager]);
   const [rosterSearchQuery, setRosterSearchQuery] = useState<string>("");
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<Set<string>>(new Set());
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isBulkUpdateModalOpen, setIsBulkUpdateModalOpen] = useState(false);
+  const [bulkUpdateDept, setBulkUpdateDept] = useState<string>(DEPARTMENTS[0]);
+  const [bulkUpdateTeam, setBulkUpdateTeam] = useState<string>(TEAMS[0]);
   const [rosterDeptFilter, setRosterDeptFilter] = useState<string>("All");
   const [rosterTeamFilter, setRosterTeamFilter] = useState<string>("All");
   const [rosterSortBy, setRosterSortBy] = useState<"Alphabetical Name" | "Highest Performance" | "Lowest Performance">("Alphabetical Name");
@@ -348,6 +353,58 @@ export default function App() {
   const handleDeleteEmployeeClick = (emp: Employee) => {
     setEmployeeToDelete(emp);
     setIsDeleteConfirmOpen(true);
+  };
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Are you sure you want to delete ${selectedEmployeeIds.size} employees?`)) return;
+    
+    setIsSubmitting(true);
+    try {
+      const ids = Array.from(selectedEmployeeIds);
+      await Promise.all(ids.map(id => fetch(`/api/employees/${id}`, { method: 'DELETE' })));
+      
+      const res = await fetch("/api/employees");
+      const data = await res.json();
+      setEmployees(data);
+      
+      showToast(`Successfully deleted ${ids.length} employees`, "success");
+      setSelectedEmployeeIds(new Set());
+    } catch (err: any) {
+      showToast(err.message || "Failed to delete employees", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleBulkUpdate = async () => {
+    setIsSubmitting(true);
+    try {
+      const ids = Array.from(selectedEmployeeIds);
+      const updateData = {
+        department: bulkUpdateDept,
+        team: bulkUpdateTeam,
+      };
+      
+      await Promise.all(ids.map(id => 
+        fetch(`/api/employees/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updateData)
+        })
+      ));
+      
+      const res = await fetch("/api/employees");
+      const data = await res.json();
+      setEmployees(data);
+      
+      showToast(`Successfully updated ${ids.length} employees`, "success");
+      setIsBulkUpdateModalOpen(false);
+      setSelectedEmployeeIds(new Set());
+    } catch (err: any) {
+      showToast(err.message || "Failed to update employees", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleConfirmDeleteEmployee = async () => {
@@ -1458,6 +1515,26 @@ export default function App() {
                   <table className="w-full text-left text-xs text-slate-500">
                     <thead className="bg-slate-50/70 uppercase text-slate-400 font-mono text-[9px] tracking-wider border-b border-slate-100">
                       <tr>
+                        <th className="px-6 py-4 w-12 text-center">
+                          <button
+                            onClick={() => {
+                              if (rosterFilteredEmployees.length > 0 && selectedEmployeeIds.size === rosterFilteredEmployees.length) {
+                                setSelectedEmployeeIds(new Set());
+                              } else {
+                                setSelectedEmployeeIds(new Set(rosterFilteredEmployees.map(emp => emp.id)));
+                              }
+                            }}
+                            className={`w-5 h-5 rounded flex items-center justify-center transition-all cursor-pointer shadow-sm ${
+                              rosterFilteredEmployees.length > 0 && selectedEmployeeIds.size === rosterFilteredEmployees.length
+                                ? "bg-indigo-500 shadow-indigo-500/30 border-transparent"
+                                : "bg-white border border-slate-300 hover:border-indigo-400 hover:bg-indigo-50"
+                            }`}
+                          >
+                            {rosterFilteredEmployees.length > 0 && selectedEmployeeIds.size === rosterFilteredEmployees.length && (
+                              <Check className="h-3 w-3 text-white" strokeWidth={3} />
+                            )}
+                          </button>
+                        </th>
                         <th className="px-6 py-4">Employee Profile</th>
                         <th className="px-6 py-4">Corporate Division</th>
                         <th className="px-6 py-4">Registry Credentials</th>
@@ -1518,12 +1595,48 @@ export default function App() {
                               exit={{ opacity: 0, scale: 0.98 }}
                               transition={{ duration: 0.2 }}
                               key={emp.id}
-                              className={`transition-all group border-l-2 ${
-                                hasLowAttendance 
-                                  ? "bg-rose-50/40 hover:bg-rose-100/40 border-l-rose-500" 
-                                  : "hover:bg-slate-50/40 border-l-transparent"
+                              className={`transition-all group border-l-2 cursor-pointer ${
+                                selectedEmployeeIds.has(emp.id)
+                                  ? "bg-indigo-50 hover:bg-indigo-100/80 border-l-indigo-500 shadow-[inset_0_0_0_1px_rgba(99,102,241,0.15)]"
+                                  : hasLowAttendance 
+                                    ? "bg-rose-50/40 hover:bg-rose-100/40 border-l-rose-500" 
+                                    : "hover:bg-slate-50/40 border-l-transparent"
                               }`}
+                              onClick={() => {
+                                const newSet = new Set(selectedEmployeeIds);
+                                if (newSet.has(emp.id)) {
+                                  newSet.delete(emp.id);
+                                } else {
+                                  newSet.add(emp.id);
+                                }
+                                setSelectedEmployeeIds(newSet);
+                              }}
                             >
+                              <td className="px-6 py-4 w-12 text-center" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const newSet = new Set(selectedEmployeeIds);
+                                    if (newSet.has(emp.id)) {
+                                      newSet.delete(emp.id);
+                                    } else {
+                                      newSet.add(emp.id);
+                                    }
+                                    setSelectedEmployeeIds(newSet);
+                                  }}
+                                  className={`w-5 h-5 rounded flex items-center justify-center transition-all cursor-pointer shadow-sm ${
+                                    selectedEmployeeIds.has(emp.id)
+                                      ? "bg-indigo-500 shadow-indigo-500/30 border-transparent scale-110"
+                                      : "bg-white border border-slate-300 group-hover:border-indigo-400 group-hover:bg-indigo-50"
+                                  }`}
+                                >
+                                  {selectedEmployeeIds.has(emp.id) && (
+                                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 20 }}>
+                                      <Check className="h-3 w-3 text-white" strokeWidth={3} />
+                                    </motion.div>
+                                  )}
+                                </button>
+                              </td>
                               {/* Employee Profile Cell */}
                               <td className="px-6 py-4">
                                 <div className="flex items-center gap-3">
@@ -1874,6 +1987,137 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      
+      {/* Floating Bulk Action Toolbar */}
+      <AnimatePresence>
+        {activeTab === "roster" && selectedEmployeeIds.size > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.9 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center justify-center group"
+          >
+            {/* Animated glowing backdrop */}
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full blur-md opacity-25 group-hover:opacity-40 transition-opacity duration-500 animate-pulse"></div>
+            
+            <div className="relative bg-slate-900 text-white px-5 py-2.5 rounded-full shadow-2xl flex items-center gap-5 border border-slate-700/80 backdrop-blur-xl bg-slate-900/90 overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+              <div className="flex items-center gap-2 font-semibold text-sm">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500/20 text-blue-400 text-xs font-bold font-mono shadow-[inset_0_0_8px_rgba(59,130,246,0.3)]">
+                  {selectedEmployeeIds.size}
+                </span>
+                Selected
+              </div>
+              <div className="h-4 w-px bg-slate-700"></div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setIsBulkUpdateModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold hover:bg-slate-800 rounded-lg transition-all text-slate-300 hover:text-white cursor-pointer active:scale-95"
+                >
+                  <Edit3 className="h-3.5 w-3.5 text-blue-400" />
+                  Update
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold hover:bg-rose-500/10 rounded-lg transition-all text-rose-400 hover:text-rose-300 cursor-pointer active:scale-95"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <span className="w-3.5 h-3.5 border-2 border-rose-500/30 border-t-rose-500 rounded-full animate-spin"></span>
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                  Delete
+                </button>
+                <div className="h-4 w-px bg-slate-700 mx-1"></div>
+                <button
+                  onClick={() => setSelectedEmployeeIds(new Set())}
+                  className="flex items-center justify-center p-1.5 hover:bg-slate-800 rounded-full transition-all text-slate-400 hover:text-white cursor-pointer hover:rotate-90"
+                  title="Clear Selection"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL: BULK UPDATE */}
+      {isBulkUpdateModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-xs">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md flex flex-col shadow-xl animate-in fade-in zoom-in-95 overflow-hidden">
+            <div className="flex justify-between items-center p-6 pb-4 border-b border-slate-100 shrink-0">
+              <h3 className="text-md font-bold text-slate-800">
+                Bulk Update Division
+              </h3>
+              <button
+                onClick={() => setIsBulkUpdateModalOpen(false)}
+                className="p-1 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4 text-slate-500" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto space-y-4">
+              <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100 text-xs text-blue-800 font-medium flex items-start gap-2">
+                <Users className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                Updating {selectedEmployeeIds.size} selected employee profiles.
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">New Corporate Division</label>
+                <select
+                  value={bulkUpdateDept}
+                  onChange={(e) => setBulkUpdateDept(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all cursor-pointer shadow-sm"
+                  required
+                >
+                  {DEPARTMENTS.map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">New Team Category</label>
+                <select
+                  value={bulkUpdateTeam}
+                  onChange={(e) => setBulkUpdateTeam(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all cursor-pointer shadow-sm"
+                  required
+                >
+                  {TEAMS.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2 shrink-0">
+              <button
+                onClick={() => setIsBulkUpdateModalOpen(false)}
+                className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkUpdate}
+                disabled={isSubmitting}
+                className="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-lg shadow-sm shadow-blue-500/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-70 text-sm"
+              >
+                {isSubmitting ? (
+                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                ) : (
+                  <Check className="h-3.5 w-3.5" />
+                )}
+                Confirm Bulk Update
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL 1: ADD / EDIT EMPLOYEE */}
       {isEmployeeModalOpen && (
