@@ -33,7 +33,8 @@ import {
   LogOut,
   Building,
   ArrowLeftRight,
-  ChevronDown
+  ChevronDown,
+  Activity
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -161,6 +162,8 @@ export default function App() {
   });
 
   const [kudos, setKudos] = useState<Record<string, { velocity: number; innovation: number; team: number; precision: number; growth: number; empathy: number }>>({});
+
+  const [activeCompareMetric, setActiveCompareMetric] = useState<string>("Attendance Rate");
 
   const getInitialKudos = (name: string) => {
     let hash = 0;
@@ -2086,105 +2089,449 @@ export default function App() {
                 const perf1 = performance.find(p => p.employeeId === emp1.id && p.month === selectedMonth);
                 const perf2 = performance.find(p => p.employeeId === emp2.id && p.month === selectedMonth);
 
-                const data = [
-                  { 
-                    metric: 'Attendance', 
-                    [emp1.name]: perf1?.attendance || 0, 
-                    [emp2.name]: perf2?.attendance || 0,
-                    fullMark: 100
+                const maxAttendance = Math.max(perf1?.attendance || 0, perf2?.attendance || 0, 1);
+                const maxValue = Math.max(perf1?.deliveredProjectsValue || 0, perf2?.deliveredProjectsValue || 0, 1);
+                const maxProjects = Math.max(perf1?.deliveredProjectsAmount || 0, perf2?.deliveredProjectsAmount || 0, 1);
+                const maxMeetings = Math.max(perf1?.conductedMeetings || 0, perf2?.conductedMeetings || 0, 1);
+
+                const kudos1 = getEmployeeKudos(emp1.id, emp1.name);
+                const kudos2 = getEmployeeKudos(emp2.id, emp2.name);
+                const totalKudos1 = (Object.values(kudos1) as number[]).reduce((a, b) => a + b, 0);
+                const totalKudos2 = (Object.values(kudos2) as number[]).reduce((a, b) => a + b, 0);
+                const maxKudos = Math.max(totalKudos1, totalKudos2, 1);
+
+                const radarData = [
+                  {
+                    subject: "Attendance",
+                    [emp1.name]: Math.round(((perf1?.attendance || 0) / maxAttendance) * 100),
+                    [emp2.name]: Math.round(((perf2?.attendance || 0) / maxAttendance) * 100),
                   },
-                  { 
-                    metric: 'Proj. Value (k$)', 
-                    [emp1.name]: Number(((perf1?.deliveredProjectsValue || 0) / 1000).toFixed(1)), 
-                    [emp2.name]: Number(((perf2?.deliveredProjectsValue || 0) / 1000).toFixed(1)),
-                    fullMark: Math.max(50, ((perf1?.deliveredProjectsValue || 0) / 1000) * 1.2, ((perf2?.deliveredProjectsValue || 0) / 1000) * 1.2)
+                  {
+                    subject: "Delivered Value",
+                    [emp1.name]: Math.round(((perf1?.deliveredProjectsValue || 0) / maxValue) * 100),
+                    [emp2.name]: Math.round(((perf2?.deliveredProjectsValue || 0) / maxValue) * 100),
                   },
-                  { 
-                    metric: 'Projects', 
-                    [emp1.name]: perf1?.deliveredProjectsAmount || 0, 
-                    [emp2.name]: perf2?.deliveredProjectsAmount || 0,
-                    fullMark: Math.max(10, (perf1?.deliveredProjectsAmount || 0) * 1.5, (perf2?.deliveredProjectsAmount || 0) * 1.5)
+                  {
+                    subject: "Projects Delivered",
+                    [emp1.name]: Math.round(((perf1?.deliveredProjectsAmount || 0) / maxProjects) * 100),
+                    [emp2.name]: Math.round(((perf2?.deliveredProjectsAmount || 0) / maxProjects) * 100),
                   },
-                  { 
-                    metric: 'Meetings', 
-                    [emp1.name]: perf1?.conductedMeetings || 0, 
-                    [emp2.name]: perf2?.conductedMeetings || 0,
-                    fullMark: Math.max(20, (perf1?.conductedMeetings || 0) * 1.5, (perf2?.conductedMeetings || 0) * 1.5)
-                  }
+                  {
+                    subject: "Meetings",
+                    [emp1.name]: Math.round(((perf1?.conductedMeetings || 0) / maxMeetings) * 100),
+                    [emp2.name]: Math.round(((perf2?.conductedMeetings || 0) / maxMeetings) * 100),
+                  },
+                  {
+                    subject: "Kudos",
+                    [emp1.name]: Math.round((totalKudos1 / maxKudos) * 100),
+                    [emp2.name]: Math.round((totalKudos2 / maxKudos) * 100),
+                  },
                 ];
 
-                return (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in zoom-in-95 duration-300">
-                    {/* Metrics Cards */}
-                    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
-                      <h4 className="text-sm font-bold text-slate-800 mb-6 flex items-center gap-2">
-                        <UserCheck className="h-4 w-4 text-slate-400" />
-                        Metric Breakdown
-                      </h4>
-                      <div className="space-y-4">
-                        {[
-                          { label: "Attendance Rate", key: "attendance", icon: Calendar, unit: "%" },
-                          { label: "Delivered Value", key: "deliveredProjectsValue", icon: DollarSign, unit: "$", isCurrency: true },
-                          { label: "Projects Delivered", key: "deliveredProjectsAmount", icon: Briefcase, unit: "" },
-                          { label: "Meetings Conducted", key: "conductedMeetings", icon: Users, unit: "" }
-                        ].map((metric) => {
-                          const val1 = perf1?.[metric.key as keyof PerformanceRecord] as number || 0;
-                          const val2 = perf2?.[metric.key as keyof PerformanceRecord] as number || 0;
-                          const max = Math.max(val1, val2);
-                          const isCurrency = metric.isCurrency;
+                const activeMetricData = [
+                  { label: "Attendance Rate", val1: perf1?.attendance || 0, val2: perf2?.attendance || 0, max: 100, unit: "%", icon: Calendar },
+                  { label: "Delivered Value", val1: perf1?.deliveredProjectsValue || 0, val2: perf2?.deliveredProjectsValue || 0, max: maxValue, unit: "", isCurrency: true, icon: DollarSign },
+                  { label: "Projects Delivered", val1: perf1?.deliveredProjectsAmount || 0, val2: perf2?.deliveredProjectsAmount || 0, max: maxProjects, unit: " items", icon: Briefcase },
+                  { label: "Meetings Conducted", val1: perf1?.conductedMeetings || 0, val2: perf2?.conductedMeetings || 0, max: maxMeetings, unit: " sessions", icon: Users },
+                  { label: "Culture Recognition", val1: totalKudos1, val2: totalKudos2, max: maxKudos, unit: " pts", icon: Sparkles }
+                ].find(m => m.label === activeCompareMetric) || { label: "Attendance Rate", val1: perf1?.attendance || 0, val2: perf2?.attendance || 0, max: 100, unit: "%", icon: Calendar };
 
-                          return (
-                            <div key={metric.key} className="p-4 bg-slate-50 border border-slate-100 rounded-xl relative overflow-hidden">
-                              <div className="flex justify-between items-center mb-3">
-                                <span className="text-xs font-bold text-slate-600 uppercase flex items-center gap-1.5">
-                                  <metric.icon className="h-3.5 w-3.5 text-slate-400" />
-                                  {metric.label}
+                const activeSum = activeMetricData.val1 + activeMetricData.val2;
+                const activeRatio = activeSum > 0 ? (activeMetricData.val1 / activeSum) * 100 : 50;
+                // Tilt angle from -60 (fully right) to +60 (fully left)
+                const tiltAngle = (activeRatio - 50) * 1.2;
+
+                return (
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in zoom-in-95 duration-300">
+                    {/* Left Column: Interactive Gyroscopic Balance Instrument & Metric Selectors (Light Theme) */}
+                    <div className="lg:col-span-7 bg-white text-slate-800 border border-slate-200 rounded-3xl p-7 shadow-xs relative overflow-hidden flex flex-col justify-between">
+                      {/* Decorative ambient subtle light-mode spotlights */}
+                      <div className="absolute top-0 left-0 w-64 h-64 bg-blue-50/40 rounded-full blur-3xl pointer-events-none" />
+                      <div className="absolute bottom-0 right-0 w-64 h-64 bg-emerald-50/40 rounded-full blur-3xl pointer-events-none" />
+                      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.03)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
+                      
+                      <div className="relative z-10">
+                        {/* Title block */}
+                        <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+                          <div>
+                            <h4 className="text-xs font-black text-slate-700 flex items-center gap-2 uppercase tracking-widest font-mono">
+                              <ArrowLeftRight className="h-4 w-4 text-indigo-500" />
+                              Horizon Balance Map
+                            </h4>
+                            <p className="text-[10px] text-slate-400 font-medium font-sans mt-0.5">Dynamic performance parity telemetry</p>
+                          </div>
+                          
+                          <div className="flex items-center gap-3 text-[10px] font-mono">
+                            <span className="flex items-center gap-1.5 text-blue-600 font-bold">
+                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                              {emp1.name.split(' ')[0]}
+                            </span>
+                            <span className="text-slate-400">vs</span>
+                            <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              {emp2.name.split(' ')[0]}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Gyro Instrument Panel */}
+                        <div className="flex flex-col md:flex-row items-center gap-6 bg-slate-50/60 border border-slate-100 rounded-2xl p-5 mb-6">
+                          {/* Left: Gyro Instrument */}
+                          <div className="flex-shrink-0 flex flex-col items-center">
+                            <div className="relative">
+                              <svg viewBox="0 0 200 110" className="w-40 h-20 overflow-visible">
+                                <path 
+                                  d="M 20 90 A 80 80 0 0 1 180 90" 
+                                  fill="none" 
+                                  stroke="#e2e8f0" 
+                                  strokeWidth="6" 
+                                  strokeLinecap="round" 
+                                />
+                                <path 
+                                  d="M 20 90 A 80 80 0 0 1 180 90" 
+                                  fill="none" 
+                                  stroke="url(#arcGradient)" 
+                                  strokeWidth="2" 
+                                  strokeDasharray="3 3"
+                                />
+                                <line x1="100" y1="10" x2="100" y2="20" stroke="#94a3b8" strokeWidth="2" />
+                                <g transform={`rotate(${tiltAngle} 100 90)`} className="transition-transform duration-500 ease-out">
+                                  <line 
+                                    x1="100" 
+                                    y1="90" 
+                                    x2="100" 
+                                    y2="15" 
+                                    stroke="url(#needleGlow)" 
+                                    strokeWidth="3.5" 
+                                    strokeLinecap="round" 
+                                  />
+                                  <circle cx="100" cy="15" r="5" fill={activeRatio > 52 ? "#2563eb" : activeRatio < 48 ? "#059669" : "#4f46e5"} className="animate-pulse" />
+                                </g>
+                                <circle cx="100" cy="90" r="10" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" />
+                                <circle cx="100" cy="90" r="3" fill="#4f46e5" />
+                                <defs>
+                                  <linearGradient id="needleGlow" x1="0%" y1="100%" x2="0%" y2="0%">
+                                    <stop offset="0%" stopColor="#818cf8" stopOpacity="0.2" />
+                                    <stop offset="100%" stopColor="#4f46e5" stopOpacity="1" />
+                                  </linearGradient>
+                                  <linearGradient id="arcGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stopColor="#3b82f6" />
+                                    <stop offset="50%" stopColor="#cbd5e1" />
+                                    <stop offset="100%" stopColor="#10b981" />
+                                  </linearGradient>
+                                </defs>
+                              </svg>
+                            </div>
+                            <span className="text-[9px] font-mono font-bold text-slate-400 tracking-widest mt-1.5 uppercase">Telemetry Dial</span>
+                          </div>
+
+                          {/* Right: Detailed active comparison readouts */}
+                          <div className="flex-1 w-full space-y-2.5">
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                                <span className="text-[10px] font-extrabold text-slate-700 uppercase tracking-wider font-mono">{activeMetricData.label} focus</span>
+                              </div>
+                              <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100 font-mono">
+                                {activeRatio > 50 ? `${activeRatio.toFixed(0)}% Left Bias` : activeRatio < 50 ? `${(100 - activeRatio).toFixed(0)}% Right Bias` : "Equilibrium"}
+                              </span>
+                            </div>
+
+                            <p className="text-[11px] text-slate-600 leading-relaxed font-sans font-medium">
+                              {activeRatio > 52 ? (
+                                <> <span className="text-blue-600 font-bold">{emp1.name.split(' ')[0]}</span> leads by <span className="font-extrabold text-blue-600">{(activeRatio - 50).toFixed(0)}%</span> relative margin over <span className="text-slate-500">{emp2.name.split(' ')[0]}</span> in this specific discipline.</>
+                              ) : activeRatio < 48 ? (
+                                <> <span className="text-emerald-600 font-bold">{emp2.name.split(' ')[0]}</span> leads by <span className="font-extrabold text-emerald-600">{(50 - activeRatio).toFixed(0)}%</span> relative margin over <span className="text-slate-500">{emp1.name.split(' ')[0]}</span> in this specific discipline.</>
+                              ) : (
+                                <> Both employees operate in pristine, near-perfect symmetric equilibrium (50:50 parity) in this category.</>
+                              )}
+                            </p>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="bg-white p-2 rounded-xl border border-slate-100 flex justify-between items-center">
+                                <span className="text-[9px] text-slate-400 uppercase font-mono font-bold">{emp1.name.split(' ')[0]}</span>
+                                <span className="text-xs font-black text-blue-600 font-mono">
+                                  {activeMetricData.isCurrency ? `$${(activeMetricData.val1).toLocaleString()}` : `${activeMetricData.val1}${activeMetricData.unit}`}
                                 </span>
                               </div>
-                              <div className="space-y-3 relative z-10">
-                                {/* Emp 1 */}
-                                <div>
-                                  <div className="flex justify-between text-[11px] mb-1">
-                                    <span className="font-semibold text-blue-700">{emp1.name}</span>
-                                    <span className="font-mono font-bold text-slate-700">
-                                      {isCurrency ? `$${val1.toLocaleString()}` : `${val1}${metric.unit}`}
-                                    </span>
+                              <div className="bg-white p-2 rounded-xl border border-slate-100 flex justify-between items-center">
+                                <span className="text-[9px] text-slate-400 uppercase font-mono font-bold">{emp2.name.split(' ')[0]}</span>
+                                <span className="text-xs font-black text-emerald-600 font-mono">
+                                  {activeMetricData.isCurrency ? `$${(activeMetricData.val2).toLocaleString()}` : `${activeMetricData.val2}${activeMetricData.unit}`}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Interactive Selector Track Pill-Buttons */}
+                        <div className="space-y-3">
+                          <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1">Select Metric to Deep-Dive Dial:</span>
+                          {[
+                            { label: "Attendance Rate", val1: perf1?.attendance || 0, val2: perf2?.attendance || 0, max: 100, unit: "%", icon: Calendar },
+                            { label: "Delivered Value", val1: perf1?.deliveredProjectsValue || 0, val2: perf2?.deliveredProjectsValue || 0, max: maxValue, unit: "", isCurrency: true, icon: DollarSign },
+                            { label: "Projects Delivered", val1: perf1?.deliveredProjectsAmount || 0, val2: perf2?.deliveredProjectsAmount || 0, max: maxProjects, unit: " items", icon: Briefcase },
+                            { label: "Meetings Conducted", val1: perf1?.conductedMeetings || 0, val2: perf2?.conductedMeetings || 0, max: maxMeetings, unit: " sessions", icon: Users },
+                            { label: "Culture Recognition", val1: totalKudos1, val2: totalKudos2, max: maxKudos, unit: " pts", icon: Sparkles }
+                          ].map((metric) => {
+                            const sum = metric.val1 + metric.val2;
+                            const balanceRatio = sum > 0 ? (metric.val1 / sum) * 100 : 50;
+                            const isSelected = activeCompareMetric === metric.label;
+
+                            return (
+                              <button
+                                key={metric.label}
+                                onClick={() => setActiveCompareMetric(metric.label)}
+                                className={`w-full text-left p-3 rounded-2xl border transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${
+                                  isSelected
+                                    ? "bg-indigo-50/50 border-indigo-200/60 shadow-xs text-slate-800"
+                                    : "bg-white border-slate-100 text-slate-500 hover:bg-slate-50/50 hover:border-slate-200"
+                                }`}
+                              >
+                                {/* Active subtle border glow */}
+                                {isSelected && (
+                                  <div className="absolute top-0 bottom-0 left-0 w-[2.5px] bg-gradient-to-b from-blue-500 to-indigo-500" />
+                                )}
+
+                                <div className="flex justify-between items-center w-full mb-1.5 relative z-10">
+                                  <span className="text-[11px] font-bold flex items-center gap-2 tracking-wide font-sans">
+                                    <metric.icon className={`h-3.5 w-3.5 ${isSelected ? "text-indigo-600" : "text-slate-400"}`} />
+                                    {metric.label}
+                                  </span>
+
+                                  <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border ${
+                                    isSelected 
+                                      ? "bg-indigo-100/40 border-indigo-200/50 text-indigo-700" 
+                                      : "bg-slate-50 border-slate-100 text-slate-600"
+                                  }`}>
+                                    {metric.label === "Attendance Rate" ? (
+                                      `${metric.val1}% vs ${metric.val2}%`
+                                    ) : (
+                                      `Δ: ${metric.isCurrency ? `$${Math.abs(metric.val1 - metric.val2).toLocaleString()}` : `${Math.abs(metric.val1 - metric.val2)}${metric.unit}`}`
+                                    )}
+                                  </span>
+                                </div>
+
+                                {/* Slider track indicator */}
+                                <div className="relative h-1 w-full bg-slate-100 rounded-full overflow-hidden mt-0.5">
+                                  <div 
+                                    className="absolute left-0 top-0 bottom-0 bg-blue-500" 
+                                    style={{ width: `${balanceRatio}%` }}
+                                  />
+                                  <div 
+                                    className="absolute right-0 top-0 bottom-0 bg-emerald-500" 
+                                    style={{ width: `${100 - balanceRatio}%` }}
+                                  />
+                                  <div className="absolute top-0 bottom-0 left-1/2 w-[1px] bg-white" />
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="relative z-10 pt-3 mt-4 border-t border-slate-100 flex items-center justify-between">
+                        <p className="text-[9px] text-slate-400 font-mono">
+                          * Click on any metric card to dynamically balance-tune the Gyroscopic Telemetry Dial.
+                        </p>
+                        <span className="text-[8px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full font-mono uppercase tracking-widest">
+                          Bilateral Dial v3.0
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Right Column: Visual Radar & Partnership Typology - Takes 5 Cols */}
+                    <div className="lg:col-span-5 space-y-6">
+                      {/* Mini Footprint Radar Chart */}
+                      <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-xs relative overflow-hidden flex flex-col justify-between">
+                        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.02)_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
+                        
+                        <div className="relative z-10">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5 font-sans">
+                                <Sparkles className="h-4 w-4 text-indigo-500" />
+                                Overlap Signature
+                              </h4>
+                              <p className="text-[10px] text-slate-400 font-medium">Overlapping performance signature (normalized %)</p>
+                            </div>
+                            <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full font-mono">
+                              Radar Matrix
+                            </span>
+                          </div>
+
+                          {/* Recharts Radar Chart */}
+                          <div className="h-48 w-full flex items-center justify-center">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <RadarChart cx="50%" cy="50%" outerRadius="65%" data={radarData}>
+                                <PolarGrid stroke="#e2e8f0" strokeDasharray="3 3" />
+                                <PolarAngleAxis 
+                                  dataKey="subject" 
+                                  tick={{ fill: '#475569', fontSize: 9, fontWeight: 600, fontFamily: 'Inter' }} 
+                                />
+                                <PolarRadiusAxis 
+                                  angle={30} 
+                                  domain={[0, 100]} 
+                                  tick={{ fill: '#94a3b8', fontSize: 7 }} 
+                                />
+                                <Radar 
+                                  name={emp1.name} 
+                                  dataKey={emp1.name} 
+                                  stroke="#3b82f6" 
+                                  fill="#3b82f6" 
+                                  fillOpacity={0.12} 
+                                  strokeWidth={1.5}
+                                />
+                                <Radar 
+                                  name={emp2.name} 
+                                  dataKey={emp2.name} 
+                                  stroke="#10b981" 
+                                  fill="#10b981" 
+                                  fillOpacity={0.12} 
+                                  strokeWidth={1.5}
+                                />
+                                <Tooltip 
+                                  contentStyle={{ 
+                                    backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+                                    border: '1px solid #e2e8f0', 
+                                    borderRadius: '12px',
+                                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+                                    fontSize: '10px',
+                                    fontFamily: 'Inter',
+                                    fontWeight: '500'
+                                  }} 
+                                />
+                              </RadarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Glassmorphic Synergy Profile Archetype */}
+                      <div className="relative overflow-hidden rounded-3xl border border-slate-200/60 shadow-md p-6 bg-white/80 backdrop-blur-md">
+                        {/* Glowing backdrop spotlight */}
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full bg-gradient-to-tr from-indigo-500/10 to-emerald-500/10 blur-3xl pointer-events-none" />
+
+                        <div className="relative z-10 space-y-5">
+                          <div className="flex justify-between items-center">
+                            <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 font-mono">
+                              <Activity className="h-3.5 w-3.5 text-indigo-500" />
+                              Partnership Synergy
+                            </h4>
+                            <span className="text-[9px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md font-mono">
+                              Match Archetype
+                            </span>
+                          </div>
+
+                          {/* Synergy Profile Decider & Card Header */}
+                          {(() => {
+                            const val1 = perf1?.deliveredProjectsValue || 0;
+                            const val2 = perf2?.deliveredProjectsValue || 0;
+                            const m1 = perf1?.conductedMeetings || 0;
+                            const m2 = perf2?.conductedMeetings || 0;
+                            
+                            let archetypeTitle = "Agile Alliance";
+                            let archetypeIcon = "⚡";
+                            let archetypeDesc = "Combining disparate core workflows into a versatile, high-tempo tandem.";
+                            let tagColor = "text-indigo-600 bg-indigo-50 border-indigo-100";
+
+                            if (val1 > 50000 && val2 > 50000) {
+                              archetypeTitle = "Twin Engine Powerhouse";
+                              archetypeIcon = "🚀";
+                              archetypeDesc = "An elite, double-engine tandem delivering heavy commercial value and high strategic revenue outcomes.";
+                              tagColor = "text-amber-700 bg-amber-50 border-amber-100";
+                            } else if ((val1 > 50000 && m2 > 8) || (val2 > 50000 && m1 > 8)) {
+                              archetypeTitle = "Value & Connection Bridge";
+                              archetypeIcon = "🤝";
+                              archetypeDesc = "A perfectly balanced pairing of deep financial delivery power coupled with high interpersonal and meeting orchestration.";
+                              tagColor = "text-blue-700 bg-blue-50 border-blue-100";
+                            } else if (Math.abs(val1 - val2) < 15000 && Math.abs(m1 - m2) <= 3) {
+                              archetypeTitle = "Symmetric Peer Tandem";
+                              archetypeIcon = "✨";
+                              archetypeDesc = "A highly aligned, synchronized duo sharing almost identical operational output velocities and baselines.";
+                              tagColor = "text-emerald-700 bg-emerald-50 border-emerald-100";
+                            }
+
+                            return (
+                              <div className="space-y-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-lg shadow-sm">
+                                    {archetypeIcon}
                                   </div>
-                                  <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
-                                    <motion.div 
-                                      className="h-full bg-blue-500 rounded-full" 
-                                      initial={{ width: 0 }} 
-                                      animate={{ width: max > 0 ? `${(val1 / max) * 100}%` : '0%' }} 
-                                      transition={{ duration: 0.8, ease: "easeOut" }}
-                                    />
+                                  <div>
+                                    <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border uppercase tracking-wider font-mono ${tagColor}`}>
+                                      {archetypeTitle}
+                                    </span>
+                                    <p className="text-xs text-slate-500 mt-1 leading-relaxed font-sans font-medium">{archetypeDesc}</p>
                                   </div>
                                 </div>
-                                {/* Emp 2 */}
-                                <div>
-                                  <div className="flex justify-between text-[11px] mb-1">
-                                    <span className="font-semibold text-emerald-700">{emp2.name}</span>
-                                    <span className="font-mono font-bold text-slate-700">
-                                      {isCurrency ? `$${val2.toLocaleString()}` : `${val2}${metric.unit}`}
-                                    </span>
+
+                                <div className="space-y-3 pt-3 border-t border-slate-100">
+                                  {/* Synergy Insight Bullet 1 */}
+                                  <div className="flex items-start gap-2.5 text-[11px] text-slate-600">
+                                    <span className="text-slate-400 mt-0.5">•</span>
+                                    <div>
+                                      <span className="font-bold text-slate-800">Commercial Balance: </span>
+                                      {val1 > val2 ? (
+                                        <><span className="font-semibold text-blue-600">{emp1.name.split(' ')[0]}</span> leads delivered financial impact by <span className="font-bold text-slate-900">${(val1 - val2).toLocaleString()}</span>.</>
+                                      ) : val2 > val1 ? (
+                                        <><span className="font-semibold text-emerald-600">{emp2.name.split(' ')[0]}</span> leads delivered financial impact by <span className="font-bold text-slate-900">${(val2 - val1).toLocaleString()}</span>.</>
+                                      ) : (
+                                        <>They display a perfectly balanced, equal commercial return baseline.</>
+                                      )}
+                                    </div>
                                   </div>
-                                  <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
-                                    <motion.div 
-                                      className="h-full bg-emerald-500 rounded-full" 
-                                      initial={{ width: 0 }} 
-                                      animate={{ width: max > 0 ? `${(val2 / max) * 100}%` : '0%' }} 
-                                      transition={{ duration: 0.8, ease: "easeOut" }}
-                                    />
+
+                                  {/* Synergy Insight Bullet 2 */}
+                                  <div className="flex items-start gap-2.5 text-[11px] text-slate-600">
+                                    <span className="text-slate-400 mt-0.5">•</span>
+                                    <div>
+                                      <span className="font-bold text-slate-800">Culture Impact: </span>
+                                      {totalKudos1 > totalKudos2 ? (
+                                        <><span className="font-semibold text-blue-600">{emp1.name.split(' ')[0]}</span> commands {totalKudos1} team accolades, demonstrating high cultural integration.</>
+                                      ) : totalKudos2 > totalKudos1 ? (
+                                        <><span className="font-semibold text-emerald-600">{emp2.name.split(' ')[0]}</span> commands {totalKudos2} team accolades, demonstrating high cultural integration.</>
+                                      ) : (
+                                        <>They share identical baseline social recognition weight on the team.</>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
+                            );
+                          })()}
+
+                          {/* Overlap Matching Index Bar */}
+                          <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                            <div className="flex flex-col">
+                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider font-mono">Co-velocity index</span>
+                              <span className="text-[11px] font-extrabold text-indigo-600 font-mono">
+                                {(() => {
+                                  const match = Math.round(
+                                    100 - (
+                                      Math.abs((perf1?.attendance || 0) - (perf2?.attendance || 0)) +
+                                      (maxProjects > 0 ? Math.abs((perf1?.deliveredProjectsAmount || 0) - (perf2?.deliveredProjectsAmount || 0)) / maxProjects * 100 : 0) +
+                                      (maxValue > 0 ? Math.abs((perf1?.deliveredProjectsValue || 0) - (perf2?.deliveredProjectsValue || 0)) / maxValue * 100 : 0) +
+                                      (maxMeetings > 0 ? Math.abs((perf1?.conductedMeetings || 0) - (perf2?.conductedMeetings || 0)) / maxMeetings * 100 : 0)
+                                    ) / 4
+                                  );
+                                  return `${Math.max(25, match)}% Overlap Match`;
+                                })()}
+                              </span>
                             </div>
-                          );
-                        })}
+                            <div className="flex -space-x-2">
+                              <div className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 overflow-hidden shadow-sm">
+                                <img src={get3DAvatarUrl(emp1.name)} alt="" className="w-full h-full object-cover" />
+                              </div>
+                              <div className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 overflow-hidden shadow-sm">
+                                <img src={get3DAvatarUrl(emp2.name)} alt="" className="w-full h-full object-cover" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-[10px] text-slate-400 text-center mt-4">
-                        * Comparison metrics are normalized for this visualization based on the highest performer in each category.
-                      </p>
                     </div>
+
                   </div>
                 );
               })()}
