@@ -2141,6 +2141,35 @@ export default function App() {
                 // Tilt angle from -60 (fully right) to +60 (fully left)
                 const tiltAngle = (activeRatio - 50) * 1.2;
 
+                // Calculate the Global Synergy Index
+                const metricsList = [
+                  { val1: perf1?.attendance || 0, val2: perf2?.attendance || 0 },
+                  { val1: perf1?.deliveredProjectsValue || 0, val2: perf2?.deliveredProjectsValue || 0 },
+                  { val1: perf1?.deliveredProjectsAmount || 0, val2: perf2?.deliveredProjectsAmount || 0 },
+                  { val1: perf1?.conductedMeetings || 0, val2: perf2?.conductedMeetings || 0 },
+                  { val1: totalKudos1, val2: totalKudos2 }
+                ];
+                const totalDeviation = metricsList.reduce((acc, curr) => {
+                  const sum = curr.val1 + curr.val2;
+                  const ratio = sum > 0 ? (curr.val1 / sum) * 100 : 50;
+                  return acc + Math.abs(ratio - 50);
+                }, 0);
+                const avgDeviation = totalDeviation / metricsList.length;
+                const synergyScore = Math.max(0, Math.min(100, Math.round(100 - (avgDeviation * 2))));
+
+                // Calculate harmonic resonance wave
+                const waveDiff = Math.abs(activeRatio - 50);
+                const wavePath = Array.from({ length: 60 }, (_, i) => {
+                  const x = (i / 59) * 140;
+                  // Amplitude decreases as imbalance increases, creating a flatter or flatter-looking wave
+                  const amplitude = Math.max(2, 14 - waveDiff * 0.25);
+                  // Frequency increases slightly under imbalance to represent high frequency tension
+                  const frequency = 0.12 + (waveDiff * 0.004);
+                  // Offset wave slightly
+                  const y = 16 + Math.sin(x * frequency) * amplitude;
+                  return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+                }).join(' ');
+
                 return (
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in zoom-in-95 duration-300">
                     {/* Left Column: Interactive Gyroscopic Balance Instrument & Metric Selectors (Light Theme) */}
@@ -2152,31 +2181,44 @@ export default function App() {
                       
                       <div className="relative z-10">
                         {/* Title block */}
-                        <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">
                           <div>
                             <h4 className="text-xs font-black text-slate-700 flex items-center gap-2 uppercase tracking-widest font-mono">
                               <ArrowLeftRight className="h-4 w-4 text-indigo-500" />
                               Horizon Balance Map
                             </h4>
-                            <p className="text-[10px] text-slate-400 font-medium font-sans mt-0.5">Dynamic performance parity telemetry</p>
+                            <p className="text-[10px] text-slate-400 font-medium font-sans mt-0.5 font-bold uppercase tracking-wider">
+                              Dynamic performance parity telemetry
+                            </p>
                           </div>
-                          
-                          <div className="flex items-center gap-3 text-[10px] font-mono">
-                            <span className="flex items-center gap-1.5 text-blue-600 font-bold">
-                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                              {emp1.name.split(' ')[0]}
-                            </span>
-                            <span className="text-slate-400">vs</span>
-                            <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                              {emp2.name.split(' ')[0]}
-                            </span>
+
+                          <div className="flex items-center gap-4">
+                            {/* Synergy Index Badge */}
+                            <div className="flex items-center gap-2 bg-indigo-50/70 border border-indigo-100 px-3 py-1.5 rounded-2xl">
+                              <div className="flex flex-col">
+                                <span className="text-[8px] font-mono font-bold text-indigo-400 uppercase tracking-wider">Synergy Index</span>
+                                <span className="text-xs font-black text-indigo-700 font-mono">{synergyScore}%</span>
+                              </div>
+                              <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse" />
+                            </div>
+                            
+                            <div className="flex items-center gap-2.5 text-[10px] font-mono bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-2xl">
+                              <span className="flex items-center gap-1 text-blue-600 font-extrabold">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                {emp1.name.split(' ')[0]}
+                              </span>
+                              <span className="text-slate-400 font-light">vs</span>
+                              <span className="flex items-center gap-1 text-emerald-600 font-extrabold">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                {emp2.name.split(' ')[0]}
+                              </span>
+                            </div>
                           </div>
                         </div>
 
                         {/* Gyro Instrument Panel */}
                         <div className="flex flex-col md:flex-row items-center gap-6 bg-slate-50/60 border border-slate-100 rounded-2xl p-5 mb-6">
-                          {/* Left: Gyro Instrument */}
+                          {/* Left: Gyro Instrument with dial ticks */}
                           <div className="flex-shrink-0 flex flex-col items-center">
                             <div className="relative">
                               <svg viewBox="0 0 200 110" className="w-40 h-20 overflow-visible">
@@ -2194,7 +2236,35 @@ export default function App() {
                                   strokeWidth="2" 
                                   strokeDasharray="3 3"
                                 />
-                                <line x1="100" y1="10" x2="100" y2="20" stroke="#94a3b8" strokeWidth="2" />
+                                
+                                {/* Precision Watch Ticks along the arc */}
+                                {[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((pct) => {
+                                  const angleRad = (180 - (pct * 1.8)) * Math.PI / 180;
+                                  const rOuter = 84;
+                                  const rInner = 76;
+                                  const x1 = 100 + rOuter * Math.cos(angleRad);
+                                  const y1 = 90 - rOuter * Math.sin(angleRad);
+                                  const x2 = 100 + rInner * Math.cos(angleRad);
+                                  const y2 = 90 - rInner * Math.sin(angleRad);
+                                  const isMajor = pct % 25 === 0;
+                                  return (
+                                    <line
+                                      key={pct}
+                                      x1={x1}
+                                      y1={y1}
+                                      x2={x2}
+                                      y2={y2}
+                                      stroke={isMajor ? "#6366f1" : "#cbd5e1"}
+                                      strokeWidth={isMajor ? "1.5" : "0.75"}
+                                      opacity={isMajor ? "0.8" : "0.5"}
+                                    />
+                                  );
+                                })}
+
+                                <text x="14" y="102" textAnchor="middle" className="text-[7px] font-mono font-bold fill-slate-400">100% L</text>
+                                <text x="100" y="5" textAnchor="middle" className="text-[7px] font-mono font-bold fill-indigo-500">PARITY</text>
+                                <text x="186" y="102" textAnchor="middle" className="text-[7px] font-mono font-bold fill-slate-400">100% R</text>
+
                                 <g transform={`rotate(${tiltAngle} 100 90)`} className="transition-transform duration-500 ease-out">
                                   <line 
                                     x1="100" 
@@ -2222,7 +2292,32 @@ export default function App() {
                                 </defs>
                               </svg>
                             </div>
-                            <span className="text-[9px] font-mono font-bold text-slate-400 tracking-widest mt-1.5 uppercase">Telemetry Dial</span>
+                            
+                            {/* Harmonic Oscilloscope Wave */}
+                            <div className="mt-4 bg-slate-950/5 border border-slate-200/50 rounded-lg px-2.5 py-1.5 w-full flex items-center justify-between gap-3 shadow-2xs">
+                              <div className="flex flex-col">
+                                <span className="text-[8px] font-mono font-bold text-slate-400 uppercase tracking-wider">Operational Resonance</span>
+                                <span className="text-[9px] font-mono font-extrabold text-slate-700">
+                                  {waveDiff < 5 ? "Harmonic Equilibrium" : waveDiff < 15 ? "Resonant Parity" : "Dispersive Skew"}
+                                </span>
+                              </div>
+                              <svg className="w-20 h-6 overflow-visible" viewBox="0 0 140 32">
+                                <path
+                                  d={wavePath}
+                                  fill="none"
+                                  stroke="url(#waveGradient)"
+                                  strokeWidth="1.5"
+                                  strokeLinecap="round"
+                                />
+                                <defs>
+                                  <linearGradient id="waveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stopColor="#3b82f6" />
+                                    <stop offset="50%" stopColor="#818cf8" />
+                                    <stop offset="100%" stopColor="#10b981" />
+                                  </linearGradient>
+                                </defs>
+                              </svg>
+                            </div>
                           </div>
 
                           {/* Right: Detailed active comparison readouts */}
@@ -2282,18 +2377,18 @@ export default function App() {
                               <button
                                 key={metric.label}
                                 onClick={() => setActiveCompareMetric(metric.label)}
-                                className={`w-full text-left p-3 rounded-2xl border transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${
+                                className={`w-full text-left p-3.5 rounded-2xl border transition-all duration-350 relative overflow-visible flex flex-col justify-between ${
                                   isSelected
-                                    ? "bg-indigo-50/50 border-indigo-200/60 shadow-xs text-slate-800"
+                                    ? "bg-gradient-to-b from-indigo-50/20 to-indigo-50/50 border-indigo-200/80 shadow-xs text-slate-800"
                                     : "bg-white border-slate-100 text-slate-500 hover:bg-slate-50/50 hover:border-slate-200"
                                 }`}
                               >
                                 {/* Active subtle border glow */}
                                 {isSelected && (
-                                  <div className="absolute top-0 bottom-0 left-0 w-[2.5px] bg-gradient-to-b from-blue-500 to-indigo-500" />
+                                  <div className="absolute top-1 bottom-1 left-0 w-[3px] bg-gradient-to-b from-blue-500 to-indigo-500 rounded-full" />
                                 )}
 
-                                <div className="flex justify-between items-center w-full mb-1.5 relative z-10">
+                                <div className="flex justify-between items-center w-full mb-2 relative z-10">
                                   <span className="text-[11px] font-bold flex items-center gap-2 tracking-wide font-sans">
                                     <metric.icon className={`h-3.5 w-3.5 ${isSelected ? "text-indigo-600" : "text-slate-400"}`} />
                                     {metric.label}
@@ -2312,17 +2407,35 @@ export default function App() {
                                   </span>
                                 </div>
 
-                                {/* Slider track indicator */}
-                                <div className="relative h-1 w-full bg-slate-100 rounded-full overflow-hidden mt-0.5">
+                                {/* Bilateral Console Fader Track */}
+                                <div className="relative h-2 w-full bg-slate-100/80 rounded-full border border-slate-200/40 overflow-visible mt-2">
+                                  {/* Parity Center Line Notch */}
+                                  <div className="absolute top-0 bottom-0 left-1/2 w-[1.5px] bg-slate-300 z-10" />
+                                  
+                                  {/* Left side bar fill */}
                                   <div 
-                                    className="absolute left-0 top-0 bottom-0 bg-blue-500" 
+                                    className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-blue-500/10 to-blue-500 rounded-l-full transition-all duration-300" 
                                     style={{ width: `${balanceRatio}%` }}
                                   />
+                                  {/* Right side bar fill */}
                                   <div 
-                                    className="absolute right-0 top-0 bottom-0 bg-emerald-500" 
+                                    className="absolute right-0 top-0 bottom-0 bg-gradient-to-l from-emerald-500/10 to-emerald-500 rounded-r-full transition-all duration-300" 
                                     style={{ width: `${100 - balanceRatio}%` }}
                                   />
-                                  <div className="absolute top-0 bottom-0 left-1/2 w-[1px] bg-white" />
+
+                                  {/* Dynamic floating slider handle */}
+                                  <div 
+                                    className={`absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 rounded-full border shadow-md flex items-center justify-center transition-all duration-300 ${
+                                      isSelected 
+                                        ? "bg-white border-indigo-500 scale-110" 
+                                        : "bg-white border-slate-300 hover:border-slate-400"
+                                    }`}
+                                    style={{ left: `calc(${balanceRatio}% - 7px)` }}
+                                  >
+                                    <div className={`h-1.5 w-1.5 rounded-full ${
+                                      balanceRatio > 51 ? "bg-blue-500" : balanceRatio < 49 ? "bg-emerald-500" : "bg-indigo-500"
+                                    }`} />
+                                  </div>
                                 </div>
                               </button>
                             );
