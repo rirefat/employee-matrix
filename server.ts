@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import dotenv from "dotenv";
 import { dbService } from "./server/db";
-import { generateMonthlyPerformanceReport } from "./server/gemini";
+import { generateMonthlyPerformanceReport, generateCoPilotResponse } from "./server/gemini";
 
 // Load environment variables
 dotenv.config();
@@ -42,7 +42,7 @@ app.get("/api/employees", async (req, res) => {
 // Create Employee
 app.post("/api/employees", async (req, res) => {
   try {
-    const { name, role, department, team, email, id, leaveBalance } = req.body;
+    const { name, role, department, team, email, id, leaveBalance, joiningDate, salary, incrementHistory, phone, emergencyContact, notes } = req.body;
     if (!name || !role || !department || !team || !email) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -54,7 +54,13 @@ app.post("/api/employees", async (req, res) => {
       email,
       id,
       active: true,
-      leaveBalance
+      leaveBalance,
+      joiningDate,
+      salary,
+      incrementHistory,
+      phone,
+      emergencyContact,
+      notes
     });
     res.status(201).json(newEmp);
   } catch (err: any) {
@@ -189,6 +195,31 @@ app.post("/api/reports/generate", async (req, res) => {
   } catch (err: any) {
     console.error("Error generating report:", err);
     res.status(500).json({ error: err.message || "Failed to generate talent development report" });
+  }
+});
+
+// --- AI TALENT COPILOT CHAT API ---
+app.post("/api/copilot/ask", async (req, res) => {
+  try {
+    const { employeeId, month, message } = req.body;
+    if (!employeeId || !message) {
+      return res.status(400).json({ error: "employeeId and message are required" });
+    }
+
+    const employees = await dbService.getEmployees();
+    const employee = employees.find(e => e.id === employeeId);
+    if (!employee) {
+      return res.status(404).json({ error: "Employee profile not found" });
+    }
+
+    const records = await dbService.getPerformance(month);
+    const record = records.find(r => r.employeeId === employeeId);
+
+    const answer = await generateCoPilotResponse(employee, record, message);
+    res.json({ answer });
+  } catch (err: any) {
+    console.error("Co-pilot chat error:", err);
+    res.status(500).json({ error: err.message || "Failed to generate co-pilot advice" });
   }
 });
 

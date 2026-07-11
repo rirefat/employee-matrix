@@ -207,3 +207,53 @@ export async function generateMonthlyPerformanceReport(
     };
   }
 }
+
+export async function generateCoPilotResponse(
+  employee: Employee,
+  record: PerformanceRecord | undefined,
+  message: string
+): Promise<string> {
+  const prompt = `
+    You are an expert Talent Success and Leadership Co-Pilot.
+    A manager has requested your direct advice, questions, or ideas regarding their employee, ${employee.name}.
+    
+    Employee context:
+    - Name: ${employee.name}
+    - Role: ${employee.role}
+    - Department: ${employee.department}
+    - Team: ${employee.team || "General Team"}
+    - Current Salary: $${(employee.salary || 55000).toLocaleString()} / year
+    
+    Current Month Performance Record:
+    ${record ? `- Attendance: ${record.attendance}%
+- Meetings Conducted: ${record.conductedMeetings}
+- Projects Delivered: ${record.deliveredProjectsAmount}
+- Total Generated Value: $${record.deliveredProjectsValue.toLocaleString()}
+- Current Qualitative Manager Notes: "${record.managerRemarks || "None entered yet"}"` : "No metrics logged for this employee in the current month."}
+    
+    Manager's message/question:
+    "${message}"
+    
+    Guidelines:
+    - Deliver highly action-oriented, precise, and supportive counsel.
+    - Suggest specific items for 1-on-1s, training tracks, or project assignments.
+    - Structure your answer beautifully using clean markdown, lists, and bold headings.
+    - Be brief but extremely impactful (max 2-3 short, scannable paragraphs).
+  `;
+
+  if (!ai) {
+    return `**[Aura Co-Pilot offline mode]**\n\nHere are some custom action items for **${employee.name}**:\n\n* **Metrics Improvement**: Schedule a short review to alignment-check their attendance (${record ? record.attendance : 'N/A'}%) and weekly meetings.\n* **Growth Pathway**: Delegate one client-facing or high-value feature task to expand their core competence.\n* **1-on-1 Engagement**: Ask them: *"What is one operational roadblock I can clear for you this week to unlock higher productivity?"*`;
+  }
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+    });
+    return response.text || "No insights could be synthesized. Please try another query.";
+  } catch (error) {
+    console.error("Co-pilot chat generation error:", error);
+    return `**[Co-Pilot Suggestion]**\n\n- Encourage **${employee.name}** to document their core deliverable workflows for the rest of the department.\n- Work together to map out a clear timeline for their upcoming base compensation review.`;
+  }
+}
+

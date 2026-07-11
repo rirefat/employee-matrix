@@ -1654,7 +1654,13 @@ class DatabaseService {
         casualLeaveUsed: 0,
         govFestHolidaysUsed: 0
       },
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      joiningDate: emp.joiningDate,
+      salary: emp.salary,
+      incrementHistory: emp.incrementHistory || [],
+      phone: emp.phone,
+      emergencyContact: emp.emergencyContact,
+      notes: emp.notes
     };
 
     if (this.db && this.dbStatus.connectionType === "mongodb") {

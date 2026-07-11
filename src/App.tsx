@@ -34,7 +34,10 @@ import {
   Building,
   ArrowLeftRight,
   ChevronDown,
-  Activity
+  Activity,
+  Shield,
+  Brain,
+  Bot
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -59,6 +62,7 @@ import { DashboardTab } from "./components/DashboardTab";
 import { EmployeeCard } from "./components/EmployeeCard";
 import { LoginPage, Manager } from "./components/LoginPage";
 import { MonthPicker } from "./components/MonthPicker";
+import { EmployeeDossier } from "./components/EmployeeDossier";
 import { motion, AnimatePresence } from "motion/react";
 
 const DEPARTMENTS = ["Sales", "Operations"];
@@ -87,9 +91,25 @@ import { get3DAvatarUrl } from "./utils";
 
 export default function App() {
   const [activePortal, setActivePortal] = useState<"performance" | "leaves" | "employees">("performance");
+  const [profileSubTab, setProfileSubTab] = useState<"overview" | "performance" | "progression" | "leaves" | "copilot">("overview");
   const [activeTab, setActiveTab] = useState<"profile" | "team" | "roster" | "compare">("profile");
+
+  const [copilotMessages, setCopilotMessages] = useState<{ sender: "user" | "ai"; text: string }[]>([]);
+  const [copilotInput, setCopilotInput] = useState("");
+  const [isCopilotLoading, setIsCopilotLoading] = useState(false);
   const [compareEmp1, setCompareEmp1] = useState<string>("");
   const [compareEmp2, setCompareEmp2] = useState<string>("");
+  const [selectedDirectoryEmpId, setSelectedDirectoryEmpId] = useState<string>("");
+  const [employeeDirectorySearch, setEmployeeDirectorySearch] = useState<string>("");
+  const [selectedDirectoryDept, setSelectedDirectoryDept] = useState<string>("All");
+  const [isHeaderDropdownOpen, setIsHeaderDropdownOpen] = useState(false);
+  const [headerDropdownSearch, setHeaderDropdownSearch] = useState("");
+  const [isIncrementModalOpen, setIsIncrementModalOpen] = useState(false);
+  const [incrementFormData, setIncrementFormData] = useState({
+    newSalary: 60000,
+    remarks: "Annual Performance Review",
+    date: new Date().toISOString().split("T")[0]
+  });
   const [loggedInManager, setLoggedInManager] = useState<Manager | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [performance, setPerformance] = useState<PerformanceRecord[]>([]);
@@ -98,6 +118,37 @@ export default function App() {
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>("2026-06");
   const myEmployees = useMemo(() => employees.filter(emp => loggedInManager?.teams.includes(emp.team)), [employees, loggedInManager]);
+  const filteredDirectoryEmployees = useMemo(() => {
+    return myEmployees.filter(emp => {
+      const deptMatches = selectedDirectoryDept === "All" || emp.department === selectedDirectoryDept;
+      const searchLower = employeeDirectorySearch.toLowerCase();
+      const searchMatches = !employeeDirectorySearch ||
+        emp.name.toLowerCase().includes(searchLower) ||
+        emp.role.toLowerCase().includes(searchLower) ||
+        emp.email.toLowerCase().includes(searchLower) ||
+        emp.team.toLowerCase().includes(searchLower) ||
+        (emp.phone && emp.phone.toLowerCase().includes(searchLower));
+      return deptMatches && searchMatches;
+    });
+  }, [myEmployees, selectedDirectoryDept, employeeDirectorySearch]);
+
+  const activeDirectoryEmployee = useMemo(() => {
+    if (!selectedDirectoryEmpId) {
+      return filteredDirectoryEmployees[0] || null;
+    }
+    return myEmployees.find(e => e.id === selectedDirectoryEmpId) || filteredDirectoryEmployees[0] || null;
+  }, [myEmployees, selectedDirectoryEmpId, filteredDirectoryEmployees]);
+
+  useEffect(() => {
+    if (activeDirectoryEmployee) {
+      setCopilotMessages([
+        {
+          sender: "ai",
+          text: `Hello! I am your **Gemini Talent Success Co-Pilot**. Ask me any question, brainstorm customized training modules, or request specific 1-on-1 tactics or growth opportunities for **${activeDirectoryEmployee.name}**!`
+        }
+      ]);
+    }
+  }, [activeDirectoryEmployee]);
   const [rosterSearchQuery, setRosterSearchQuery] = useState<string>("");
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<Set<string>>(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -139,6 +190,11 @@ export default function App() {
     department: DEPARTMENTS[0],
     team: TEAMS[0],
     email: "",
+    joiningDate: "",
+    salary: 55000,
+    phone: "",
+    emergencyContact: "",
+    notes: "",
     leaveBalance: {
       sickLeaveUsed: 0,
       casualLeaveUsed: 0,
@@ -276,7 +332,7 @@ export default function App() {
 
   // Lock body scroll when any modal is open to prevent background scrolling
   useEffect(() => {
-    const isAnyModalOpen = isEmployeeModalOpen || isTargetsModalOpen || isPerformanceModalOpen || isDeleteConfirmOpen;
+    const isAnyModalOpen = isEmployeeModalOpen || isTargetsModalOpen || isPerformanceModalOpen || isDeleteConfirmOpen || isIncrementModalOpen;
     if (isAnyModalOpen) {
       document.body.classList.add("overflow-hidden");
     } else {
@@ -285,7 +341,7 @@ export default function App() {
     return () => {
       document.body.classList.remove("overflow-hidden");
     };
-  }, [isEmployeeModalOpen, isTargetsModalOpen, isPerformanceModalOpen, isDeleteConfirmOpen]);
+  }, [isEmployeeModalOpen, isTargetsModalOpen, isPerformanceModalOpen, isDeleteConfirmOpen, isIncrementModalOpen]);
 
   const handleSaveTarget = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -384,7 +440,17 @@ export default function App() {
       role: "",
       department: DEPARTMENTS[0],
       team: TEAMS[0],
-      email: ""
+      email: "",
+      joiningDate: new Date().toISOString().split("T")[0],
+      salary: 55000,
+      phone: "",
+      emergencyContact: "",
+      notes: "",
+      leaveBalance: {
+        sickLeaveUsed: 0,
+        casualLeaveUsed: 0,
+        govFestHolidaysUsed: 0
+      }
     });
     setIsEmployeeModalOpen(true);
   };
@@ -398,6 +464,11 @@ export default function App() {
       department: emp.department,
       team: emp.team || TEAMS[0],
       email: emp.email,
+      joiningDate: emp.joiningDate || new Date().toISOString().split("T")[0],
+      salary: emp.salary || 55000,
+      phone: emp.phone || "",
+      emergencyContact: emp.emergencyContact || "",
+      notes: emp.notes || "",
       leaveBalance: emp.leaveBalance || { sickLeaveUsed: 0, casualLeaveUsed: 0, govFestHolidaysUsed: 0 }
     });
     setIsEmployeeModalOpen(true);
@@ -445,6 +516,53 @@ export default function App() {
       }
     } catch (err) {
       console.error("Error saving employee:", err);
+      showToast("Error communicating with the server.", "error");
+    }
+  };
+
+  const handleSaveIncrement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const emp = employees.find(empItem => empItem.id === selectedDirectoryEmpId);
+    if (!emp) {
+      showToast("No employee selected.", "error");
+      return;
+    }
+
+    const previousSalary = emp.salary || 55000;
+    const newSalary = Number(incrementFormData.newSalary);
+    if (!newSalary || newSalary <= 0) {
+      showToast("Please enter a valid salary amount.", "error");
+      return;
+    }
+
+    const newRecord = {
+      date: incrementFormData.date,
+      previousSalary,
+      newSalary,
+      remarks: incrementFormData.remarks || "Salary adjustment"
+    };
+
+    const updatedHistory = [...(emp.incrementHistory || []), newRecord];
+
+    try {
+      const res = await fetch(`/api/employees/${emp.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          salary: newSalary,
+          incrementHistory: updatedHistory
+        })
+      });
+      if (res.ok) {
+        showToast(`Logged salary increment for ${emp.name} successfully!`, "success");
+        setIsIncrementModalOpen(false);
+        fetchData();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        showToast(errData.error || "Failed to save salary increment.", "error");
+      }
+    } catch (err) {
+      console.error("Error saving increment:", err);
       showToast("Error communicating with the server.", "error");
     }
   };
@@ -703,6 +821,46 @@ export default function App() {
     navigator.clipboard.writeText(text);
     setCopiedText(text);
     setTimeout(() => setCopiedText(null), 1500);
+  };
+
+  const handleSendCopilotMessage = async (textToSend?: string) => {
+    const text = textToSend || copilotInput;
+    if (!text.trim() || !activeDirectoryEmployee) return;
+
+    // Append user message
+    setCopilotMessages((prev) => [...prev, { sender: "user", text }]);
+    setCopilotInput("");
+    setIsCopilotLoading(true);
+
+    try {
+      const response = await fetch("/api/copilot/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          employeeId: activeDirectoryEmployee.id,
+          month: selectedMonth,
+          message: text
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setCopilotMessages((prev) => [...prev, { sender: "ai", text: data.answer }]);
+      } else {
+        setCopilotMessages((prev) => [
+          ...prev,
+          { sender: "ai", text: `Sorry, I encountered an error: ${data.error || "Please check your server logs or try again."}` }
+        ]);
+      }
+    } catch (err) {
+      console.error("Error communicating with Co-Pilot:", err);
+      setCopilotMessages((prev) => [
+        ...prev,
+        { sender: "ai", text: "Sorry, I am unable to contact the Gemini server. Please check your internet connection and make sure the server is online." }
+      ]);
+    } finally {
+      setIsCopilotLoading(false);
+    }
   };
 
   const activeRecord = performance.find(
@@ -2787,20 +2945,26 @@ export default function App() {
       )}
 
       {activePortal === "employees" && (
-        <main className="flex-1 w-full px-6 lg:px-10 xl:px-12 py-8 overflow-y-auto">
-          <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-            <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-4 border border-slate-200">
-              <Users className="h-8 w-8 text-slate-400" />
-            </div>
-            <h2 className="text-lg font-bold text-slate-900 tracking-tight font-display">Employee Directory</h2>
-            <p className="text-slate-500 mt-2 max-w-md">
-              This module is not yet implemented. It will provide a comprehensive list of all employees, their roles, contact information, and hierarchy.
-            </p>
-          </div>
-        </main>
+        <EmployeeDossier
+          activeDirectoryEmployee={activeDirectoryEmployee}
+          myEmployees={myEmployees}
+          setSelectedDirectoryEmpId={setSelectedDirectoryEmpId}
+          handleOpenAddEmployee={handleOpenAddEmployee}
+          handleOpenEditEmployee={handleOpenEditEmployee}
+          handleDeleteEmployeeClick={handleDeleteEmployeeClick}
+          setIsIncrementModalOpen={setIsIncrementModalOpen}
+          setIncrementFormData={setIncrementFormData}
+          performance={performance}
+          selectedMonth={selectedMonth}
+          copilotInput={copilotInput}
+          setCopilotInput={setCopilotInput}
+          isCopilotLoading={isCopilotLoading}
+          copilotMessages={copilotMessages}
+          setCopilotMessages={setCopilotMessages}
+          handleSendCopilotMessage={handleSendCopilotMessage}
+          showToast={showToast}
+        />
       )}
-
-
 
 
       {/* MODALS */}
@@ -2828,68 +2992,241 @@ export default function App() {
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <form onSubmit={handleSaveEmployee} className="p-5 space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">Full Name</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none" 
-                    value={employeeFormData.name || ''} 
-                    onChange={(e) => setEmployeeFormData({...employeeFormData, name: e.target.value})} 
-                    placeholder="e.g. Jane Doe" 
-                    required 
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">Corporate Email</label>
-                  <input 
-                    type="email" 
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none" 
-                    value={employeeFormData.email || ''} 
-                    onChange={(e) => setEmployeeFormData({...employeeFormData, email: e.target.value})} 
-                    placeholder="e.g. jane.doe@company.com" 
-                    required 
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">Corporate Role</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none" 
-                    value={employeeFormData.role || ''} 
-                    onChange={(e) => setEmployeeFormData({...employeeFormData, role: e.target.value})} 
-                    placeholder="e.g. Senior Software Engineer" 
-                    required 
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={handleSaveEmployee} className="flex flex-col overflow-hidden max-h-[85vh]">
+                <div className="p-5 space-y-4 overflow-y-auto flex-1">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 mb-1">Department</label>
-                    <select 
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none cursor-pointer" 
-                      value={employeeFormData.department || DEPARTMENTS[0]} 
-                      onChange={(e) => setEmployeeFormData({...employeeFormData, department: e.target.value})}
-                    >
-                      {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-                    </select>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Full Name</label>
+                    <input 
+                      type="text" 
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none" 
+                      value={employeeFormData.name || ''} 
+                      onChange={(e) => setEmployeeFormData({...employeeFormData, name: e.target.value})} 
+                      placeholder="e.g. Jane Doe" 
+                      required 
+                    />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 mb-1">Team Hub</label>
-                    <select 
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none cursor-pointer" 
-                      value={employeeFormData.team || TEAMS[0]} 
-                      onChange={(e) => setEmployeeFormData({...employeeFormData, team: e.target.value})}
-                    >
-                      {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Corporate Email</label>
+                    <input 
+                      type="email" 
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none" 
+                      value={employeeFormData.email || ''} 
+                      onChange={(e) => setEmployeeFormData({...employeeFormData, email: e.target.value})} 
+                      placeholder="e.g. jane.doe@company.com" 
+                      required 
+                    />
                   </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">Corporate Role</label>
+                      <input 
+                        type="text" 
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none" 
+                        value={employeeFormData.role || ''} 
+                        onChange={(e) => setEmployeeFormData({...employeeFormData, role: e.target.value})} 
+                        placeholder="e.g. Senior Developer" 
+                        required 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">Joining Date</label>
+                      <input 
+                        type="date" 
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none font-mono" 
+                        value={employeeFormData.joiningDate || ''} 
+                        onChange={(e) => setEmployeeFormData({...employeeFormData, joiningDate: e.target.value})} 
+                        required 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">Department</label>
+                      <select 
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none cursor-pointer" 
+                        value={employeeFormData.department || DEPARTMENTS[0]} 
+                        onChange={(e) => setEmployeeFormData({...employeeFormData, department: e.target.value})}
+                      >
+                        {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">Team Hub</label>
+                      <select 
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none cursor-pointer" 
+                        value={employeeFormData.team || TEAMS[0]} 
+                        onChange={(e) => setEmployeeFormData({...employeeFormData, team: e.target.value})}
+                      >
+                        {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">Base Salary ($ / year)</label>
+                      <input 
+                        type="number" 
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none font-mono" 
+                        value={employeeFormData.salary || ''} 
+                        onChange={(e) => setEmployeeFormData({...employeeFormData, salary: parseFloat(e.target.value) || 0})} 
+                        placeholder="e.g. 75000" 
+                        required 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">Phone Number</label>
+                      <input 
+                        type="text" 
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none" 
+                        value={employeeFormData.phone || ''} 
+                        onChange={(e) => setEmployeeFormData({...employeeFormData, phone: e.target.value})} 
+                        placeholder="e.g. +1 (555) 019-2834" 
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Emergency Contact (Name, Phone & Relation)</label>
+                    <input 
+                      type="text" 
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none" 
+                      value={employeeFormData.emergencyContact || ''} 
+                      onChange={(e) => setEmployeeFormData({...employeeFormData, emergencyContact: e.target.value})} 
+                      placeholder="e.g. Mary Doe (Spouse) - +1 (555) 019-9999" 
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Internal Notes</label>
+                    <textarea 
+                      rows={2}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none resize-none" 
+                      value={employeeFormData.notes || ''} 
+                      onChange={(e) => setEmployeeFormData({...employeeFormData, notes: e.target.value})} 
+                      placeholder="Provide internal notes, review schedules, etc." 
+                    />
+                  </div>
+                </div>
+
+                <div className="p-5 border-t border-slate-100 bg-slate-50/50 flex gap-3">
+                  <button 
+                    type="button" 
+                    onClick={() => setIsEmployeeModalOpen(false)}
+                    className="flex-1 py-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold border border-slate-200 rounded-lg transition-colors cursor-pointer text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="flex-1 py-2 bg-slate-950 hover:bg-slate-900 text-white font-bold rounded-lg transition-colors shadow-sm cursor-pointer text-sm"
+                  >
+                    {editingEmployee ? "Save Profile" : "Create Profile"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
+        {isIncrementModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col border border-slate-100"
+            >
+              <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-indigo-50/30">
+                <div>
+                  <h3 className="text-base font-bold text-indigo-950">
+                    Log Salary Increment
+                  </h3>
+                  <p className="text-xs text-indigo-700/70 mt-0.5">
+                    Adjust annual base compensation and log reason.
+                  </p>
                 </div>
                 <button 
-                  type="submit" 
-                  className="w-full py-2.5 bg-slate-950 hover:bg-slate-900 text-white font-bold rounded-lg transition-colors mt-2 shadow-sm cursor-pointer"
+                  type="button"
+                  onClick={() => setIsIncrementModalOpen(false)} 
+                  className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
                 >
-                  {editingEmployee ? "Save Profile Changes" : "Create Profile"}
+                  <X className="h-4 w-4" />
                 </button>
+              </div>
+              <form onSubmit={handleSaveIncrement} className="p-5 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Target Employee</label>
+                  <input 
+                    type="text" 
+                    className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-sm transition-all outline-none text-slate-600 font-bold" 
+                    value={activeDirectoryEmployee ? activeDirectoryEmployee.name : "N/A"}
+                    disabled
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Current Base ($)</label>
+                    <input 
+                      type="text" 
+                      className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-sm transition-all outline-none font-mono text-slate-600 font-bold" 
+                      value={activeDirectoryEmployee ? `$${(activeDirectoryEmployee.salary || 55000).toLocaleString()}` : "$0"}
+                      disabled
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">New Base Annual ($)</label>
+                    <input 
+                      type="number" 
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none font-mono font-bold" 
+                      value={incrementFormData.newSalary || ""} 
+                      onChange={(e) => setIncrementFormData({...incrementFormData, newSalary: parseInt(e.target.value) || 0})}
+                      placeholder="e.g. 65000"
+                      required 
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Adjustment Date</label>
+                  <input 
+                    type="date" 
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none font-mono" 
+                    value={incrementFormData.date} 
+                    onChange={(e) => setIncrementFormData({...incrementFormData, date: e.target.value})}
+                    required 
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Adjustment Reason / Remarks</label>
+                  <textarea 
+                    rows={3}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none resize-none" 
+                    value={incrementFormData.remarks} 
+                    onChange={(e) => setIncrementFormData({...incrementFormData, remarks: e.target.value})} 
+                    placeholder="e.g. Annual merit review, promotion to senior engineer..." 
+                    required
+                  />
+                </div>
+
+                <div className="pt-2 flex gap-3">
+                  <button 
+                    type="button" 
+                    onClick={() => setIsIncrementModalOpen(false)}
+                    className="flex-1 py-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold border border-slate-200 rounded-lg transition-colors cursor-pointer text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors shadow-sm cursor-pointer text-sm"
+                  >
+                    Log Raise
+                  </button>
+                </div>
               </form>
             </motion.div>
           </div>

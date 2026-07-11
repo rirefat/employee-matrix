@@ -1,3 +1,10 @@
+export interface IncrementRecord {
+  date: string;
+  previousSalary: number;
+  newSalary: number;
+  remarks?: string;
+}
+
 export interface Employee {
   id: string;
   name: string;
@@ -12,6 +19,12 @@ export interface Employee {
     govFestHolidaysUsed: number;
   };
   createdAt: string;
+  joiningDate?: string;
+  salary?: number;
+  incrementHistory?: IncrementRecord[];
+  phone?: string;
+  emergencyContact?: string;
+  notes?: string;
 }
 
 export interface PerformanceRecord {
