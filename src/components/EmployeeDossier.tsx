@@ -30,6 +30,7 @@ import {
   Info,
   Send,
   User,
+  Users,
   X,
   GitBranch,
   GitPullRequest,
@@ -75,6 +76,7 @@ interface EmployeeDossierProps {
   setCopilotMessages: React.Dispatch<React.SetStateAction<{ sender: "user" | "ai"; text: string }[]>>;
   handleSendCopilotMessage: (text?: string) => Promise<void>;
   showToast: (message: string, type: "success" | "error") => void;
+  onRefreshEmployees?: () => Promise<void> | void;
 }
 
 export function EmployeeDossier({
@@ -94,7 +96,8 @@ export function EmployeeDossier({
   copilotMessages,
   setCopilotMessages,
   handleSendCopilotMessage,
-  showToast
+  showToast,
+  onRefreshEmployees
 }: EmployeeDossierProps) {
   // Navigation tabs - curated for an elite Software R&D Workspace
   const [activeTab, setActiveTab] = useState<
@@ -103,6 +106,84 @@ export function EmployeeDossier({
 
   const [isHeaderDropdownOpen, setIsHeaderDropdownOpen] = useState(false);
   const [headerDropdownSearch, setHeaderDropdownSearch] = useState("");
+  const [switcherSearch, setSwitcherSearch] = useState("");
+
+  // States for manager notes chronological timeline
+  const [managerNoteAuthor, setManagerNoteAuthor] = useState("");
+  const [managerNoteText, setManagerNoteText] = useState("");
+  const [isSubmittingNote, setIsSubmittingNote] = useState(false);
+
+  const handleAddManagerNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeDirectoryEmployee) return;
+    if (!managerNoteText.trim()) {
+      showToast("Please write a note description.", "error");
+      return;
+    }
+
+    const authorName = managerNoteAuthor.trim() || "Lead Manager";
+    const newNote = {
+      id: "note-" + Math.random().toString(36).substring(2, 11),
+      author: authorName,
+      text: managerNoteText.trim(),
+      createdAt: new Date().toISOString()
+    };
+
+    const updatedNotes = [...(activeDirectoryEmployee.managerNotes || []), newNote];
+
+    setIsSubmittingNote(true);
+    try {
+      const res = await fetch(`/api/employees/${activeDirectoryEmployee.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          managerNotes: updatedNotes
+        })
+      });
+
+      if (res.ok) {
+        showToast("Manager confidential note logged successfully", "success");
+        setManagerNoteText("");
+        if (onRefreshEmployees) {
+          await onRefreshEmployees();
+        }
+      } else {
+        showToast("Failed to save confidential note.", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Error updating employee notes chronicle", "error");
+    } finally {
+      setIsSubmittingNote(false);
+    }
+  };
+
+  const handleDeleteManagerNote = async (noteId: string) => {
+    if (!activeDirectoryEmployee) return;
+    const updatedNotes = (activeDirectoryEmployee.managerNotes || []).filter(n => n.id !== noteId);
+
+    try {
+      const res = await fetch(`/api/employees/${activeDirectoryEmployee.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          managerNotes: updatedNotes
+        })
+      });
+
+      if (res.ok) {
+        showToast("Confidential note deleted from timeline", "success");
+        if (onRefreshEmployees) {
+          await onRefreshEmployees();
+        }
+      } else {
+        showToast("Failed to delete confidential note.", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Error deleting note.", "error");
+    }
+  };
 
   // Grouped Tech Stack for Software IT Farm
   const [skillsGrouped, setSkillsGrouped] = useState<{
@@ -202,6 +283,156 @@ export function EmployeeDossier({
       p => p.employeeId === activeDirectoryEmployee.id && p.month === selectedMonth
     );
   }, [performance, activeDirectoryEmployee, selectedMonth]);
+
+  const parsedMonth = useMemo(() => {
+    if (!selectedMonth) return { year: 2026, month: 6, label: "June 2026" };
+    const [yStr, mStr] = selectedMonth.split("-");
+    const year = parseInt(yStr) || 2026;
+    const month = parseInt(mStr) || 6;
+    const dateObj = new Date(year, month - 1, 1);
+    const monthLabel = dateObj.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    return { year, month, label: monthLabel };
+  }, [selectedMonth]);
+
+  const daysArray = useMemo(() => {
+    const { year, month } = parsedMonth;
+    const totalDays = new Date(year, month, 0).getDate();
+    const startDayOfWeek = new Date(year, month - 1, 1).getDay();
+
+    let workingDaysList: number[] = [];
+    for (let d = 1; d <= totalDays; d++) {
+      const dayOfWeek = new Date(year, month - 1, d).getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      if (!isWeekend) {
+        workingDaysList.push(d);
+      }
+    }
+
+    const workingDaysCount = workingDaysList.length;
+    let pCount = Math.round(workingDaysCount * 0.95);
+    let aCount = 0;
+    let lCount = workingDaysCount - pCount;
+
+    if (activeRecord) {
+      if (activeRecord.presentDays !== undefined) pCount = activeRecord.presentDays;
+      if (activeRecord.absentDays !== undefined) aCount = activeRecord.absentDays;
+      if (activeRecord.leaveDays !== undefined) lCount = activeRecord.leaveDays;
+
+      const totalAssigned = pCount + aCount + lCount;
+      if (totalAssigned !== workingDaysCount) {
+        if (pCount + aCount + lCount === 0) {
+          pCount = workingDaysCount;
+        } else {
+          const factor = workingDaysCount / totalAssigned;
+          pCount = Math.round(pCount * factor);
+          lCount = Math.round(lCount * factor);
+          aCount = workingDaysCount - pCount - lCount;
+        }
+      }
+    }
+
+    const seedString = `${activeDirectoryEmployee?.id || "EMP"}-${year}-${month}`;
+    let seed = 0;
+    for (let i = 0; i < seedString.length; i++) {
+      seed += seedString.charCodeAt(i);
+    }
+    const seededRandom = () => {
+      const x = Math.sin(seed++) * 10000;
+      return x - Math.floor(x);
+    };
+
+    const shuffledWorkingDays = [...workingDaysList];
+    for (let i = shuffledWorkingDays.length - 1; i > 0; i--) {
+      const j = Math.floor(seededRandom() * (i + 1));
+      const temp = shuffledWorkingDays[i];
+      shuffledWorkingDays[i] = shuffledWorkingDays[j];
+      shuffledWorkingDays[j] = temp;
+    }
+
+    const statusMap: Record<number, "Present" | "Absent" | "Leave"> = {};
+    const leaveDaysSet = new Set(shuffledWorkingDays.slice(0, lCount));
+    const absentDaysSet = new Set(shuffledWorkingDays.slice(lCount, lCount + aCount));
+
+    workingDaysList.forEach(d => {
+      if (leaveDaysSet.has(d)) {
+        statusMap[d] = "Leave";
+      } else if (absentDaysSet.has(d)) {
+        statusMap[d] = "Absent";
+      } else {
+        statusMap[d] = "Present";
+      }
+    });
+
+    const cells = [];
+    for (let i = 0; i < startDayOfWeek; i++) {
+      cells.push({
+        dayNumber: null,
+        isWeekend: false,
+        status: null,
+        dateString: null,
+        isFuture: false
+      });
+    }
+
+    const currentYear = 2026;
+    const currentMonth = 7;
+    const currentDay = 11;
+
+    for (let d = 1; d <= totalDays; d++) {
+      const dayOfWeek = new Date(year, month - 1, d).getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+      let isFuture = false;
+      if (year > currentYear) {
+        isFuture = true;
+      } else if (year === currentYear) {
+        if (month > currentMonth) {
+          isFuture = true;
+        } else if (month === currentMonth) {
+          if (d > currentDay) {
+            isFuture = true;
+          }
+        }
+      }
+
+      let finalStatus: "Present" | "Absent" | "Leave" | "Weekend" | "Future" = "Present";
+      if (isFuture) {
+        finalStatus = "Future";
+      } else if (isWeekend) {
+        finalStatus = "Weekend";
+      } else {
+        // Integrate with leaveRequests from local state if there's any matching date
+        const dateObj = new Date(year, month - 1, d);
+        const localLeave = leaveRequests.find(lr => {
+          const s = new Date(lr.start);
+          const e = new Date(lr.end);
+          return dateObj >= s && dateObj <= e;
+        });
+
+        if (localLeave) {
+          if (localLeave.status === "Approved") {
+            finalStatus = "Leave";
+          } else {
+            // Keep status but maybe we can keep it as Present/Leave depending on seed
+            finalStatus = statusMap[d] || "Present";
+          }
+        } else {
+          finalStatus = statusMap[d] || "Present";
+        }
+      }
+
+      cells.push({
+        dayNumber: d,
+        isWeekend,
+        status: finalStatus,
+        dateString: dateStr,
+        isFuture
+      });
+    }
+
+    return { cells, pCount, aCount, lCount, workingDaysCount };
+  }, [parsedMonth, activeRecord, activeDirectoryEmployee, leaveRequests]);
 
   // Tech stack mutations
   const handleAddSkill = (e: React.FormEvent) => {
@@ -355,8 +586,8 @@ export function EmployeeDossier({
 
   if (!activeDirectoryEmployee) {
     return (
-      <div className="flex-1 w-full p-8 lg:p-12 overflow-y-auto bg-slate-50/60 text-slate-800 flex flex-col items-center justify-center min-h-[80vh] font-sans">
-        <div className="w-16 h-16 bg-white border border-slate-200 rounded-full flex items-center justify-center text-blue-600 mb-6 shadow-sm animate-pulse">
+      <div className="flex-1 w-full p-8 lg:p-12 overflow-y-auto bg-slate-50 text-slate-800 flex flex-col items-center justify-center min-h-[80vh] font-sans">
+        <div className="w-16 h-16 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-700 mb-6 shadow-sm animate-pulse">
           <Bot className="h-8 w-8" />
         </div>
         <h3 className="text-sm font-extrabold tracking-tight text-slate-900 font-display">No Active Talent Record</h3>
@@ -365,7 +596,7 @@ export function EmployeeDossier({
         </p>
         <button
           onClick={handleOpenAddEmployee}
-          className="mt-6 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer hover:scale-[1.02]"
+          className="mt-6 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer hover:scale-[1.02]"
         >
           <UserPlus className="w-3.5 h-3.5" /> Enroll Team Member
         </button>
@@ -374,13 +605,13 @@ export function EmployeeDossier({
   }
 
   return (
-    <div className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 overflow-y-auto bg-slate-50/40 text-slate-800 relative min-h-screen font-sans">
+    <div className="flex-1 w-full px-6 lg:px-10 xl:px-12 py-8 overflow-y-auto overflow-x-hidden bg-transparent text-slate-800 relative min-h-screen font-sans">
       
       {/* Premium subtle grid overlay */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(148,163,184,0.03)_1px,transparent_1px)] bg-[size:100%_40px] pointer-events-none" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(148,163,184,0.02)_1px,transparent_1px)] bg-[size:100%_40px] pointer-events-none" />
 
       {/* Main Container Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl mx-auto w-full relative z-10">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full relative z-10">
         
         {/* LEFT COLUMN: Sidebar Navigation Profile */}
         <div className="lg:col-span-4 flex flex-col gap-6">
@@ -391,7 +622,7 @@ export function EmployeeDossier({
               <button
                 type="button"
                 onClick={() => setIsHeaderDropdownOpen(!isHeaderDropdownOpen)}
-                className="w-full px-4 py-3 bg-white hover:bg-slate-50 border border-slate-200/80 text-slate-800 rounded-2xl flex items-center justify-between cursor-pointer text-xs font-semibold transition-all shadow-[0_2px_8px_rgba(0,0,0,0.04)] focus:outline-none"
+                className="w-full px-4 py-3 bg-white/70 backdrop-blur-md border border-slate-200/60 text-slate-800 rounded-2xl flex items-center justify-between cursor-pointer text-xs font-semibold transition-all shadow-2xs hover:shadow-md hover:border-slate-300 duration-300 focus:outline-none"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="relative">
@@ -410,7 +641,7 @@ export function EmployeeDossier({
               {isHeaderDropdownOpen && (
                 <>
                   <div className="fixed inset-0 z-30" onClick={() => setIsHeaderDropdownOpen(false)} />
-                  <div className="absolute left-0 mt-2 w-full bg-white border border-slate-200/80 rounded-2xl shadow-xl z-40 py-2 flex flex-col max-h-[250px] overflow-hidden">
+                  <div className="absolute left-0 mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-xl z-40 py-2 flex flex-col max-h-[250px] overflow-hidden">
                     <div className="px-3 pb-2 pt-1 border-b border-slate-100 relative">
                       <Search className="absolute left-6 top-3.5 h-3 w-3 text-slate-400" />
                       <input
@@ -418,7 +649,7 @@ export function EmployeeDossier({
                         placeholder="Search employee..."
                         value={headerDropdownSearch}
                         onChange={(e) => setHeaderDropdownSearch(e.target.value)}
-                        className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl transition-all outline-none font-medium text-slate-800 placeholder:text-slate-400"
+                        className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-slate-800 focus:ring-1 focus:ring-slate-800/10 rounded-xl transition-all outline-none font-medium text-slate-800 placeholder:text-slate-400"
                       />
                     </div>
                     <div className="overflow-y-auto flex-1 py-1 no-scrollbar">
@@ -434,7 +665,7 @@ export function EmployeeDossier({
                               setHeaderDropdownSearch("");
                             }}
                             className={`w-full px-4 py-2 flex items-center gap-3 text-left hover:bg-slate-50 transition-colors ${
-                              activeDirectoryEmployee.id === emp.id ? "bg-blue-50/70 text-blue-600 font-bold border-l-4 border-blue-500" : "text-slate-600"
+                              activeDirectoryEmployee.id === emp.id ? "bg-slate-50 text-blue-600 font-bold border-l-4 border-blue-500" : "text-slate-600"
                             }`}
                           >
                             <img
@@ -457,25 +688,107 @@ export function EmployeeDossier({
             <button
               type="button"
               onClick={handleOpenAddEmployee}
-              className="w-11 h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl flex items-center justify-center cursor-pointer transition-all shadow-[0_2px_8px_rgba(37,99,235,0.2)] shrink-0 border border-blue-500/10"
+              className="w-11 h-11 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl flex items-center justify-center cursor-pointer transition-all shadow-[0_8px_24px_rgba(15,23,42,0.1)] shrink-0 border border-slate-250"
               title="Enroll New Developer"
             >
               <UserPlus className="h-4 w-4" />
             </button>
           </div>
 
+          {/* Team Quick Switcher Panel - Supremely User Friendly */}
+          <div className="bg-white/70 backdrop-blur-md border border-slate-200/60 rounded-2xl p-4 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all duration-300 flex flex-col gap-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-slate-500" /> Team Quick Switcher
+              </span>
+              <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full font-mono">
+                {myEmployees.length} Developers
+              </span>
+            </div>
+
+            {/* Compact search input */}
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 h-3 w-3 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Quick-search team member..."
+                value={switcherSearch}
+                onChange={(e) => setSwitcherSearch(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 text-[11px] bg-slate-50 border border-slate-200 focus:bg-white focus:border-slate-800 rounded-xl transition-all outline-none font-semibold text-slate-800 placeholder:text-slate-400"
+              />
+              {switcherSearch && (
+                <button
+                  type="button"
+                  onClick={() => setSwitcherSearch("")}
+                  className="absolute right-2.5 top-2 p-0.5 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+
+            {/* List of team members with avatars, roles, and quick clickable interface */}
+            <div className="flex flex-col gap-1 max-h-[160px] overflow-y-auto pr-1 no-scrollbar">
+              {myEmployees
+                .filter(emp => !switcherSearch || emp.name.toLowerCase().includes(switcherSearch.toLowerCase()) || emp.role.toLowerCase().includes(switcherSearch.toLowerCase()))
+                .map((emp) => {
+                  const isCurrent = emp.id === activeDirectoryEmployee.id;
+                  return (
+                    <button
+                      key={emp.id}
+                      type="button"
+                      onClick={() => setSelectedDirectoryEmpId(emp.id)}
+                      className={`w-full p-1.5 rounded-xl flex items-center justify-between text-left transition-all border ${
+                        isCurrent
+                          ? "bg-slate-900 border-slate-950 text-white shadow-xs font-semibold"
+                          : "bg-slate-50/50 hover:bg-slate-100/80 border border-slate-200/40 text-slate-700 hover:border-slate-300"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="relative shrink-0">
+                          <img
+                            src={get3DAvatarUrl(emp.name)}
+                            alt=""
+                            className="w-6.5 h-6.5 rounded-lg object-cover bg-slate-100 border border-slate-200"
+                          />
+                          <span className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 bg-emerald-500 border border-white rounded-full" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className={`text-[11px] font-bold truncate ${isCurrent ? "text-white" : "text-slate-800"}`}>
+                            {emp.name}
+                          </div>
+                          <div className={`text-[9px] truncate font-medium ${isCurrent ? "text-slate-300" : "text-slate-400"}`}>
+                            {emp.role}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center shrink-0 pr-1">
+                        <ChevronRight className={`w-3 h-3 ${isCurrent ? "text-white animate-pulse" : "text-slate-400"}`} />
+                      </div>
+                    </button>
+                  );
+                })}
+              {myEmployees.filter(emp => !switcherSearch || emp.name.toLowerCase().includes(switcherSearch.toLowerCase()) || emp.role.toLowerCase().includes(switcherSearch.toLowerCase())).length === 0 && (
+                <div className="text-center py-4 text-[10px] text-slate-400 italic">
+                  No developers found
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Left Main Profile Card - Reimagined with Premium Vercel/Linear elegance */}
-          <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col items-center text-center relative overflow-hidden group">
+          <div className="bg-white/70 backdrop-blur-md border border-slate-200/60 rounded-2xl p-6 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all duration-300 flex flex-col items-center text-center relative overflow-hidden group">
             
             {/* Elegant glass active status pill */}
-            <div className="absolute top-4 left-4 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 border border-emerald-150 text-emerald-700 font-mono uppercase tracking-wider">
+            <div className="absolute top-4 left-4 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-slate-50 border border-slate-200 text-emerald-700 font-mono uppercase tracking-wider shadow-xs">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
               Active R&D Sync
             </div>
 
             <button 
               onClick={() => showToast(`Dossier assessment completeness at ${profileCompletion}%`, "success")}
-              className="absolute top-4 right-4 text-slate-350 hover:text-blue-600 transition-colors cursor-pointer"
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 transition-colors cursor-pointer"
             >
               <Info className="w-4 h-4" />
             </button>
@@ -488,7 +801,7 @@ export function EmployeeDossier({
                   cx="48"
                   cy="48"
                   r="44"
-                  className="text-slate-100"
+                  className="text-slate-200/50"
                   strokeWidth="2.5"
                   stroke="currentColor"
                   fill="transparent"
@@ -497,7 +810,7 @@ export function EmployeeDossier({
                   cx="48"
                   cy="48"
                   r="44"
-                  className="text-blue-600 transition-all duration-1000 ease-out"
+                  className="text-slate-900 transition-all duration-1000 ease-out"
                   strokeWidth="2.5"
                   strokeDasharray={276.46}
                   strokeDashoffset={276.46 - (276.46 * profileCompletion) / 100}
@@ -506,7 +819,7 @@ export function EmployeeDossier({
                   fill="transparent"
                 />
               </svg>
-              <div className="absolute inset-2 rounded-full overflow-hidden bg-slate-50 border border-slate-200/40 p-1">
+              <div className="absolute inset-2 rounded-full overflow-hidden bg-slate-50 border border-slate-200 p-1">
                 <img
                   src={get3DAvatarUrl(activeDirectoryEmployee.name)}
                   alt={activeDirectoryEmployee.name}
@@ -516,40 +829,111 @@ export function EmployeeDossier({
             </div>
 
             {/* Profile Identifiers & Meta */}
-            <div className="space-y-1 w-full">
-              <h3 className="text-base font-bold text-slate-800 tracking-tight font-display">{activeDirectoryEmployee.name}</h3>
-              <p className="text-[10px] font-mono text-slate-400 uppercase tracking-widest bg-slate-50 border border-slate-100/80 px-2 py-0.5 rounded-md inline-block">
+            <div className="space-y-1.5 w-full">
+              <h3 className="text-base font-bold text-slate-900 tracking-tight font-display">{activeDirectoryEmployee.name}</h3>
+              <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-md inline-block">
                 ID: {activeDirectoryEmployee.id}
               </p>
-              <p className="text-xs font-semibold text-blue-600 font-mono mt-1">{activeDirectoryEmployee.role}</p>
+              <p className="text-xs font-semibold text-slate-800 font-mono mt-1">{activeDirectoryEmployee.role}</p>
               <p className="text-[11px] text-slate-500 font-medium">{activeDirectoryEmployee.email}</p>
               <p className="text-[10px] text-slate-400 font-mono">Hub: {activeDirectoryEmployee.team || "Core Engineering"}</p>
             </div>
 
-            <div className="w-full border-t border-dashed border-slate-150 my-5" />
+            <div className="w-full border-t border-dashed border-slate-200 my-5" />
 
             {/* Clean Progress Tracker */}
-            <div className="w-full space-y-1.5 text-left">
+            <div className="w-full space-y-1.5 text-left relative">
               <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
                 <span>Dossier Quality</span>
-                <span className="text-blue-600">{profileCompletion}%</span>
+                <span className="text-slate-900 font-bold">{profileCompletion}%</span>
               </div>
-              <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-1.5 w-full bg-slate-200/40 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-1000"
+                  className="h-full bg-slate-900 rounded-full transition-all duration-1000"
                   style={{ width: `${profileCompletion}%` }}
                 />
               </div>
+
+              {/* Collapsible Dossier Tips Checklist */}
+              {profileCompletion < 100 ? (
+                <div className="mt-3 bg-slate-50 border border-slate-200/60 p-2.5 rounded-xl text-left space-y-1.5">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-1">
+                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider font-mono flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-indigo-500 animate-pulse" /> Improve Quality
+                    </span>
+                    <span className="text-[8px] font-bold text-amber-600 bg-amber-50 px-1 rounded uppercase font-mono">
+                      Missing Fields
+                    </span>
+                  </div>
+                  <div className="space-y-1 max-h-[100px] overflow-y-auto no-scrollbar">
+                    {!activeDirectoryEmployee.phone && (
+                      <button
+                        onClick={() => handleOpenEditEmployee(activeDirectoryEmployee)}
+                        className="w-full text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-white p-1 rounded border border-transparent hover:border-slate-200 transition-all flex items-center gap-1.5 text-left cursor-pointer"
+                      >
+                        <Plus className="w-2.5 h-2.5 text-indigo-500 shrink-0" />
+                        Add Phone (+12.5%)
+                      </button>
+                    )}
+                    {!activeDirectoryEmployee.notes && (
+                      <button
+                        onClick={() => handleOpenEditEmployee(activeDirectoryEmployee)}
+                        className="w-full text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-white p-1 rounded border border-transparent hover:border-slate-200 transition-all flex items-center gap-1.5 text-left cursor-pointer"
+                      >
+                        <Plus className="w-2.5 h-2.5 text-indigo-500 shrink-0" />
+                        Add R&D notes (+12.5%)
+                      </button>
+                    )}
+                    {sshKeys.length === 0 && (
+                      <button
+                        onClick={() => setActiveTab("dev_env")}
+                        className="w-full text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-white p-1 rounded border border-transparent hover:border-slate-200 transition-all flex items-center gap-1.5 text-left cursor-pointer"
+                      >
+                        <Plus className="w-2.5 h-2.5 text-indigo-500 shrink-0" />
+                        Add SSH Key (+12.5%)
+                      </button>
+                    )}
+                    {!activeDirectoryEmployee.salary && (
+                      <button
+                        onClick={() => handleOpenEditEmployee(activeDirectoryEmployee)}
+                        className="w-full text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-white p-1 rounded border border-transparent hover:border-slate-200 transition-all flex items-center gap-1.5 text-left cursor-pointer"
+                      >
+                        <Plus className="w-2.5 h-2.5 text-indigo-500 shrink-0" />
+                        Set Salary (+12.5%)
+                      </button>
+                    )}
+                    {!activeDirectoryEmployee.bloodGroup && (
+                      <button
+                        onClick={() => handleOpenEditEmployee(activeDirectoryEmployee)}
+                        className="w-full text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-white p-1 rounded border border-transparent hover:border-slate-200 transition-all flex items-center gap-1.5 text-left cursor-pointer"
+                      >
+                        <Plus className="w-2.5 h-2.5 text-indigo-500 shrink-0" />
+                        Set Blood Group
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-2.5 bg-emerald-50 border border-emerald-200/50 p-2.5 rounded-xl text-left flex items-center gap-2">
+                  <div className="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center shrink-0">
+                    <Check className="w-2.5 h-2.5 text-white stroke-[3px]" />
+                  </div>
+                  <div>
+                    <span className="block text-[9px] font-black text-emerald-800 uppercase tracking-widest font-mono">Dossier Complete</span>
+                    <p className="text-[9px] text-emerald-600 leading-none">Passed HR administrative audit.</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Compact Action Panel with Elegant Labelings */}
-            <div className="flex items-center justify-center gap-2.5 w-full border-t border-dashed border-slate-150 pt-4 mt-5">
+            <div className="flex items-center justify-center gap-2 w-full border-t border-dashed border-slate-200 pt-4 mt-5">
               <button
                 onClick={() => handleOpenEditEmployee(activeDirectoryEmployee)}
-                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-800 transition-all cursor-pointer border border-slate-200/60 text-[10px] font-bold"
+                className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 transition-all cursor-pointer border border-slate-200 text-[10px] font-bold"
                 title="Edit Developer Information"
               >
-                <Edit3 className="w-3 h-3" /> Edit Profile
+                <Edit3 className="w-3 h-3" /> Edit
               </button>
               <button
                 onClick={() => {
@@ -560,14 +944,14 @@ export function EmployeeDossier({
                   });
                   setIsIncrementModalOpen(true);
                 }}
-                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100/80 text-blue-600 hover:text-blue-700 transition-all cursor-pointer border border-blue-200/40 text-[10px] font-bold"
+                className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 hover:text-slate-900 transition-all cursor-pointer border border-slate-300 text-[10px] font-bold"
                 title="Log Annual Hike"
               >
-                <TrendingUp className="w-3 h-3" /> Salary Hike
+                <TrendingUp className="w-3 h-3" /> Hike
               </button>
               <button
                 onClick={() => handleDeleteEmployeeClick(activeDirectoryEmployee)}
-                className="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 transition-all cursor-pointer border border-rose-200/40"
+                className="p-2 rounded-xl bg-rose-50/40 hover:bg-rose-100/60 text-rose-600 hover:text-rose-700 transition-all cursor-pointer border border-rose-200/30"
                 title="De-register Developer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -577,7 +961,7 @@ export function EmployeeDossier({
           </div>
 
           {/* Left Vertical Navigation tabs (Sleeker, Border-anchored list design with check indicators) */}
-          <div className="bg-white border border-slate-200/80 rounded-3xl p-3 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col gap-1.5">
+          <div className="bg-white/70 backdrop-blur-md border border-slate-200/60 rounded-2xl p-3 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all duration-300 flex flex-col gap-1.5">
             {[
               { id: "profile", label: "Developer Profile", isCompleted: isProfileComplete, icon: <User className="w-3.5 h-3.5" /> },
               { id: "skills", label: "Tech Stack & Skills", isCompleted: isSkillsComplete, icon: <Code2 className="w-3.5 h-3.5" /> },
@@ -592,25 +976,26 @@ export function EmployeeDossier({
               return (
                 <button
                   key={tab.id}
+                  type="button"
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs transition-all duration-200 cursor-pointer text-left border ${
                     isSelected
                       ? "bg-slate-900 border-slate-950 text-white font-semibold shadow-sm"
-                      : "bg-transparent border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                      : "bg-transparent border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800"
                   }`}
                 >
                   <span className="flex items-center gap-2 font-medium">
-                    <span className={isSelected ? "text-white" : tab.highlight ? "text-blue-600 font-bold" : "text-slate-400"}>
+                    <span className={isSelected ? "text-white" : tab.highlight ? "text-slate-800 font-bold" : "text-slate-400"}>
                       {tab.icon}
                     </span>
-                    <span className={tab.highlight && !isSelected ? "text-blue-600 font-bold" : ""}>
+                    <span className={tab.highlight && !isSelected ? "text-slate-800 font-bold" : ""}>
                       {tab.label}
                     </span>
                   </span>
                   
                   {tab.isCompleted ? (
                     <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
-                      isSelected ? "bg-white/20 text-white" : "bg-emerald-50 border border-emerald-200 text-emerald-600"
+                      isSelected ? "bg-white/10 text-white" : "bg-emerald-50 border border-emerald-100 text-emerald-600 shadow-2xs"
                     }`}>
                       <Check className="w-2.5 h-2.5 stroke-[3px]" />
                     </div>
@@ -625,12 +1010,12 @@ export function EmployeeDossier({
         </div>
 
         {/* RIGHT COLUMN: Tab Panel Display Panel - High End Visual Polish */}
-        <div className="lg:col-span-8 bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col justify-between min-h-[700px] relative overflow-hidden">
+        <div className="lg:col-span-8 bg-white border border-slate-200/60 rounded-2xl p-6 sm:p-8 shadow-2xs hover:shadow-sm transition-all duration-300 flex flex-col justify-between min-h-[700px] relative overflow-hidden">
           
           <div className="w-full">
             
             {/* Header Title with quick edit triggers */}
-            <div className="flex items-center justify-between border-b border-dashed border-slate-150 pb-4 mb-6">
+            <div className="flex items-center justify-between border-b border-dashed border-slate-200 pb-4 mb-6">
               <h2 className="text-xs font-bold text-slate-400 tracking-widest uppercase font-mono flex items-center gap-2">
                 {activeTab === "profile" && <User className="w-4 h-4 text-slate-500" />}
                 {activeTab === "skills" && <Code2 className="w-4 h-4 text-slate-500" />}
@@ -652,7 +1037,7 @@ export function EmployeeDossier({
               </h2>
               <button
                 onClick={() => handleOpenEditEmployee(activeDirectoryEmployee)}
-                className="p-2 rounded-xl bg-slate-55 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-200 transition-all cursor-pointer"
+                className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-200 transition-all cursor-pointer"
                 title="Edit This Record"
               >
                 <Edit3 className="w-3.5 h-3.5" />
@@ -674,11 +1059,11 @@ export function EmployeeDossier({
                   <div className="space-y-8">
                     
                     {/* Modern Bento Block for General Info */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-8 bg-slate-50/50 border border-slate-200/60 rounded-2xl p-6 relative overflow-hidden">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-8 bg-white/90 border border-slate-200/60 rounded-2xl p-6 relative overflow-hidden shadow-2xs">
                       <div className="absolute top-0 right-0 p-1 bg-gradient-to-bl from-blue-500/10 to-transparent w-24 h-24 rounded-bl-full pointer-events-none" />
                       <div>
                         <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Engineering Name</span>
-                        <span className="block text-xs font-bold text-slate-800 mt-1 font-display">{activeDirectoryEmployee.name}</span>
+                        <span className="block text-xs font-bold text-slate-900 mt-1 font-display">{activeDirectoryEmployee.name}</span>
                       </div>
                       <div>
                         <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Corporate Email</span>
@@ -694,71 +1079,371 @@ export function EmployeeDossier({
                       </div>
                       <div>
                         <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Slack Direct Address</span>
-                        <span className="block text-xs font-semibold text-blue-600 mt-1 font-mono">U05{activeDirectoryEmployee.id.toUpperCase()}L9K</span>
+                        <span className="block text-xs font-semibold text-slate-900 mt-1 font-mono">U05{activeDirectoryEmployee.id.toUpperCase()}L9K</span>
                       </div>
                       <div>
                         <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Company Join Date</span>
                         <span className="block text-xs font-bold text-slate-800 mt-1 font-mono">{activeDirectoryEmployee.joiningDate || "12-Jan-2025"}</span>
                       </div>
-                      <div className="sm:col-span-2 pt-2 border-t border-slate-200/40">
+                      <div className="sm:col-span-2 pt-2 border-t border-slate-200">
                         <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1">R&D Core Focus Summary</span>
-                        <p className="text-xs text-slate-600 italic leading-relaxed bg-white p-3 rounded-xl border border-slate-100">
+                        <p className="text-xs text-slate-600 italic leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200/60">
                           "{activeDirectoryEmployee.notes || "Core software development contributor active in microservices architecture cycles."}"
                         </p>
                       </div>
                     </div>
 
-                    {/* Integrated Sub-sections: Location Hub & Academics */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      
-                      {/* Office Hub Location */}
-                      <div className="bg-slate-50/40 border border-slate-200/50 rounded-2xl p-5 space-y-3.5">
-                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                          <MapPin className="w-3.5 h-3.5 text-blue-600" /> Physical Office Location
-                        </h4>
-                        <div className="text-xs text-slate-600 space-y-2 bg-white p-3 rounded-xl border border-slate-150/50">
-                          <p className="flex justify-between"><strong>Physical Hub:</strong> <span className="text-slate-800">Dhaka HQ, Tower B</span></p>
-                          <p className="flex justify-between"><strong>Present Unit:</strong> <span className="text-slate-800">Banani, Road 12, Dhaka</span></p>
-                          <p className="flex justify-between"><strong>Home Town:</strong> <span className="text-slate-800 font-mono">Sylhet Sadar, Sylhet</span></p>
-                        </div>
+                    {/* Modern Interactive Quick Actions Hub */}
+                    <div className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-2xl p-6 shadow-sm space-y-4 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
+                        <Activity className="w-24 h-24 stroke-[1px]" />
+                      </div>
+                      <div className="relative z-10">
+                        <span className="text-[9px] font-mono tracking-widest uppercase text-slate-300 font-bold">Managerial Workspace</span>
+                        <h3 className="text-sm font-extrabold tracking-tight font-display mt-0.5">Quick Actions & Integration Triggers</h3>
+                        <p className="text-[11px] text-slate-300 leading-relaxed mt-1">
+                          Seamlessly trigger workspace links, compile reports, or coordinate with the active developer through integrated actions.
+                        </p>
                       </div>
 
-                      {/* Educational Credentials */}
-                      <div className="bg-slate-50/40 border border-slate-200/50 rounded-2xl p-5 space-y-3.5">
-                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                          <GraduationCap className="w-3.5 h-3.5 text-blue-600" /> Academic Credentials
-                        </h4>
-                        <div className="text-xs text-slate-600 space-y-2.5 bg-white p-3 rounded-xl border border-slate-150/50 font-sans">
-                          <div>
-                            <p className="font-bold text-slate-800 text-[11px]">B.Sc. in Computer Science & Engineering</p>
-                            <p className="text-[10px] text-slate-400 font-mono">Dhaka University of Engineering & Tech</p>
-                          </div>
-                          <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between">
-                            <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-                              <Award className="w-2.5 h-2.5" /> Duet Verified Talent
-                            </span>
-                          </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 relative z-10 pt-2">
+                        <button
+                          onClick={() => {
+                            window.location.href = `mailto:${activeDirectoryEmployee.email}`;
+                            showToast(`Opening default mail client to: ${activeDirectoryEmployee.email}`, "success");
+                          }}
+                          className="p-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl flex flex-col items-center justify-center gap-2 text-center transition-all group cursor-pointer"
+                        >
+                          <Mail className="w-4.5 h-4.5 text-indigo-300 group-hover:scale-110 transition-transform" />
+                          <span className="text-[10px] font-bold text-white tracking-tight">Direct Email</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setActiveTab("copilot");
+                            handleSendCopilotMessage(`Please generate a comprehensive professional assessment and SWOT analysis for developer ${activeDirectoryEmployee.name}, currently holding the role of ${activeDirectoryEmployee.role}. List key growth recommendations.`);
+                            showToast("Initiating Gemini Performance Assessment...", "success");
+                          }}
+                          className="p-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl flex flex-col items-center justify-center gap-2 text-center transition-all group cursor-pointer"
+                        >
+                          <Bot className="w-4.5 h-4.5 text-blue-300 group-hover:scale-110 transition-transform" />
+                          <span className="text-[10px] font-bold text-white tracking-tight">AI Assessment</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            showToast(`Compiling and building PDF Dossier for ${activeDirectoryEmployee.name}...`, "success");
+                            setTimeout(() => {
+                              const printWindow = window.open("", "_blank");
+                              if (printWindow) {
+                                printWindow.document.write(`
+                                  <html>
+                                    <head>
+                                      <title>Employee Dossier - ${activeDirectoryEmployee.name}</title>
+                                      <style>
+                                        body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; line-height: 1.6; }
+                                        h1 { font-size: 24px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px; }
+                                        h2 { font-size: 16px; margin-top: 30px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; }
+                                        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+                                        .field { margin-bottom: 12px; }
+                                        .label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: bold; }
+                                        .value { font-size: 13px; font-weight: 600; color: #0f172a; margin-top: 2px; }
+                                        .badge { display: inline-block; padding: 4px 8px; background: #f1f5f9; border-radius: 4px; font-size: 11px; font-weight: bold; }
+                                      </style>
+                                    </head>
+                                    <body>
+                                      <h1>EMPLOYEE DOSSIER REPORT</h1>
+                                      <div class="grid">
+                                        <div class="field"><div class="label">Name</div><div class="value">${activeDirectoryEmployee.name}</div></div>
+                                        <div class="field"><div class="label">Role / Title</div><div class="value">${activeDirectoryEmployee.role}</div></div>
+                                        <div class="field"><div class="label">Corporate Email</div><div class="value">${activeDirectoryEmployee.email}</div></div>
+                                        <div class="field"><div class="label">Employee ID</div><div class="value">${activeDirectoryEmployee.id}</div></div>
+                                        <div class="field"><div class="label">Department</div><div class="value">${activeDirectoryEmployee.department}</div></div>
+                                        <div class="field"><div class="label">Join Date</div><div class="value">${activeDirectoryEmployee.joiningDate || '12-Jan-2025'}</div></div>
+                                      </div>
+                                      <h2>PERSONAL & HEALTH COMPLIANCE</h2>
+                                      <div class="grid">
+                                        <div class="field"><div class="label">Blood Group</div><div class="value"><span class="badge">${activeDirectoryEmployee.bloodGroup || 'Not set'}</span></div></div>
+                                        <div class="field"><div class="label">Date of Birth</div><div class="value">${activeDirectoryEmployee.dob || 'Not set'}</div></div>
+                                        <div class="field"><div class="label">Gender</div><div class="value">${activeDirectoryEmployee.gender || 'Not set'}</div></div>
+                                        <div class="field"><div class="label">Emergency Contact</div><div class="value">${activeDirectoryEmployee.emergencyContact || 'Not set'}</div></div>
+                                        <div class="field"><div class="label">Highest Qualification</div><div class="value">${activeDirectoryEmployee.highestQualification || 'Not set'}</div></div>
+                                        <div class="field"><div class="label">Bank Name</div><div class="value">${activeDirectoryEmployee.bankName || 'Not set'}</div></div>
+                                      </div>
+                                      <h2>R&D DEVELOPMENT FOCUS</h2>
+                                      <p>${activeDirectoryEmployee.notes || 'Core software developer active in microservices architecture cycles.'}</p>
+                                      <script>window.print();</script>
+                                    </body>
+                                  </html>
+                                `);
+                                printWindow.document.close();
+                              }
+                            }, 1200);
+                          }}
+                          className="p-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl flex flex-col items-center justify-center gap-2 text-center transition-all group cursor-pointer"
+                        >
+                          <FileText className="w-4.5 h-4.5 text-rose-300 group-hover:scale-110 transition-transform" />
+                          <span className="text-[10px] font-bold text-white tracking-tight">Print Dossier</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setActiveTab("leaves");
+                            showToast("Navigated to leaves & scheduling planner.", "success");
+                          }}
+                          className="p-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl flex flex-col items-center justify-center gap-2 text-center transition-all group cursor-pointer"
+                        >
+                          <Calendar className="w-4.5 h-4.5 text-emerald-300 group-hover:scale-110 transition-transform" />
+                          <span className="text-[10px] font-bold text-white tracking-tight">Leave Balance</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* HR Ledger & Compliance Registry (Confidential) */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-6">
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                            <Shield className="w-3.5 h-3.5 text-blue-600" /> HR Executive Ledger & Compliance
+                          </h4>
+                          <p className="text-[10px] text-slate-500">Confidential employee details for HR, administrative, and payroll records.</p>
                         </div>
+                        <span className="text-[9px] font-bold text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-full font-mono">
+                          Verified Profile
+                        </span>
                       </div>
 
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        {/* Section 1: Personal & Demographics */}
+                        <div className="bg-white border border-slate-200 rounded-xl p-4.5 space-y-3.5 shadow-2xs">
+                          <h5 className="text-[11px] font-extrabold text-slate-800 uppercase tracking-wider font-mono flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                            <User className="w-3.5 h-3.5 text-slate-600" /> Personal & Demographics
+                          </h5>
+                          <div className="text-xs text-slate-600 space-y-2.5 font-sans">
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-400 font-medium">Date of Birth:</span>
+                              <span className="text-slate-800 font-semibold">{activeDirectoryEmployee.dob || "—"}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-400 font-medium">Gender:</span>
+                              <span className="text-slate-800 font-semibold">{activeDirectoryEmployee.gender || "—"}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-400 font-medium">Blood Group:</span>
+                              {activeDirectoryEmployee.bloodGroup ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200/40">
+                                  {activeDirectoryEmployee.bloodGroup}
+                                </span>
+                              ) : (
+                                <span className="text-slate-850 font-semibold">—</span>
+                              )}
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-400 font-medium">Marital Status:</span>
+                              <span className="text-slate-800 font-semibold">{activeDirectoryEmployee.maritalStatus || "—"}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-400 font-medium">Nationality:</span>
+                              <span className="text-slate-800 font-semibold">{activeDirectoryEmployee.nationality || "—"}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-400 font-medium">Personal Email:</span>
+                              {activeDirectoryEmployee.personalEmail ? (
+                                <button
+                                  onClick={() => copyToClipboard(activeDirectoryEmployee.personalEmail || "", "Personal Email")}
+                                  className="text-slate-850 hover:text-blue-600 font-semibold flex items-center gap-1 transition-colors cursor-pointer group text-right"
+                                >
+                                  <span className="font-mono text-xs truncate max-w-[150px]">{activeDirectoryEmployee.personalEmail}</span>
+                                  <Copy className="w-2.5 h-2.5 text-slate-400 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </button>
+                              ) : (
+                                <span className="text-slate-800 font-semibold">—</span>
+                              )}
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-400 font-medium">Emergency Contact:</span>
+                              <span className="text-slate-805 font-semibold font-mono">{activeDirectoryEmployee.emergencyContact || "—"}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Section 2: Professional & Experience */}
+                        <div className="bg-white border border-slate-200 rounded-xl p-4.5 space-y-3.5 shadow-2xs">
+                          <h5 className="text-[11px] font-extrabold text-slate-800 uppercase tracking-wider font-mono flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                            <Briefcase className="w-3.5 h-3.5 text-slate-600" /> Professional & Experience
+                          </h5>
+                          <div className="text-xs text-slate-600 space-y-2.5 font-sans">
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-400 font-medium">Employment Type:</span>
+                              {activeDirectoryEmployee.employmentType ? (
+                                <span className="inline-flex items-center text-[10px] font-bold text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200/40">
+                                  {activeDirectoryEmployee.employmentType}
+                                </span>
+                              ) : (
+                                <span className="text-slate-800 font-semibold">—</span>
+                              )}
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-400 font-medium">Probation Period:</span>
+                              <span className="text-slate-800 font-semibold">{activeDirectoryEmployee.probationPeriod || "—"}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-400 font-medium">Highest Qualification:</span>
+                              <span className="text-slate-800 font-semibold">{activeDirectoryEmployee.highestQualification || "—"}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-400 font-medium">Experience Years:</span>
+                              <span className="text-slate-800 font-semibold">
+                                {activeDirectoryEmployee.experienceYears !== undefined ? `${activeDirectoryEmployee.experienceYears} Years` : "—"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-400 font-medium">Work Location Hub:</span>
+                              <span className="text-slate-800 font-semibold">{activeDirectoryEmployee.workLocation || "—"}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Section 3: Residential Addresses */}
+                        <div className="bg-white border border-slate-200 rounded-xl p-4.5 space-y-3.5 shadow-2xs md:col-span-2">
+                          <h5 className="text-[11px] font-extrabold text-slate-800 uppercase tracking-wider font-mono flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                            <MapPin className="w-3.5 h-3.5 text-slate-600" /> Residential Addresses
+                          </h5>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-sans">
+                            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200/60 flex flex-col justify-between">
+                              <div>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Current Address</span>
+                                <p className="text-slate-700 mt-1.5 leading-relaxed font-medium">
+                                  {activeDirectoryEmployee.currentAddress || "Not Provided"}
+                                </p>
+                              </div>
+                              {activeDirectoryEmployee.currentAddress && (
+                                <button
+                                  onClick={() => copyToClipboard(activeDirectoryEmployee.currentAddress || "", "Current Address")}
+                                  className="mt-3 text-[10px] font-bold text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-1 cursor-pointer self-start"
+                                >
+                                  <Copy className="w-3 h-3" /> Copy Address
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200/60 flex flex-col justify-between">
+                              <div>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Permanent Address</span>
+                                <p className="text-slate-700 mt-1.5 leading-relaxed font-medium">
+                                  {activeDirectoryEmployee.permanentAddress || "Not Provided"}
+                                </p>
+                              </div>
+                              {activeDirectoryEmployee.permanentAddress && (
+                                <button
+                                  onClick={() => copyToClipboard(activeDirectoryEmployee.permanentAddress || "", "Permanent Address")}
+                                  className="mt-3 text-[10px] font-bold text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-1 cursor-pointer self-start"
+                                >
+                                  <Copy className="w-3 h-3" /> Copy Address
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Section 4: National Identifiers & Financial Compliance */}
+                        <div className="bg-white border border-slate-200 rounded-xl p-4.5 space-y-3.5 shadow-2xs">
+                          <h5 className="text-[11px] font-extrabold text-slate-800 uppercase tracking-wider font-mono flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                            <Shield className="w-3.5 h-3.5 text-slate-600" /> National ID & Tax Registries
+                          </h5>
+                          <div className="text-xs text-slate-600 space-y-2.5 font-sans">
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-400 font-medium">National ID / NID:</span>
+                              {activeDirectoryEmployee.nationalId ? (
+                                <button
+                                  onClick={() => copyToClipboard(activeDirectoryEmployee.nationalId || "", "National ID")}
+                                  className="text-slate-800 hover:text-blue-600 font-semibold flex items-center gap-1 transition-colors cursor-pointer group"
+                                >
+                                  <span className="font-mono font-bold">{activeDirectoryEmployee.nationalId}</span>
+                                  <Copy className="w-2.5 h-2.5 text-slate-400 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </button>
+                              ) : (
+                                <span className="text-slate-800 font-semibold">—</span>
+                              )}
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-400 font-medium">Tax ID / TIN / SSN:</span>
+                              {activeDirectoryEmployee.taxId ? (
+                                <button
+                                  onClick={() => copyToClipboard(activeDirectoryEmployee.taxId || "", "Tax ID")}
+                                  className="text-slate-800 hover:text-blue-600 font-semibold flex items-center gap-1 transition-colors cursor-pointer group"
+                                >
+                                  <span className="font-mono font-bold">{activeDirectoryEmployee.taxId}</span>
+                                  <Copy className="w-2.5 h-2.5 text-slate-400 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </button>
+                              ) : (
+                                <span className="text-slate-800 font-semibold">—</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Section 5: Banking & Payroll Settlement */}
+                        <div className="bg-white border border-slate-200 rounded-xl p-4.5 space-y-3.5 shadow-2xs">
+                          <h5 className="text-[11px] font-extrabold text-slate-800 uppercase tracking-wider font-mono flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                            <DollarSign className="w-3.5 h-3.5 text-slate-600" /> Banking & Payroll settlement
+                          </h5>
+                          <div className="text-xs text-slate-600 space-y-2.5 font-sans">
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-400 font-medium">Bank Name:</span>
+                              <span className="text-slate-850 font-bold">{activeDirectoryEmployee.bankName || "—"}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-400 font-medium">Account Number:</span>
+                              {activeDirectoryEmployee.bankAccountNumber ? (
+                                <button
+                                  onClick={() => copyToClipboard(activeDirectoryEmployee.bankAccountNumber || "", "Bank Account Number")}
+                                  className="text-slate-850 hover:text-blue-600 font-semibold flex items-center gap-1 transition-colors cursor-pointer group"
+                                >
+                                  <span className="font-mono font-bold">{activeDirectoryEmployee.bankAccountNumber}</span>
+                                  <Copy className="w-2.5 h-2.5 text-slate-400 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </button>
+                              ) : (
+                                <span className="text-slate-800 font-semibold">—</span>
+                              )}
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-slate-400 font-medium">IFSC / Routing Code:</span>
+                              {activeDirectoryEmployee.bankIfscCode ? (
+                                <button
+                                  onClick={() => copyToClipboard(activeDirectoryEmployee.bankIfscCode || "", "Routing Code")}
+                                  className="text-slate-850 hover:text-blue-600 font-semibold flex items-center gap-1 transition-colors cursor-pointer group"
+                                >
+                                  <span className="font-mono font-bold">{activeDirectoryEmployee.bankIfscCode}</span>
+                                  <Copy className="w-2.5 h-2.5 text-slate-400 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </button>
+                              ) : (
+                                <span className="text-slate-800 font-semibold">—</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                      </div>
                     </div>
 
                     {/* Premium Integration: Interactive Git & R&D Linkages */}
-                    <div className="bg-slate-50/40 border border-slate-200/50 rounded-2xl p-5 space-y-3">
+                    <div className="bg-white/90 border border-slate-200/60 rounded-2xl p-5 space-y-3 shadow-2xs">
                       <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">Connected Developer Registries</h4>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         {[
                           { name: "Git Registry", url: "https://github.com", icon: <GitBranch className="w-3.5 h-3.5 text-slate-700" /> },
-                          { name: "LinkedIn", url: "https://linkedin.com", icon: <Briefcase className="w-3.5 h-3.5 text-blue-700" /> },
-                          { name: "Jira Scrum", url: "https://atlassian.com", icon: <CheckSquare className="w-3.5 h-3.5 text-blue-500" /> },
-                          { name: "Container Hub", url: "https://hub.docker.com", icon: <Database className="w-3.5 h-3.5 text-cyan-600" /> }
+                          { name: "LinkedIn", url: "https://linkedin.com", icon: <Briefcase className="w-3.5 h-3.5 text-slate-800" /> },
+                          { name: "Jira Scrum", url: "https://atlassian.com", icon: <CheckSquare className="w-3.5 h-3.5 text-slate-800" /> },
+                          { name: "Container Hub", url: "https://hub.docker.com", icon: <Database className="w-3.5 h-3.5 text-slate-800" /> }
                         ].map((link, i) => (
                           <a
                             key={i}
                             href={link.url}
                             target="_blank"
                             rel="noreferrer"
-                            className="p-2.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-[11px] font-semibold text-slate-650 hover:text-slate-900 transition-all shadow-xs"
+                            className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-between text-[11px] font-semibold text-slate-700 hover:text-slate-900 transition-all shadow-2xs"
                           >
                             <span className="flex items-center gap-1.5 truncate">
                               {link.icon}
@@ -771,49 +1456,354 @@ export function EmployeeDossier({
                     </div>
 
                     {/* PREMIUM UI/UX IMPROVEMENT: "Developer Core Performance Index & KPI Grid" */}
-                    <div className="space-y-4 pt-4 border-t border-dashed border-slate-150">
+                    <div className="space-y-4 pt-4 border-t border-dashed border-slate-200">
                       <div>
                         <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono flex items-center gap-1.5">
-                          <Activity className="w-3.5 h-3.5 text-blue-600 animate-pulse" /> Developer KPI Intelligence
+                          <Activity className="w-3.5 h-3.5 text-slate-900 animate-pulse" /> Developer KPI Intelligence
                         </h4>
                         <p className="text-[10px] text-slate-400">Continuous assessments calculated based on Git triggers, commits velocity, and QA coverage.</p>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-2xl space-y-2">
+                        <div className="bg-white/90 border border-slate-200/60 p-4 rounded-2xl space-y-2 shadow-2xs relative group cursor-help">
                           <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Committed Stacks</span>
                           <div className="flex items-baseline gap-1.5">
                             <span className="text-xl font-extrabold text-slate-800 font-mono">18</span>
                             <span className="text-[10px] text-slate-500 font-semibold">Technologies</span>
                           </div>
-                          <div className="h-1 w-full bg-slate-200 rounded-full overflow-hidden">
-                            <div className="h-full bg-blue-500 rounded-full" style={{ width: "78%" }} />
+                          <div className="h-1.5 w-full bg-slate-200/40 rounded-full overflow-hidden">
+                            <div className="h-full bg-slate-900 rounded-full" style={{ width: "78%" }} />
                           </div>
                           <span className="text-[9px] text-slate-400 font-medium block">Top Skill: TypeScript</span>
+
+                          {/* Tooltip on hover */}
+                          <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none w-56 left-1/2 -translate-x-1/2">
+                            <div className="bg-slate-950 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
+                              <strong>Committed Stacks:</strong> 18 unique corporate technology skills. Calculated as a ratio relative to target baseline (23 skills, giving a 78% index).
+                            </div>
+                            <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
+                          </div>
                         </div>
 
-                        <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-2xl space-y-2">
+                        <div className="bg-white/90 border border-slate-200/60 p-4 rounded-2xl space-y-2 shadow-2xs relative group cursor-help">
                           <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Sprint Velocity</span>
                           <div className="flex items-baseline gap-1.5">
-                            <span className="text-xl font-extrabold text-indigo-600 font-mono">38</span>
+                            <span className="text-xl font-extrabold text-slate-800 font-mono">38</span>
                             <span className="text-[10px] text-slate-500 font-semibold">Story Points</span>
                           </div>
-                          <div className="h-1 w-full bg-slate-200 rounded-full overflow-hidden">
-                            <div className="h-full bg-indigo-500 rounded-full" style={{ width: "87%" }} />
+                          <div className="h-1.5 w-full bg-slate-200/40 rounded-full overflow-hidden">
+                            <div className="h-full bg-slate-900 rounded-full" style={{ width: "87%" }} />
                           </div>
                           <span className="text-[9px] text-slate-400 font-medium block">87.5% completion rate</span>
+
+                          {/* Tooltip on hover */}
+                          <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none w-56 left-1/2 -translate-x-1/2">
+                            <div className="bg-slate-950 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
+                              <strong>Sprint Velocity:</strong> Aggregate story points (SP) assigned in the current cycle. Bar shows active completion rate (87.5%).
+                            </div>
+                            <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
+                          </div>
                         </div>
 
-                        <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-2xl space-y-2">
+                        <div className="bg-white/90 border border-slate-200/60 p-4 rounded-2xl space-y-2 shadow-2xs relative group cursor-help">
                           <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Attendance Ratio</span>
                           <div className="flex items-baseline gap-1.5">
-                            <span className="text-xl font-extrabold text-emerald-600 font-mono">{activeRecord?.attendance || 98}%</span>
+                            <span className="text-xl font-extrabold text-slate-800 font-mono">{activeRecord?.attendance || 98}%</span>
                             <span className="text-[10px] text-slate-500 font-semibold">This Cycle</span>
                           </div>
-                          <div className="h-1 w-full bg-slate-200 rounded-full overflow-hidden">
-                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${activeRecord?.attendance || 98}%` }} />
+                          <div className="h-1.5 w-full bg-slate-200/40 rounded-full overflow-hidden">
+                            <div className="h-full bg-slate-900 rounded-full" style={{ width: `${activeRecord?.attendance || 98}%` }} />
                           </div>
                           <span className="text-[9px] text-slate-400 font-medium block">Dhaka Hub Standard Shift</span>
+
+                          {/* Tooltip on hover */}
+                          <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none w-56 left-1/2 -translate-x-1/2">
+                            <div className="bg-slate-950 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
+                              <strong>Attendance Ratio:</strong> Calculated as (Present Days / Total Working Days) * 100 in the active cycle, excluding weekends and holidays.
+                            </div>
+                            <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Monthly Attendance Heatmap Calendar Component */}
+                    <div id="attendance-heatmap-card" className="bg-white/90 border border-slate-200/60 rounded-2xl p-5 space-y-4 shadow-2xs">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-slate-900" /> Attendance Heatmap Calendar
+                          </h4>
+                          <p className="text-[10px] text-slate-400">Daily roster visualization for the selected workspace cycle.</p>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <span id="selected-heatmap-month-badge" className="text-xs font-bold font-mono text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200/60 shadow-xs">
+                            {parsedMonth.label}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                        {/* Left Part: Calendar Heatmap Grid */}
+                        <div className="md:col-span-8 space-y-3">
+                          {/* Weekdays Header */}
+                          <div className="grid grid-cols-7 gap-1 text-center">
+                            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                              <span key={day} className="text-[9px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+                                {day}
+                              </span>
+                            ))}
+                          </div>
+
+                          {/* Calendar Days */}
+                          <div className="grid grid-cols-7 gap-1.5">
+                            {daysArray.cells.map((cell, index) => {
+                              if (cell.dayNumber === null) {
+                                  return <div key={`empty-${index}`} className="aspect-square" />;
+                              }
+
+                              let cellClass = "aspect-square rounded-xl flex flex-col items-center justify-center text-[11px] font-bold transition-all relative group cursor-pointer ";
+                              let statusText = "Working Day";
+                              
+                              if (cell.status === "Future") {
+                                cellClass += "bg-slate-50/40 border border-dashed border-slate-200 text-slate-400 cursor-not-allowed";
+                                statusText = "Future Roster";
+                              } else if (cell.status === "Weekend") {
+                                cellClass += "bg-slate-100 border border-slate-200 text-slate-400";
+                                statusText = "Weekend (Non-Working)";
+                              } else if (cell.status === "Present") {
+                                cellClass += "bg-emerald-50 border border-emerald-200/60 text-emerald-800 hover:bg-emerald-100";
+                                statusText = "Present (Standard Shift)";
+                              } else if (cell.status === "Leave") {
+                                cellClass += "bg-amber-50 border border-amber-200/60 text-amber-800 hover:bg-amber-100";
+                                statusText = "Approved Paid Leave";
+                              } else if (cell.status === "Absent") {
+                                cellClass += "bg-rose-50 border border-rose-200/60 text-rose-800 hover:bg-rose-100";
+                                statusText = "Unexcused Absence";
+                              }
+
+                              return (
+                                <div
+                                  key={`day-${cell.dayNumber}`}
+                                  id={`heatmap-cell-day-${cell.dayNumber}`}
+                                  className={cellClass}
+                                  title={`${parsedMonth.label.split(" ")[0]} ${cell.dayNumber}, ${parsedMonth.year}: ${statusText}`}
+                                >
+                                  <span>{cell.dayNumber}</span>
+                                  
+                                  {/* Micro indicator dot */}
+                                  {cell.status !== "Weekend" && cell.status !== "Future" && (
+                                    <span className={`w-1 h-1 rounded-full mt-0.5 ${
+                                      cell.status === "Present" ? "bg-emerald-500" :
+                                      cell.status === "Leave" ? "bg-amber-500" : "bg-rose-500"
+                                    }`} />
+                                  )}
+
+                                  {/* Tooltip on hover */}
+                                  <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-20 pointer-events-none">
+                                    <div className="bg-slate-950/95 text-white text-[10px] py-1 px-2.5 rounded-lg whitespace-nowrap shadow-md border border-slate-800 font-mono">
+                                      Day {cell.dayNumber}: {statusText}
+                                    </div>
+                                    <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Right Part: Legend & Statistics */}
+                        <div id="attendance-heatmap-legend" className="md:col-span-4 flex flex-col justify-between bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4">
+                          <div className="space-y-3">
+                            <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Attendance Index</span>
+                            
+                            <div className="space-y-2.5">
+                              {/* Present */}
+                              <div className="flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 border border-emerald-600/30" />
+                                  <span className="text-slate-600 font-semibold">Present Days</span>
+                                </div>
+                                <span className="font-mono font-extrabold text-slate-800">{daysArray.pCount} days</span>
+                              </div>
+
+                              {/* Leave */}
+                              <div className="flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 border border-amber-600/30" />
+                                  <span className="text-slate-600 font-semibold">Approved Leaves</span>
+                                </div>
+                                <span className="font-mono font-extrabold text-slate-800">{daysArray.lCount} days</span>
+                              </div>
+
+                              {/* Absent */}
+                              <div className="flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500 border border-rose-600/30" />
+                                  <span className="text-slate-600 font-semibold">Absences</span>
+                                </div>
+                                <span className="font-mono font-extrabold text-slate-800">{daysArray.aCount} days</span>
+                              </div>
+
+                              {/* Weekend */}
+                              <div className="flex items-center justify-between text-xs border-t border-dashed border-slate-200 pt-2.5">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2.5 h-2.5 rounded-md bg-slate-200 border border-slate-300" />
+                                  <span className="text-slate-500 font-medium">Weekends</span>
+                                </div>
+                                <span className="font-mono text-slate-500 font-semibold">{daysArray.cells.filter(c => c.status === "Weekend").length} days</span>
+                              </div>
+                            </div>
+                          </div>
+
+                           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center space-y-1 relative group cursor-help">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider font-mono block">Roster Compliance</span>
+                            <span className="text-base font-black font-mono text-slate-900">
+                              {daysArray.workingDaysCount > 0 
+                                ? `${Math.round((daysArray.pCount / daysArray.workingDaysCount) * 100)}%`
+                                : "100%"}
+                            </span>
+                            <p className="text-[9px] text-slate-400">Calculated as Present Days / Working Days in cycle.</p>
+
+                            {/* Tooltip on hover */}
+                            <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none w-56 left-1/2 -translate-x-1/2">
+                              <div className="bg-slate-950 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
+                                <strong>Roster Compliance formula:</strong><br />
+                                ({daysArray.pCount} Present Days / {daysArray.workingDaysCount} Working Days) * 100.<br />
+                                Working days exclude weekends ({daysArray.cells.filter(c => c.status === "Weekend").length} days in cycle).
+                              </div>
+                              <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* CONFIDENTIAL MANAGER NOTES TIMELINE */}
+                    <div id="manager-notes-section" className="bg-white/90 border border-slate-200/60 rounded-2xl p-5 space-y-4 shadow-2xs">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                            <FileText className="w-3.5 h-3.5 text-slate-900" /> Manager Confidential Chronicle & Timeline
+                          </h4>
+                          <p className="text-[10px] text-slate-400">Chronological journal of 1-on-1 reviews, coaching feedback, and manager private notes.</p>
+                        </div>
+                        <span className="text-[9px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full font-mono w-fit">
+                          Confidential Access
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Chronological Timeline column */}
+                        <div className="lg:col-span-2 space-y-4">
+                          <h5 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">Timeline History</h5>
+                          
+                          {(!activeDirectoryEmployee?.managerNotes || activeDirectoryEmployee.managerNotes.length === 0) ? (
+                            <div className="bg-slate-50/50 border border-dashed border-slate-200 rounded-xl p-8 text-center space-y-2">
+                              <FileText className="w-8 h-8 text-slate-300 mx-auto" />
+                              <p className="text-xs text-slate-500 font-medium">No confidential notes recorded yet.</p>
+                              <p className="text-[10px] text-slate-400 max-w-sm mx-auto">Use the quick-log panel on the right to post feedback, performance warnings, or milestone celebrations to this employee's timeline.</p>
+                            </div>
+                          ) : (
+                            <div className="relative pl-4 border-l-2 border-slate-200/80 ml-2 space-y-6 py-2">
+                              {[...(activeDirectoryEmployee.managerNotes || [])]
+                                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                                .map((note) => {
+                                  const dateFormatted = new Date(note.createdAt).toLocaleDateString("en-US", {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit"
+                                  });
+                                  return (
+                                    <div key={note.id} className="relative group">
+                                      {/* Timeline Bullet Node */}
+                                      <div className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-slate-800 border-2 border-white ring-4 ring-slate-100 group-hover:scale-125 transition-all" />
+                                      
+                                      <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-3.5 space-y-2 transition-all hover:border-slate-300 hover:shadow-2xs">
+                                        <div className="flex items-center justify-between gap-2">
+                                          <div className="flex flex-wrap items-center gap-2">
+                                            <span className="text-[10px] font-bold text-slate-750 bg-slate-200/80 px-2 py-0.5 rounded">
+                                              {note.author}
+                                            </span>
+                                            <span className="text-[10px] text-slate-400 font-mono">
+                                              {dateFormatted}
+                                            </span>
+                                          </div>
+
+                                          <button
+                                            onClick={() => {
+                                              if (window.confirm("Are you sure you want to delete this confidential note?")) {
+                                                handleDeleteManagerNote(note.id);
+                                              }
+                                            }}
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-rose-50"
+                                            title="Delete Note"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+
+                                        <p className="text-xs text-slate-600 leading-relaxed font-sans whitespace-pre-wrap">
+                                          {note.text}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Quick-Log Form column */}
+                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4 h-fit">
+                          <div>
+                            <h5 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                              <MessageSquare className="w-3.5 h-3.5 text-slate-800" /> Log Confidential Observation
+                            </h5>
+                            <p className="text-[10px] text-slate-400">Post performance remarks or general milestones to the active dossier timeline.</p>
+                          </div>
+
+                          <form onSubmit={handleAddManagerNote} className="space-y-3">
+                            <div className="space-y-1">
+                              <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Manager / Author Name</label>
+                              <div className="relative">
+                                <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                                  <User className="w-3 h-3 text-slate-400" />
+                                </span>
+                                <input
+                                  type="text"
+                                  value={managerNoteAuthor}
+                                  onChange={(e) => setManagerNoteAuthor(e.target.value)}
+                                  placeholder="e.g. Marcus Aurelius"
+                                  className="w-full text-xs pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-500 font-sans"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Observation Note Content</label>
+                              <textarea
+                                value={managerNoteText}
+                                onChange={(e) => setManagerNoteText(e.target.value)}
+                                placeholder="Type confidential milestone, feedback summary, performance remarks..."
+                                rows={4}
+                                className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-500 font-sans resize-none"
+                                required
+                              />
+                            </div>
+
+                            <button
+                              type="submit"
+                              disabled={isSubmittingNote}
+                              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-850 text-white rounded-lg text-xs font-semibold shadow-xs hover:shadow-sm transition-all disabled:opacity-50"
+                            >
+                              {isSubmittingNote ? "Logging Note..." : "Log to Timeline"}
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </form>
                         </div>
                       </div>
                     </div>
@@ -833,14 +1823,14 @@ export function EmployeeDossier({
                       {/* Left: Beautifully grouped stack grids */}
                       <div className="space-y-4">
                         {[
-                          { key: "languages", label: "Programming Languages", color: "from-blue-500 to-cyan-500", icon: <Code2 className="w-3.5 h-3.5 text-blue-500" /> },
-                          { key: "frontend", label: "Frontend Architecture", color: "from-indigo-500 to-purple-500", icon: <Layers className="w-3.5 h-3.5 text-indigo-500" /> },
-                          { key: "backend", label: "Backend & Microservices", color: "from-amber-500 to-orange-500", icon: <Server className="w-3.5 h-3.5 text-amber-500" /> },
-                          { key: "cloudDevops", label: "Cloud Infra & CI/CD", color: "from-emerald-500 to-teal-500", icon: <Cloud className="w-3.5 h-3.5 text-emerald-500" /> },
-                          { key: "databases", label: "Databases & Brokers", color: "from-rose-500 to-red-500", icon: <Database className="w-3.5 h-3.5 text-rose-500" /> }
+                          { key: "languages", label: "Programming Languages", color: "from-blue-500 to-cyan-500", icon: <Code2 className="w-3.5 h-3.5 text-slate-700" /> },
+                          { key: "frontend", label: "Frontend Architecture", color: "from-indigo-500 to-purple-500", icon: <Layers className="w-3.5 h-3.5 text-slate-700" /> },
+                          { key: "backend", label: "Backend & Microservices", color: "from-amber-500 to-orange-500", icon: <Server className="w-3.5 h-3.5 text-slate-700" /> },
+                          { key: "cloudDevops", label: "Cloud Infra & CI/CD", color: "from-emerald-500 to-teal-500", icon: <Cloud className="w-3.5 h-3.5 text-slate-700" /> },
+                          { key: "databases", label: "Databases & Brokers", color: "from-rose-500 to-red-500", icon: <Database className="w-3.5 h-3.5 text-slate-700" /> }
                         ].map((stack) => (
-                          <div key={stack.key} className="bg-slate-50/40 border border-slate-200/50 rounded-2xl p-4.5 space-y-3">
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono flex items-center gap-1.5">
+                          <div key={stack.key} className="bg-white border border-slate-200 rounded-2xl p-4.5 space-y-3 shadow-2xs">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono flex items-center gap-1.5">
                               {stack.icon} {stack.label}
                             </span>
                             <div className="flex flex-wrap gap-1.5">
@@ -848,7 +1838,7 @@ export function EmployeeDossier({
                                 <span
                                   key={skill}
                                   onClick={() => handleRemoveSkill(stack.key as any, skill)}
-                                  className="px-2.5 py-1 text-[11px] font-semibold text-slate-700 bg-white hover:bg-rose-50 hover:text-rose-600 border border-slate-200 hover:border-rose-250 rounded-xl transition-all flex items-center gap-1 group cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+                                  className="px-2.5 py-1 text-[11px] font-semibold text-slate-800 bg-slate-50 hover:bg-rose-50/50 hover:text-rose-600 border border-slate-200 hover:border-rose-200 rounded-xl transition-all flex items-center gap-1 group cursor-pointer shadow-2xs"
                                   title="De-register Technology"
                                 >
                                   {skill}
@@ -856,7 +1846,7 @@ export function EmployeeDossier({
                                 </span>
                               ))}
                               {skillsGrouped[stack.key as keyof typeof skillsGrouped].length === 0 && (
-                                <span className="text-[10px] text-slate-450 italic">No verified skills registered.</span>
+                                <span className="text-[10px] text-slate-400 italic">No verified skills registered.</span>
                               )}
                             </div>
                           </div>
@@ -866,7 +1856,7 @@ export function EmployeeDossier({
                       {/* Right: Premium Add Skill Form & Visual Aura Gauge */}
                       <div className="space-y-6">
                         
-                        <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-4">
+                        <div className="bg-white border border-slate-200/60 p-5 rounded-2xl shadow-2xs space-y-4">
                           <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-display">Enlist Corporate Technology</h4>
                           <form onSubmit={handleAddSkill} className="space-y-3.5">
                             <div>
@@ -876,7 +1866,7 @@ export function EmployeeDossier({
                                 placeholder="e.g. Golang, GraphQL, Terraform"
                                 value={newSkillText}
                                 onChange={(e) => setNewSkillText(e.target.value)}
-                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs outline-none focus:bg-white transition-all placeholder:text-slate-400 font-semibold text-slate-800"
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800/10 rounded-xl text-xs outline-none focus:bg-white transition-all placeholder:text-slate-400 font-semibold text-slate-800"
                               />
                             </div>
                             <div>
@@ -884,7 +1874,7 @@ export function EmployeeDossier({
                               <select
                                 value={newSkillCat}
                                 onChange={(e) => setNewSkillCat(e.target.value as any)}
-                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs outline-none cursor-pointer focus:bg-white transition-all font-semibold text-slate-700"
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800/10 rounded-xl text-xs outline-none cursor-pointer focus:bg-white transition-all font-semibold text-slate-700"
                               >
                                 <option value="languages">Programming Languages</option>
                                 <option value="frontend">Frontend Architecture</option>
@@ -895,7 +1885,7 @@ export function EmployeeDossier({
                             </div>
                             <button
                               type="submit"
-                              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-all cursor-pointer shadow-[0_2px_8px_rgba(37,99,235,0.2)]"
+                              className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-all cursor-pointer shadow-sm"
                             >
                               Authorize Technology Tag
                             </button>
@@ -903,16 +1893,24 @@ export function EmployeeDossier({
                         </div>
 
                         {/* Premium Visual Rating Card */}
-                        <div className="bg-slate-900 text-white p-5 rounded-3xl relative overflow-hidden shadow-[0_8px_30px_rgba(15,23,42,0.08)]">
+                        <div className="bg-slate-900 text-white p-5 rounded-3xl relative overflow-hidden shadow-sm border border-slate-800 group cursor-help">
                           <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                             <Flame className="w-32 h-32 stroke-[1px]" />
                           </div>
                           <div className="space-y-2 relative z-10">
-                            <span className="text-[9px] font-mono tracking-widest uppercase text-blue-400 font-bold">IT Talent Architecture</span>
+                            <span className="text-[9px] font-mono tracking-widest uppercase text-slate-400 font-bold">IT Talent Architecture</span>
                             <h3 className="text-sm font-extrabold tracking-tight font-display">Grade A - Principal Engineer</h3>
                             <p className="text-[11px] text-slate-300 leading-relaxed">
                               Verified across {Object.values(skillsGrouped).flat().length} corporate technologies. Excellent microservices synergy.
                             </p>
+                          </div>
+
+                          {/* Tooltip on hover */}
+                          <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none w-64 left-1/2 -translate-x-1/2">
+                            <div className="bg-slate-950 text-white text-[10px] py-1.5 px-3 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
+                              <strong>Grade & Title Derivation:</strong> Role grading matches corporate taxonomy based on unique technical skill tags ({Object.values(skillsGrouped).flat().length} tags) combined with the developer seniority index.
+                            </div>
+                            <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
                           </div>
                         </div>
 
@@ -922,40 +1920,47 @@ export function EmployeeDossier({
 
                   </div>
                 )}
-
                 {/* 3. ASSIGNED PROJECTS & SPRINT TICKETS */}
                 {activeTab === "projects" && (
                   <div className="space-y-6">
                     
                     {/* Active Project Overview */}
-                    <div className="bg-slate-50/50 border border-slate-200/60 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-2xs">
                       <div className="space-y-1.5">
-                        <span className="inline-block text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full font-mono uppercase tracking-wider">
+                        <span className="inline-block text-[9px] font-bold text-slate-800 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full font-mono uppercase tracking-wider">
                           Active Sprint: Cycle 14
                         </span>
-                        <h3 className="text-sm font-bold text-slate-800 font-display">Antigravity Distributed API Router Pipeline</h3>
+                        <h3 className="text-sm font-bold text-slate-900 font-display">Antigravity Distributed API Router Pipeline</h3>
                         <p className="text-xs text-slate-500 max-w-lg leading-relaxed font-medium">
                           Refactoring monolithic session controls into HttpOnly secure cookies. Integrated to containerized environments on Cloud Run.
                         </p>
                       </div>
-                      <div className="bg-white px-4 py-3 rounded-xl border border-slate-200/50 text-center shrink-0 min-w-[120px] shadow-xs">
+                      <div className="bg-slate-50 px-4 py-3 rounded-xl border border-slate-200 text-center shrink-0 min-w-[120px] shadow-2xs relative group cursor-help">
                         <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Velocity Target</span>
-                        <span className="block text-lg font-mono font-extrabold text-blue-600 mt-0.5">38 SP</span>
+                        <span className="block text-lg font-mono font-extrabold text-slate-900 mt-0.5">38 SP</span>
                         <span className="text-[9px] text-slate-400 font-bold">Q3 Goal Aligned</span>
+
+                        {/* Tooltip on hover */}
+                        <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none w-56 left-1/2 -translate-x-1/2">
+                          <div className="bg-slate-950 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
+                            <strong>Velocity Target:</strong> Total planned story points for active development (38 SP across closed & open issues).
+                          </div>
+                          <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
+                        </div>
                       </div>
                     </div>
 
                     {/* Jira Ticket Board */}
                     <div className="space-y-3.5">
                       <div>
-                        <h4 className="text-xs font-bold text-slate-850 uppercase tracking-wider font-mono">Active Jira Board Issues</h4>
+                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">Active Jira Board Issues</h4>
                         <p className="text-[10px] text-slate-400">Manage development states and log timesheets directly against sprint issues.</p>
                       </div>
 
-                      <div className="overflow-x-auto rounded-xl border border-slate-200/60 bg-white">
+                      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-2xs">
                         <table className="w-full text-left border-collapse min-w-[600px]">
                           <thead>
-                            <tr className="bg-slate-50 border-b border-slate-200/60">
+                            <tr className="bg-slate-50 border-b border-slate-200">
                               <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-24 font-mono">ID</th>
                               <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Summary</th>
                               <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-28">Sprint State</th>
@@ -965,14 +1970,14 @@ export function EmployeeDossier({
                           </thead>
                           <tbody className="divide-y divide-slate-100">
                             {tickets.map((t) => (
-                              <tr key={t.id} className="hover:bg-slate-50/20 transition-colors">
-                                <td className="px-4 py-3 text-xs font-bold font-mono text-blue-600">{t.id}</td>
+                              <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
+                                <td className="px-4 py-3 text-xs font-bold font-mono text-slate-900">{t.id}</td>
                                 <td className="px-4 py-3 text-xs font-semibold text-slate-700">
                                   <div className="space-y-0.5">
-                                    <p className="font-display font-bold">{t.title}</p>
+                                    <p className="font-display font-bold text-slate-800">{t.title}</p>
                                     <span className={`inline-block text-[9px] font-bold ${
-                                      t.priority === "Critical" ? "text-red-600 bg-red-50 border border-red-100" : t.priority === "High" ? "text-orange-600 bg-orange-50 border border-orange-100" : "text-slate-500 bg-slate-50"
-                                    } px-2 py-0.2 rounded-md font-mono`}>
+                                      t.priority === "Critical" ? "text-red-700 bg-red-50 border border-red-100" : t.priority === "High" ? "text-orange-700 bg-orange-50 border border-orange-100" : "text-slate-600 bg-slate-50 border border-slate-200"
+                                    } px-2 py-0.2 rounded-md font-mono shadow-2xs`}>
                                       {t.priority} Priority
                                     </span>
                                   </div>
@@ -993,8 +1998,16 @@ export function EmployeeDossier({
                                     {t.status}
                                   </button>
                                 </td>
-                                <td className="px-4 py-3 text-xs font-mono font-bold text-slate-500 text-center">
+                                <td className="px-4 py-3 text-xs font-mono font-bold text-slate-500 text-center relative group cursor-help">
                                   {t.loggedHours} hrs
+
+                                  {/* Tooltip on hover */}
+                                  <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none w-48 left-1/2 -translate-x-1/2">
+                                    <div className="bg-slate-950 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
+                                      <strong>Timesheet Logs:</strong> Hours logged on {t.id} sprint ticket relative to its estimate of {t.sp} story points (target: 8 hrs/SP).
+                                    </div>
+                                    <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
+                                  </div>
                                 </td>
                                 <td className="px-4 py-3 text-right">
                                   <div className="flex items-center justify-end gap-1.5">
@@ -1003,11 +2016,11 @@ export function EmployeeDossier({
                                       placeholder="Hrs"
                                       value={timeToLog[t.id] || ""}
                                       onChange={(e) => setTimeToLog({ ...timeToLog, [t.id]: e.target.value })}
-                                      className="w-12 px-1.5 py-1 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded text-[11px] font-mono outline-none text-center font-bold"
+                                      className="w-12 px-1.5 py-1 bg-slate-50 border border-slate-200 focus:border-slate-800 rounded text-[11px] font-mono outline-none text-center font-bold"
                                     />
                                     <button
                                       onClick={() => handleLogHours(t.id)}
-                                      className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded text-[10px] transition-colors cursor-pointer"
+                                      className="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded text-[10px] transition-colors cursor-pointer"
                                     >
                                       Log
                                     </button>
@@ -1028,9 +2041,9 @@ export function EmployeeDossier({
                   <div className="space-y-6">
                     
                     {/* Machine Specifications */}
-                    <div className="bg-slate-50/50 border border-slate-200/60 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden">
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden shadow-2xs group cursor-help">
                       <div className="flex items-center gap-3.5">
-                        <div className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-150 flex items-center justify-center text-blue-600 shrink-0">
+                        <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-800 shadow-2xs shrink-0">
                           <Laptop className="w-5 h-5" />
                         </div>
                         <div>
@@ -1039,42 +2052,50 @@ export function EmployeeDossier({
                           <p className="text-[10px] text-slate-500 font-mono">16-Core CPU / 36GB Unified RAM / 1TB SSD / macOS Sequoia</p>
                         </div>
                       </div>
-                      <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-blue-50 border border-blue-100 text-blue-600 font-mono">
+                      <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 border border-slate-200 text-slate-700 font-mono">
                         Hardware Insured
                       </span>
+
+                      {/* Tooltip on hover */}
+                      <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none w-64 left-1/2 -translate-x-1/2">
+                        <div className="bg-slate-950 text-white text-[10px] py-1.5 px-3 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
+                          <strong>Hardware Allocation:</strong> MacBook workstation resource. Depreciation, warranty limits, and active telemetry logs synced with enterprise IT asset registries.
+                        </div>
+                        <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
+                      </div>
                     </div>
 
                     {/* Local Docker Containers */}
                     <div className="space-y-3.5">
                       <div>
-                        <h4 className="text-xs font-bold text-slate-850 uppercase tracking-wider font-mono flex items-center gap-1.5">
-                          <TerminalSquare className="w-3.5 h-3.5 text-blue-500" /> Local Docker Sandboxes
+                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                          <TerminalSquare className="w-3.5 h-3.5 text-slate-700" /> Local Docker Sandboxes
                         </h4>
                         <p className="text-[10px] text-slate-400">Simulated environments running on localhost developers loop.</p>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {containers.map((c) => (
-                          <div key={c.id} className="bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between shadow-xs">
+                          <div key={c.id} className="bg-white border border-slate-200/80 rounded-xl p-4 flex items-center justify-between shadow-2xs">
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
                                 <span className="text-xs font-bold text-slate-800 font-mono">{c.name}</span>
                                 <span className={`inline-block w-2 h-2 rounded-full ${c.status === "running" ? "bg-emerald-500 animate-pulse" : "bg-slate-300"}`} />
                               </div>
-                              <p className="text-[9px] text-slate-450 font-mono">{c.image} | Port: {c.port}</p>
+                              <p className="text-[9px] text-slate-400 font-mono">{c.image} | Port: {c.port}</p>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
                               <button
                                 onClick={() => handleToggleDocker(c.id, c.name, c.status)}
                                 className={`px-2.5 py-1 rounded-lg border text-[10px] font-bold transition-all cursor-pointer ${
-                                  c.status === "running" ? "bg-rose-50 border-rose-150 text-rose-600 hover:bg-rose-100" : "bg-emerald-50 border-emerald-150 text-emerald-600 hover:bg-emerald-100"
+                                  c.status === "running" ? "bg-rose-50 border border-rose-100 text-rose-700 hover:bg-rose-100/50" : "bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100"
                                 }`}
                               >
                                 {c.status === "running" ? "Stop" : "Start"}
                               </button>
                               <button
                                 onClick={() => handleRestartDocker(c.name)}
-                                className="p-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-500 border border-slate-200/80 transition-colors cursor-pointer"
+                                className="p-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 transition-colors cursor-pointer"
                                 title="Restart container daemon"
                               >
                                 <RotateCw className="w-3.5 h-3.5" />
@@ -1085,28 +2106,27 @@ export function EmployeeDossier({
                       </div>
                     </div>
 
-                    {/* SSH Public Keys */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-dashed border-slate-150">
+                    {/* SSH Public Keys */}                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-dashed border-slate-200">
                       
                       {/* Active keys */}
                       <div className="space-y-3">
                         <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">SSH Public Registries</h4>
                         <div className="space-y-3">
                           {sshKeys.map((k) => (
-                            <div key={k.id} className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 space-y-2 text-xs relative">
+                            <div key={k.id} className="bg-white border border-slate-200/80 rounded-xl p-3.5 space-y-2 text-xs relative shadow-2xs">
                               <button
                                 onClick={() => handleRemoveSSHKey(k.id, k.name)}
-                                className="absolute top-3.5 right-3.5 text-slate-350 hover:text-rose-600 transition-colors cursor-pointer"
+                                className="absolute top-3.5 right-3.5 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
                                 title="Revoke access GPG"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                               <div className="space-y-0.5">
-                                <h5 className="font-bold text-slate-800 font-display">{k.name}</h5>
+                                <h5 className="font-bold text-slate-900 font-display">{k.name}</h5>
                                 <p className="text-[10px] text-slate-400 font-mono">{k.type} | Added: {k.date}</p>
                               </div>
-                              <div className="flex items-center gap-1.5 bg-white p-2 rounded-lg border border-slate-150/40">
-                                <span className="font-mono text-[9px] text-slate-500 truncate flex-1 leading-none select-all">
+                              <div className="flex items-center gap-1.5 bg-slate-50 p-2 rounded-lg border border-slate-200">
+                                <span className="font-mono text-[9px] text-slate-600 truncate flex-1 leading-none select-all">
                                   {k.fingerprint}
                                 </span>
                                 <button
@@ -1129,7 +2149,7 @@ export function EmployeeDossier({
                       </div>
 
                       {/* Add SSH credentials */}
-                      <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-xs space-y-4">
+                      <div className="bg-white/90 border border-slate-200/60 p-5 rounded-2xl shadow-2xs space-y-4">
                         <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-display">Enlist GPG/SSH public key</h4>
                         <form onSubmit={handleAddSSHKey} className="space-y-3.5">
                           <div>
@@ -1139,7 +2159,7 @@ export function EmployeeDossier({
                               placeholder="e.g. mbp-workstation"
                               value={newKeyName}
                               onChange={(e) => setNewKeyName(e.target.value)}
-                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs outline-none focus:bg-white transition-all font-semibold text-slate-800"
+                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800/10 focus:bg-white rounded-xl text-xs outline-none transition-all font-semibold text-slate-800"
                             />
                           </div>
                           <div>
@@ -1147,7 +2167,7 @@ export function EmployeeDossier({
                             <select
                               value={newKeyType}
                               onChange={(e) => setNewKeyType(e.target.value)}
-                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs outline-none cursor-pointer focus:bg-white transition-all font-semibold text-slate-700"
+                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800/10 focus:bg-white rounded-xl text-xs outline-none cursor-pointer transition-all font-semibold text-slate-700"
                             >
                               <option value="ssh-ed25519">ssh-ed25519 (Secure)</option>
                               <option value="ssh-rsa">ssh-rsa (Legacy)</option>
@@ -1160,12 +2180,12 @@ export function EmployeeDossier({
                               placeholder="ssh-ed25519 AAAA..."
                               value={newKeyContent}
                               onChange={(e) => setNewKeyContent(e.target.value)}
-                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs outline-none focus:bg-white transition-all font-mono text-slate-700 text-[11px] resize-none leading-relaxed"
+                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800/10 focus:bg-white rounded-xl text-xs outline-none transition-all font-mono text-slate-700 text-[11px] resize-none leading-relaxed"
                             />
                           </div>
                           <button
                             type="submit"
-                            className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm cursor-pointer"
+                            className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-colors shadow-sm cursor-pointer"
                           >
                             Deploy Key Token
                           </button>
@@ -1182,9 +2202,9 @@ export function EmployeeDossier({
                   <div className="space-y-6">
                     
                     {/* Manual action trigger */}
-                    <div className="bg-slate-50/50 border border-slate-200/60 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div className="bg-white/90 border border-slate-200/60 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-2xs">
                       <div className="space-y-1">
-                        <span className="inline-flex items-center gap-1.5 text-[9px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full font-mono uppercase">
+                        <span className="inline-flex items-center gap-1.5 text-[9px] font-bold text-slate-800 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full font-mono uppercase">
                           GitHub Deployment: Passing
                         </span>
                         <h4 className="text-xs font-bold text-slate-800 font-display">Production Webhook Sync Lock</h4>
@@ -1200,38 +2220,45 @@ export function EmployeeDossier({
                     </div>
 
                     {/* Metrics Grid */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                      {[
-                        { label: "Commits Pushed", value: "148 commits", desc: "This Month Cycle", color: "text-blue-600" },
-                        { label: "Pull Requests Merged", value: "22 PRs", desc: "100% Approval Rate", color: "text-emerald-600" },
-                        { label: "Peer Reviews Completed", value: "18 logs", desc: "R&D Collaborations", color: "text-indigo-600" },
-                        { label: "Lines of Code (LoC)", value: "+14,200", desc: "-4,800 Clean deletions", color: "text-orange-600" },
-                        { label: "Test Coverage Average", value: "87.4%", desc: "Strict Jest Validations", color: "text-purple-600" },
-                        { label: "CI Pipeline Runtime", value: "3m 42s", desc: "Standard Actions runtime", color: "text-rose-600" }
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">                      {[
+                        { label: "Commits Pushed", value: "148 commits", desc: "This Month Cycle", tooltip: "Total commits pushed to corporate mainline and feature branches during the active billing cycle." },
+                        { label: "Pull Requests Merged", value: "22 PRs", desc: "100% Approval Rate", tooltip: "Code integration pull requests completed. Checked by Git hooks and branch rules." },
+                        { label: "Peer Reviews Completed", value: "18 logs", desc: "R&D Collaborations", tooltip: "Total code pull reviews submitted for peer developers, maintaining engineering quality baselines." },
+                        { label: "Lines of Code (LoC)", value: "+14,200", desc: "-4,800 Clean deletions", tooltip: "Direct volume index. Highlights net positive refactoring additions versus legacy file pruning." },
+                        { label: "Test Coverage Average", value: "87.4%", desc: "Strict Jest Validations", tooltip: "Dynamic percentage of statement coverage across codebase components tracked by Jest." },
+                        { label: "CI Pipeline Runtime", value: "3m 42s", desc: "Standard Actions runtime", tooltip: "Average execution duration for automated linting, container builds, and deployment stages on Cloud Run." }
                       ].map((stat, i) => (
-                        <div key={i} className="bg-white border border-slate-200/80 p-4 rounded-xl shadow-xs space-y-1">
+                        <div key={i} className="bg-white/90 border border-slate-200/60 p-4 rounded-xl shadow-2xs space-y-1 relative group cursor-help">
                           <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">{stat.label}</span>
-                          <span className={`block text-sm font-extrabold font-mono ${stat.color}`}>{stat.value}</span>
+                          <span className="block text-sm font-extrabold font-mono text-slate-900">{stat.value}</span>
                           <span className="block text-[10px] text-slate-400 font-semibold">{stat.desc}</span>
+
+                          {/* Tooltip on hover */}
+                          <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none w-48 left-1/2 -translate-x-1/2">
+                            <div className="bg-slate-950 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
+                              <strong>{stat.label}:</strong> {stat.tooltip}
+                            </div>
+                            <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
+                          </div>
                         </div>
                       ))}
                     </div>
 
                     {/* Progress bars */}
-                    <div className="bg-slate-50/40 border border-slate-200/50 rounded-2xl p-5 space-y-4">
-                      <h4 className="text-xs font-bold text-slate-850 uppercase tracking-wider font-mono">Continuous Quality Inspections</h4>
+                    <div className="bg-white/90 border border-slate-200/60 rounded-2xl p-5 space-y-4 shadow-2xs">
+                      <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">Continuous Quality Inspections</h4>
                       <div className="space-y-4">
                         {[
-                          { label: "Production Build Stability Health", val: 98, color: "bg-emerald-500" },
-                          { label: "Unit & Core Integration Coverage Ratio", val: 87.4, color: "bg-indigo-500" },
-                          { label: "Linting & Code Smells Quality index", val: 94, color: "bg-blue-500" }
+                          { label: "Production Build Stability Health", val: 98, color: "bg-slate-900" },
+                          { label: "Unit & Core Integration Coverage Ratio", val: 87.4, color: "bg-slate-700" },
+                          { label: "Linting & Code Smells Quality index", val: 94, color: "bg-slate-800" }
                         ].map((bar, idx) => (
                           <div key={idx} className="space-y-1.5 text-left text-xs">
                             <div className="flex justify-between text-slate-500 font-semibold text-[11px]">
                               <span>{bar.label}</span>
                               <span className="font-mono font-bold text-slate-800">{bar.val}%</span>
                             </div>
-                            <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-1.5 w-full bg-slate-200/40 rounded-full overflow-hidden">
                               <div
                                 className={`h-full ${bar.color} rounded-full transition-all duration-1000`}
                                 style={{ width: `${bar.val}%` }}
@@ -1252,26 +2279,34 @@ export function EmployeeDossier({
                     {/* Time Off Balance Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       {[
-                        { label: "Casual Leaves (Paid)", balance: "7 / 10 days", used: "3 used", color: "border-blue-100 text-blue-600 bg-blue-50/30" },
-                        { label: "Sick Leaves (Medical)", balance: "12 / 14 days", used: "2 used", color: "border-rose-100 text-rose-600 bg-rose-50/30" },
-                        { label: "Festival / Holiday Break", balance: "4 / 8 days", used: "4 used", color: "border-emerald-100 text-emerald-600 bg-emerald-50/30" }
+                        { label: "Casual Leaves (Paid)", balance: "7 / 10 days", used: "3 used", color: "border-slate-200 text-slate-800 bg-slate-50 shadow-2xs", tooltip: "Available casual leave quota. Allocated on a monthly accrual basis." },
+                        { label: "Sick Leaves (Medical)", balance: "12 / 14 days", used: "2 used", color: "border-slate-200 text-slate-800 bg-slate-50 shadow-2xs", tooltip: "Unused medical / sick leave allowance. Standard validation rules apply." },
+                        { label: "Festival / Holiday Break", balance: "4 / 8 days", used: "4 used", color: "border-slate-200 text-slate-800 bg-slate-50 shadow-2xs", tooltip: "Holiday allocation for national, cultural, and standard calendar breaks." }
                       ].map((bal, i) => (
-                        <div key={i} className={`border p-4 rounded-xl text-center space-y-1 ${bal.color.split(" ")[0]} ${bal.color.split(" ")[2]}`}>
+                        <div key={i} className={`border p-4 rounded-xl text-center space-y-1 relative group cursor-help ${bal.color}`}>
                           <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">{bal.label}</span>
-                          <span className={`block text-xs font-extrabold font-mono ${bal.color.split(" ")[1]}`}>{bal.balance}</span>
+                          <span className="block text-xs font-extrabold font-mono text-slate-800">{bal.balance}</span>
                           <span className="block text-[10px] text-slate-400 font-mono">{bal.used}</span>
+
+                          {/* Tooltip on hover */}
+                          <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none w-48 left-1/2 -translate-x-1/2">
+                            <div className="bg-slate-950 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
+                              <strong>{bal.label}:</strong> {bal.tooltip}
+                            </div>
+                            <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
+                          </div>
                         </div>
                       ))}
                     </div>
 
                     {/* Clock-In Compliance info */}
-                    <div className="bg-slate-50/50 border border-slate-200/60 rounded-2xl p-5 flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
+                    <div className="bg-white/90 border border-slate-200/60 rounded-2xl p-5 flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center shadow-2xs">
                       <div className="space-y-1">
                         <span className="text-[9px] font-mono font-bold text-slate-400 uppercase">Timesheet compliance roster</span>
                         <h4 className="text-xs font-bold text-slate-800 font-display">Shift: 09:00 AM - 06:00 PM BST (Standard Hub)</h4>
                         <p className="text-[11px] text-slate-500 font-medium">Average Clock-In timing over 30 days: <strong className="font-mono text-slate-800">09:12 AM</strong> (Excellent compliance ratio).</p>
                       </div>
-                      <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-50 border border-emerald-150 text-emerald-700 font-mono">
+                      <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-100 border border-slate-200 text-slate-800 font-mono">
                         Roster Aligned
                       </span>
                     </div>
@@ -1280,7 +2315,7 @@ export function EmployeeDossier({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       
                       {/* PTO Apply form */}
-                      <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-xs space-y-4">
+                      <div className="bg-white/90 border border-slate-200/60 p-5 rounded-2xl shadow-2xs space-y-4">
                         <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-display">Apply for Time Off</h4>
                         <form onSubmit={handleApplyLeave} className="space-y-3.5">
                           <div className="grid grid-cols-2 gap-3">
@@ -1290,7 +2325,7 @@ export function EmployeeDossier({
                                 type="date"
                                 value={leaveStart}
                                 onChange={(e) => setLeaveStart(e.target.value)}
-                                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-lg text-xs outline-none font-semibold text-slate-700"
+                                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800"
                               />
                             </div>
                             <div>
@@ -1299,7 +2334,7 @@ export function EmployeeDossier({
                                 type="date"
                                 value={leaveEnd}
                                 onChange={(e) => setLeaveEnd(e.target.value)}
-                                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-lg text-xs outline-none font-semibold text-slate-700"
+                                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800"
                               />
                             </div>
                           </div>
@@ -1308,7 +2343,7 @@ export function EmployeeDossier({
                             <select
                               value={leaveType}
                               onChange={(e) => setLeaveType(e.target.value as any)}
-                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs outline-none cursor-pointer font-semibold text-slate-700"
+                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800/10 rounded-xl text-xs outline-none cursor-pointer font-semibold text-slate-700"
                             >
                               <option value="Casual">Casual Leave (Paid)</option>
                               <option value="Sick">Sick Leave (Medical)</option>
@@ -1322,12 +2357,12 @@ export function EmployeeDossier({
                               placeholder="Describe purpose of paid time off..."
                               value={leaveNotes}
                               onChange={(e) => setLeaveNotes(e.target.value)}
-                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-xs outline-none resize-none text-slate-700 text-[11px]"
+                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800/10 rounded-xl text-xs outline-none resize-none text-slate-700 text-[11px]"
                             />
                           </div>
                           <button
                             type="submit"
-                            className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer shadow-sm"
+                            className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer shadow-sm"
                           >
                             Submit Leave Application
                           </button>
@@ -1339,11 +2374,11 @@ export function EmployeeDossier({
                         <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">My PTO Logs</h4>
                         <div className="space-y-3">
                           {leaveRequests.map((lr) => (
-                            <div key={lr.id} className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 space-y-1.5 text-xs">
+                            <div key={lr.id} className="bg-white/90 border border-slate-200/60 rounded-xl p-3.5 space-y-1.5 text-xs shadow-2xs">
                               <div className="flex justify-between items-center">
-                                <span className="font-bold text-slate-800 font-mono">{lr.type} Leave ({lr.days} days)</span>
+                                <span className="font-bold text-slate-900 font-mono">{lr.type} Leave ({lr.days} days)</span>
                                 <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${
-                                  lr.status === "Approved" ? "bg-emerald-50 border-emerald-100 text-emerald-700" : "bg-amber-50 border-amber-100 text-amber-700"
+                                  lr.status === "Approved" ? "bg-emerald-100/30 border-emerald-200/55 text-emerald-800" : "bg-amber-150/30 border-amber-200/55 text-amber-800"
                                 }`}>
                                   {lr.status}
                                 </span>
@@ -1366,21 +2401,47 @@ export function EmployeeDossier({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       
                       {/* Compensation structure */}
-                      <div className="bg-slate-50/50 border border-slate-200/60 rounded-2xl p-6 flex flex-col justify-between">
+                      <div className="bg-white/90 border border-slate-200/60 rounded-2xl p-6 flex flex-col justify-between shadow-2xs">
                         <div>
                           <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-3">Compensation Package</span>
                           <div className="space-y-2.5">
-                            <div className="flex justify-between border-b border-slate-100 pb-1.5 text-xs">
+                            <div className="flex justify-between border-b border-slate-200 pb-1.5 text-xs relative group/comp cursor-help">
                               <span className="text-slate-500 font-semibold">Annual Gross</span>
-                              <span className="text-emerald-600 font-extrabold font-mono">${(activeDirectoryEmployee.salary || 55000).toLocaleString()}/yr</span>
+                              <span className="text-slate-900 font-extrabold font-mono">${(activeDirectoryEmployee.salary || 55000).toLocaleString()}/yr</span>
+
+                              {/* Tooltip on hover */}
+                              <div className="absolute bottom-full mb-2 hidden group-hover/comp:flex flex-col items-center z-50 pointer-events-none w-56 left-1/2 -translate-x-1/2">
+                                <div className="bg-slate-950 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
+                                  <strong>Annual Gross:</strong> Contractual base salary package prior to standard tax withholdings or benefit deductibles.
+                                </div>
+                                <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
+                              </div>
                             </div>
-                            <div className="flex justify-between border-b border-slate-100 pb-1.5 text-xs">
+
+                            <div className="flex justify-between border-b border-slate-200 pb-1.5 text-xs relative group/comp cursor-help">
                               <span className="text-slate-500 font-semibold">Monthly Salary</span>
-                              <span className="text-slate-700 font-bold font-mono">${Math.round((activeDirectoryEmployee.salary || 55000) / 12).toLocaleString()}/mo</span>
+                              <span className="text-slate-800 font-bold font-mono">${Math.round((activeDirectoryEmployee.salary || 55000) / 12).toLocaleString()}/mo</span>
+
+                              {/* Tooltip on hover */}
+                              <div className="absolute bottom-full mb-2 hidden group-hover/comp:flex flex-col items-center z-50 pointer-events-none w-56 left-1/2 -translate-x-1/2">
+                                <div className="bg-slate-950 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
+                                  <strong>Monthly Salary:</strong> Calculated directly as Annual Gross / 12, processed on the final weekday of each month.
+                                </div>
+                                <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
+                              </div>
                             </div>
-                            <div className="flex justify-between text-xs">
+
+                            <div className="flex justify-between text-xs relative group/comp cursor-help">
                               <span className="text-slate-500 font-semibold">Hike Adjustments</span>
-                              <span className="text-slate-700 font-bold font-mono">{(activeDirectoryEmployee.incrementHistory || []).length} recorded</span>
+                              <span className="text-slate-800 font-bold font-mono">{(activeDirectoryEmployee.incrementHistory || []).length} recorded</span>
+
+                              {/* Tooltip on hover */}
+                              <div className="absolute bottom-full mb-2 hidden group-hover/comp:flex flex-col items-center z-50 pointer-events-none w-56 left-1/2 -translate-x-1/2">
+                                <div className="bg-slate-950 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
+                                  <strong>Hike Adjustments:</strong> Historical count of salary adjustments and performance merit raises logged for this profile.
+                                </div>
+                                <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -1390,7 +2451,7 @@ export function EmployeeDossier({
                       </div>
 
                       {/* Hike progression histories */}
-                      <div className="bg-slate-50/50 border border-slate-200/60 rounded-2xl p-6 flex flex-col justify-between">
+                      <div className="bg-white/90 border border-slate-200/60 rounded-2xl p-6 flex flex-col justify-between shadow-2xs">
                         <div>
                           <div className="flex items-center justify-between mb-3">
                             <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Raise Progression</span>
@@ -1404,7 +2465,7 @@ export function EmployeeDossier({
                                 });
                                 setIsIncrementModalOpen(true);
                               }}
-                              className="text-[9px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200/50 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
+                              className="text-[9px] font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow-2xs"
                             >
                               Log Raise
                             </button>
@@ -1419,13 +2480,13 @@ export function EmployeeDossier({
                               activeDirectoryEmployee.incrementHistory.map((inc, index) => {
                                 const increasePct = Math.round(((inc.newSalary - inc.previousSalary) / inc.previousSalary) * 100);
                                 return (
-                                  <div key={index} className="bg-white p-3 rounded-xl border border-slate-200/60 text-xs">
+                                  <div key={index} className="bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs shadow-2xs">
                                     <div className="flex justify-between text-[10px] text-slate-400 font-mono font-bold mb-1">
                                       <span>{inc.date}</span>
-                                      <span className="text-emerald-600">+{increasePct}% Hike</span>
+                                      <span className="text-slate-800">+{increasePct}% Hike</span>
                                     </div>
-                                    <div className="font-bold font-mono text-slate-700">
-                                      ${inc.previousSalary.toLocaleString()} → <span className="text-blue-600">${inc.newSalary.toLocaleString()}</span>
+                                    <div className="font-bold font-mono text-slate-800">
+                                      ${inc.previousSalary.toLocaleString()} → <span className="text-slate-900">${inc.newSalary.toLocaleString()}</span>
                                     </div>
                                   </div>
                                 );
@@ -1438,7 +2499,7 @@ export function EmployeeDossier({
                     </div>
 
                     {/* OKRs & Performance */}
-                    <div className="bg-slate-50/40 border border-slate-200/50 rounded-2xl p-5 space-y-4">
+                    <div className="bg-white/90 border border-slate-200/60 rounded-2xl p-5 space-y-4 shadow-2xs">
                       <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">Objective Key Results (OKRs) - Q3 2026</h4>
                       <div className="space-y-4">
                         {[
@@ -1451,9 +2512,9 @@ export function EmployeeDossier({
                               <span>{okr.title}</span>
                               <span className="font-mono font-bold text-slate-800">{okr.pct}% completed</span>
                             </div>
-                            <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-1.5 w-full bg-slate-200/40 rounded-full overflow-hidden">
                               <div
-                                className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-1000"
+                                className="h-full bg-slate-900 rounded-full transition-all duration-1000"
                                 style={{ width: `${okr.pct}%` }}
                               />
                             </div>
@@ -1466,10 +2527,10 @@ export function EmployeeDossier({
                     {/* KPI Cycle List */}
                     <div className="space-y-3 pt-2">
                       <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">Assessments Cycle History</h3>
-                      <div className="overflow-x-auto rounded-xl border border-slate-200/60 bg-white shadow-xs">
+                      <div className="overflow-x-auto rounded-xl border border-slate-200/60 bg-white/90 shadow-2xs">
                         <table className="w-full text-left border-collapse">
                           <thead>
-                            <tr className="bg-slate-50 border-b border-slate-200/60">
+                            <tr className="bg-slate-50 border-b border-slate-200">
                               <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-16">Seq</th>
                               <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Assessment Cycle</th>
                               <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Attendance Ratio</th>
@@ -1481,14 +2542,14 @@ export function EmployeeDossier({
                               .filter(p => p.employeeId === activeDirectoryEmployee.id)
                               .sort((a, b) => b.month.localeCompare(a.month))
                               .map((p, idx) => (
-                                <tr key={idx} className="hover:bg-slate-50/20 transition-colors">
+                                <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                                   <td className="px-4 py-3 text-xs text-slate-400 font-bold font-mono">{idx + 1}</td>
-                                  <td className="px-4 py-3 text-xs font-bold text-slate-700 font-mono">{p.month}</td>
+                                  <td className="px-4 py-3 text-xs font-bold text-slate-800 font-mono">{p.month}</td>
                                   <td className="px-4 py-3 text-xs text-slate-600 font-mono">{p.attendance}% attendance</td>
                                   <td className="px-4 py-3 text-right">
                                     <button
                                       onClick={() => handleQuickAnalyze(p.month)}
-                                      className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-750 border border-blue-200/40 rounded-lg text-[10px] font-bold cursor-pointer transition-all"
+                                      className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 rounded-lg text-[10px] font-bold cursor-pointer transition-all shadow-2xs"
                                     >
                                       Run AI Audit
                                     </button>
@@ -1509,12 +2570,12 @@ export function EmployeeDossier({
                     
                     {/* Message list */}
                     <div className="flex-1 overflow-y-auto space-y-4 pr-1 mb-4 no-scrollbar">
-                      <div className="flex gap-3 bg-slate-50 border border-slate-200/60 p-4 rounded-2xl shadow-xs">
-                        <div className="w-8 h-8 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0">
+                      <div className="flex gap-3 bg-white/90 border border-slate-200/60 p-4 rounded-2xl shadow-2xs">
+                        <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-800 shrink-0">
                           <Bot className="w-4 h-4" />
                         </div>
                         <div className="space-y-1">
-                          <span className="text-[10px] font-mono text-blue-600 font-bold">Gemini Talent Co-pilot</span>
+                          <span className="text-[10px] font-mono text-slate-800 font-bold">Gemini Talent Co-pilot</span>
                           <p className="text-xs text-slate-700 leading-relaxed font-medium">
                             Hello! I am your Gemini Technical Success advisor. I can analyze {activeDirectoryEmployee.name}'s technology stacks, active sprint issues, GPG credentials compliance, or draft custom promotion recommendations. Let's begin!
                           </p>
@@ -1526,19 +2587,19 @@ export function EmployeeDossier({
                           key={index}
                           className={`flex gap-3 p-4 rounded-2xl ${
                             msg.sender === "user"
-                              ? "bg-slate-900 text-white ml-8 shadow-sm border border-slate-950"
-                              : "bg-slate-50 border border-slate-200/60 mr-8 shadow-xs"
+                              ? "bg-slate-900 text-white ml-8 shadow-sm border border-slate-800"
+                              : "bg-white/90 border border-slate-200/60 mr-8 shadow-2xs"
                           }`}
                         >
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
                             msg.sender === "user"
-                              ? "bg-white/20 text-white"
-                              : "bg-blue-50 border border-blue-200 text-blue-600"
+                              ? "bg-slate-800 text-slate-100"
+                              : "bg-slate-100 border border-slate-200 text-slate-800"
                           }`}>
                             {msg.sender === "user" ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                           </div>
                           <div className="space-y-1 w-full min-w-0">
-                            <span className={`text-[9px] font-mono font-bold uppercase tracking-wider block ${msg.sender === "user" ? "text-slate-300" : "text-blue-600"}`}>
+                            <span className={`text-[9px] font-mono font-bold uppercase tracking-wider block ${msg.sender === "user" ? "text-slate-300" : "text-slate-700"}`}>
                               {msg.sender === "user" ? "Corporate Admin" : "Gemini Talent Advisor"}
                             </span>
                             <p className="text-xs leading-relaxed whitespace-pre-line font-sans font-medium break-words">
@@ -1549,16 +2610,16 @@ export function EmployeeDossier({
                       ))}
 
                       {isCopilotLoading && (
-                        <div className="flex gap-3 bg-slate-50 border border-slate-150 p-4 rounded-2xl mr-8">
-                          <div className="w-8 h-8 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0 animate-bounce">
+                        <div className="flex gap-3 bg-white/90 border border-slate-200/60 p-4 rounded-2xl mr-8">
+                          <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-800 shrink-0 animate-bounce">
                             <Bot className="w-4 h-4" />
                           </div>
                           <div className="space-y-1">
-                            <span className="text-[9px] font-mono font-bold text-slate-450 uppercase tracking-widest">Compiling engineering logs...</span>
+                            <span className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-widest">Compiling engineering logs...</span>
                             <div className="flex gap-1.5 py-2">
-                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: "0ms" }} />
-                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: "150ms" }} />
-                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: "300ms" }} />
+                              <span className="w-1.5 h-1.5 rounded-full bg-slate-700 animate-bounce" style={{ animationDelay: "0ms" }} />
+                              <span className="w-1.5 h-1.5 rounded-full bg-slate-700 animate-bounce" style={{ animationDelay: "150ms" }} />
+                              <span className="w-1.5 h-1.5 rounded-full bg-slate-700 animate-bounce" style={{ animationDelay: "300ms" }} />
                             </div>
                           </div>
                         </div>
@@ -1566,7 +2627,7 @@ export function EmployeeDossier({
                     </div>
 
                     {/* Recommendation Quick Chips */}
-                    <div className="flex gap-2 overflow-x-auto pb-3 pt-2 border-t border-dashed border-slate-150 no-scrollbar">
+                    <div className="flex gap-2 overflow-x-auto pb-3 pt-2 border-t border-dashed border-slate-200 no-scrollbar">
                       {[
                         { text: "Draft Promotion Letter", prompt: "Write a detailed technical promotion recommendation for this developer advocating to transition them to Level-3 Senior Staff Engineer." },
                         { text: "Suggest Technologies", prompt: "Analyze the current skill set and active sprint metrics to suggest 3 next-gen technologies this developer can learn to align with Q4 R&D goals." },
@@ -1577,7 +2638,7 @@ export function EmployeeDossier({
                           type="button"
                           onClick={() => handleSendCopilotMessage(preset.prompt)}
                           disabled={isCopilotLoading}
-                          className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-800 rounded-xl text-[10px] font-bold cursor-pointer shrink-0 transition-colors disabled:opacity-50 font-display"
+                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 hover:text-slate-900 rounded-xl text-[10px] font-bold cursor-pointer shrink-0 transition-colors disabled:opacity-50 font-display shadow-2xs"
                         >
                           {preset.text}
                         </button>
@@ -1598,12 +2659,12 @@ export function EmployeeDossier({
                         value={copilotInput}
                         onChange={(e) => setCopilotInput(e.target.value)}
                         disabled={isCopilotLoading}
-                        className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 focus:border-blue-500 text-slate-800 text-xs rounded-xl focus:outline-none transition-all placeholder:text-slate-400 disabled:opacity-50 font-medium font-sans"
+                        className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800/10 focus:bg-white text-slate-800 text-xs rounded-xl focus:outline-none transition-all placeholder:text-slate-400 disabled:opacity-50 font-medium font-sans"
                       />
                       <button
                         type="submit"
                         disabled={isCopilotLoading || !copilotInput.trim()}
-                        className="w-11 h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex items-center justify-center cursor-pointer transition-all disabled:opacity-40"
+                        className="w-11 h-11 bg-slate-900 hover:bg-slate-800 text-white rounded-xl flex items-center justify-center cursor-pointer transition-all disabled:opacity-40"
                       >
                         <Send className="w-4 h-4" />
                       </button>
@@ -1618,9 +2679,9 @@ export function EmployeeDossier({
           </div>
 
           {/* Footer synchronized brand details */}
-          <div className="border-t border-dashed border-slate-150 pt-5 mt-8 flex flex-col sm:flex-row justify-between items-center text-[9px] text-slate-400 font-bold uppercase tracking-wider gap-3 font-mono">
+          <div className="border-t border-dashed border-slate-200 pt-5 mt-8 flex flex-col sm:flex-row justify-between items-center text-[9px] text-slate-400 font-bold uppercase tracking-wider gap-3 font-mono">
             <span>R&D TALENT CONSOLE SYNCED</span>
-            <span className="text-blue-500/80">Continuous Staging Sync</span>
+            <span className="text-slate-500">Continuous Staging Sync</span>
           </div>
 
         </div>

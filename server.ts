@@ -42,7 +42,11 @@ app.get("/api/employees", async (req, res) => {
 // Create Employee
 app.post("/api/employees", async (req, res) => {
   try {
-    const { name, role, department, team, email, id, leaveBalance, joiningDate, salary, incrementHistory, phone, emergencyContact, notes } = req.body;
+    const {
+      name, role, department, team, email, id, leaveBalance, joiningDate, salary, incrementHistory, phone, emergencyContact, notes, managerNotes,
+      bloodGroup, dob, gender, maritalStatus, nationality, personalEmail, currentAddress, permanentAddress, highestQualification, experienceYears,
+      nationalId, taxId, bankName, bankAccountNumber, bankIfscCode, probationPeriod, workLocation, employmentType
+    } = req.body;
     if (!name || !role || !department || !team || !email) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -60,7 +64,26 @@ app.post("/api/employees", async (req, res) => {
       incrementHistory,
       phone,
       emergencyContact,
-      notes
+      notes,
+      managerNotes,
+      bloodGroup,
+      dob,
+      gender,
+      maritalStatus,
+      nationality,
+      personalEmail,
+      currentAddress,
+      permanentAddress,
+      highestQualification,
+      experienceYears,
+      nationalId,
+      taxId,
+      bankName,
+      bankAccountNumber,
+      bankIfscCode,
+      probationPeriod,
+      workLocation,
+      employmentType
     });
     res.status(201).json(newEmp);
   } catch (err: any) {

@@ -70,7 +70,21 @@ const initialEmployees: Employee[] = [
     "team": "Custom",
     "email": "karen.young@nexus.com",
     "active": true,
-    "createdAt": "2025-09-15T00:00:00.000Z"
+    "createdAt": "2025-09-15T00:00:00.000Z",
+    "managerNotes": [
+      {
+        "id": "note-1",
+        "author": "Marcus Aurelius (Lead Sales Manager)",
+        "text": "Completed the Q1 Sales bootcamp with high scores. Shows incredible potential for key accounts.",
+        "createdAt": "2026-03-10T10:00:00.000Z"
+      },
+      {
+        "id": "note-2",
+        "author": "Julius Caesar (VP Operations)",
+        "text": "Pioneered a new lead-routing script that improved general conversion speed by 15%. Highly disciplined worker.",
+        "createdAt": "2026-05-15T14:30:00.000Z"
+      }
+    ]
   },
   {
     "id": "emp-2",
@@ -80,7 +94,15 @@ const initialEmployees: Employee[] = [
     "team": "Custom",
     "email": "joseph.green@nexus.com",
     "active": true,
-    "createdAt": "2025-04-15T00:00:00.000Z"
+    "createdAt": "2025-04-15T00:00:00.000Z",
+    "managerNotes": [
+      {
+        "id": "note-3",
+        "author": "Ada Lovelace (Technical Manager)",
+        "text": "Resolved a critical bottleneck in our primary DB index query. Remarkable attention to algorithmic efficiency.",
+        "createdAt": "2026-04-20T09:15:00.000Z"
+      }
+    ]
   },
   {
     "id": "emp-3",
@@ -1660,7 +1682,28 @@ class DatabaseService {
       incrementHistory: emp.incrementHistory || [],
       phone: emp.phone,
       emergencyContact: emp.emergencyContact,
-      notes: emp.notes
+      notes: emp.notes,
+      managerNotes: emp.managerNotes || [],
+
+      // Extended Personal & HR fields
+      bloodGroup: emp.bloodGroup,
+      dob: emp.dob,
+      gender: emp.gender,
+      maritalStatus: emp.maritalStatus,
+      nationality: emp.nationality,
+      personalEmail: emp.personalEmail,
+      currentAddress: emp.currentAddress,
+      permanentAddress: emp.permanentAddress,
+      highestQualification: emp.highestQualification,
+      experienceYears: emp.experienceYears,
+      nationalId: emp.nationalId,
+      taxId: emp.taxId,
+      bankName: emp.bankName,
+      bankAccountNumber: emp.bankAccountNumber,
+      bankIfscCode: emp.bankIfscCode,
+      probationPeriod: emp.probationPeriod,
+      workLocation: emp.workLocation,
+      employmentType: emp.employmentType
     };
 
     if (this.db && this.dbStatus.connectionType === "mongodb") {

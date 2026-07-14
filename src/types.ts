@@ -5,6 +5,13 @@ export interface IncrementRecord {
   remarks?: string;
 }
 
+export interface ManagerNote {
+  id: string;
+  author: string;
+  text: string;
+  createdAt: string; // ISO datetime
+}
+
 export interface Employee {
   id: string;
   name: string;
@@ -25,6 +32,27 @@ export interface Employee {
   phone?: string;
   emergencyContact?: string;
   notes?: string;
+  managerNotes?: ManagerNote[];
+
+  // Extensive Personal & HR Details
+  bloodGroup?: string;
+  dob?: string;
+  gender?: string;
+  maritalStatus?: string;
+  nationality?: string;
+  personalEmail?: string;
+  currentAddress?: string;
+  permanentAddress?: string;
+  highestQualification?: string;
+  experienceYears?: number;
+  nationalId?: string;
+  taxId?: string;
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankIfscCode?: string;
+  probationPeriod?: string;
+  workLocation?: string;
+  employmentType?: string;
 }
 
 export interface PerformanceRecord {
