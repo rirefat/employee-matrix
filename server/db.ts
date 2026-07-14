@@ -1718,12 +1718,41 @@ class DatabaseService {
 
   public async updateEmployee(id: string, emp: Partial<Employee>): Promise<Employee | null> {
     await this.ensureInitialized();
+    const newId = emp.id;
+    const hasIdChanged = newId && newId !== id;
+
+    if (hasIdChanged) {
+      if (this.db && this.dbStatus.connectionType === "mongodb") {
+        const existing = await this.db.collection("employees").findOne({ id: newId });
+        if (existing) {
+          throw new Error(`Employee with ID "${newId}" already exists in the system.`);
+        }
+      } else {
+        const data = this.readLocal();
+        const existing = data.employees.find(e => e.id.toLowerCase() === newId.toLowerCase());
+        if (existing) {
+          throw new Error(`Employee with ID "${newId}" already exists in the system.`);
+        }
+      }
+    }
+
     if (this.db && this.dbStatus.connectionType === "mongodb") {
       await this.db.collection("employees").updateOne(
         { id: id },
         { $set: emp }
       );
-      const doc = await this.db.collection("employees").findOne({ id: id });
+      if (hasIdChanged) {
+        // Cascade update associated tables
+        await this.db.collection("performance_records").updateMany(
+          { employeeId: id },
+          { $set: { employeeId: newId } }
+        );
+        await this.db.collection("monthly_reports").updateMany(
+          { employeeId: id },
+          { $set: { employeeId: newId } }
+        );
+      }
+      const doc = await this.db.collection("employees").findOne({ id: newId || id });
       if (!doc) return null;
       const { _id, ...rest } = doc;
       return { ...rest, id: rest.id || _id.toString() } as Employee;
@@ -1732,6 +1761,15 @@ class DatabaseService {
       const idx = data.employees.findIndex(e => e.id === id);
       if (idx === -1) return null;
       data.employees[idx] = { ...data.employees[idx], ...emp };
+      if (hasIdChanged) {
+        // Cascade update associated local tables
+        data.performance = data.performance.map(p => 
+          p.employeeId === id ? { ...p, employeeId: newId } : p
+        );
+        data.reports = data.reports.map(r => 
+          r.employeeId === id ? { ...r, employeeId: newId } : r
+        );
+      }
       this.writeLocal(data);
       return data.employees[idx];
     }

@@ -889,8 +889,13 @@ export function EmployeeDossier({
   return (
     <div className="flex-1 w-full px-6 lg:px-10 xl:px-12 py-8 overflow-y-auto overflow-x-hidden bg-transparent text-slate-800 relative h-[calc(100vh-4rem)] font-sans">
       
-      {/* Premium subtle grid overlay */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(148,163,184,0.02)_1px,transparent_1px)] bg-[size:100%_40px] pointer-events-none" />
+      {/* Premium subtle grid overlay with smooth and elegant gradients */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.075)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.075)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
+      
+      {/* Decorative gradient glowing spots matching the performance portal's signature aesthetic */}
+      <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-gradient-to-tr from-blue-500/8 to-indigo-500/8 blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 -right-40 w-96 h-96 rounded-full bg-gradient-to-bl from-indigo-500/8 to-purple-500/8 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-10 left-1/3 w-80 h-80 rounded-full bg-gradient-to-br from-emerald-500/4 to-teal-500/8 blur-3xl pointer-events-none" />
 
       {/* Main Container Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full relative z-10">
@@ -978,31 +983,45 @@ export function EmployeeDossier({
           </div>
 
           {/* Left Main Profile Card - Reimagined with Premium Vercel/Linear elegance */}
-          <div className="bg-white/70 backdrop-blur-md border border-slate-200/60 rounded-2xl p-6 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all duration-300 flex flex-col items-center text-center relative overflow-hidden group">
+          <div className="bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-3xl p-6.5 shadow-xs hover:shadow-md hover:border-slate-300 transition-all duration-300 flex flex-col items-center text-center relative overflow-hidden group">
             
+            {/* Atmospheric color nodes under glass to enhance depth */}
+            <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-gradient-to-br from-blue-500/8 to-indigo-600/8 blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-24 -left-24 w-48 h-48 rounded-full bg-gradient-to-br from-indigo-500/4 to-purple-500/8 blur-3xl pointer-events-none" />
+            <div className="absolute top-1/2 left-1/4 w-32 h-32 rounded-full bg-emerald-500/4 blur-3xl pointer-events-none" />
+
+            {/* Creative technical background gridlines */}
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.04)_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
+            
+            {/* Technical decorative crosshairs and corner lines for a premium aesthetic */}
+            <div className="absolute top-3 left-3 w-1.5 h-1.5 border-t border-l border-slate-300 pointer-events-none" />
+            <div className="absolute top-3 right-3 w-1.5 h-1.5 border-t border-r border-slate-300 pointer-events-none" />
+            <div className="absolute bottom-3 left-3 w-1.5 h-1.5 border-b border-l border-slate-300 pointer-events-none" />
+            <div className="absolute bottom-3 right-3 w-1.5 h-1.5 border-b border-r border-slate-300 pointer-events-none" />
+
             {/* Elegant glass active status pill */}
-            <div className="absolute top-4 left-4 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-slate-50 border border-slate-200 text-emerald-700 font-mono uppercase tracking-wider shadow-xs">
+            <div className="absolute top-4 left-4 flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-bold bg-slate-50/90 border border-slate-200 text-emerald-700 font-mono uppercase tracking-wider shadow-2xs relative z-10">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
               Active R&D Sync
             </div>
 
             <button 
               onClick={() => showToast(`Dossier assessment completeness at ${profileCompletion}%`, "success")}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 transition-colors cursor-pointer"
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-950 transition-colors cursor-pointer relative z-10"
             >
               <Info className="w-4 h-4" />
             </button>
 
             {/* Premium Avatar Visualizer with Double Halo Gradient */}
             <div className="relative mt-8 mb-5">
-              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 opacity-10 blur-md scale-110" />
+              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 opacity-12 blur-md scale-110" />
               <svg className="w-24 h-24 transform -rotate-90">
                 <circle
                   cx="48"
                   cy="48"
                   r="44"
-                  className="text-slate-200/50"
-                  strokeWidth="2.5"
+                  className="text-slate-200/40"
+                  strokeWidth="2"
                   stroke="currentColor"
                   fill="transparent"
                 />
@@ -1010,7 +1029,7 @@ export function EmployeeDossier({
                   cx="48"
                   cy="48"
                   r="44"
-                  className="text-slate-900 transition-all duration-1000 ease-out"
+                  className="text-indigo-600 transition-all duration-1000 ease-out"
                   strokeWidth="2.5"
                   strokeDasharray={276.46}
                   strokeDashoffset={276.46 - (276.46 * profileCompletion) / 100}
@@ -1019,7 +1038,7 @@ export function EmployeeDossier({
                   fill="transparent"
                 />
               </svg>
-              <div className="absolute inset-2 rounded-full overflow-hidden bg-slate-50 border border-slate-200 p-1">
+              <div className="absolute inset-2 rounded-full overflow-hidden bg-slate-50 border border-slate-200/80 p-1 shadow-inner">
                 <img
                   src={get3DAvatarUrl(activeDirectoryEmployee.name)}
                   alt={activeDirectoryEmployee.name}
@@ -1029,108 +1048,134 @@ export function EmployeeDossier({
             </div>
 
             {/* Profile Identifiers & Meta */}
-            <div className="space-y-1.5 w-full">
-              <h3 className="text-base font-bold text-slate-900 tracking-tight font-display">{activeDirectoryEmployee.name}</h3>
-              <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-md inline-block">
-                ID: {activeDirectoryEmployee.id}
-              </p>
-              <p className="text-xs font-semibold text-slate-800 font-mono mt-1">{activeDirectoryEmployee.role}</p>
-              <p className="text-[11px] text-slate-500 font-medium">{activeDirectoryEmployee.email}</p>
-              <p className="text-[10px] text-slate-400 font-mono">Hub: {activeDirectoryEmployee.team || "Core Engineering"}</p>
+            <div className="space-y-2 w-full flex flex-col items-center">
+              <h3 className="text-lg font-bold text-slate-900 tracking-tight font-display">{activeDirectoryEmployee.name}</h3>
+              
+              <div className="inline-flex items-center gap-1 bg-slate-50 border border-slate-200/60 px-2.5 py-0.5 rounded-lg text-[10px] font-mono font-medium text-slate-500 select-none shadow-2xs">
+                <span className="text-slate-400 font-bold">UID //</span> {activeDirectoryEmployee.id}
+              </div>
+
+              <div className="pt-1.5 flex flex-col items-center gap-1">
+                <span className="text-xs font-semibold text-slate-800 bg-slate-100 border border-slate-200/50 px-3 py-1 rounded-full font-mono">
+                  {activeDirectoryEmployee.role}
+                </span>
+                <span className="text-[11px] text-slate-500 font-medium select-all mt-0.5">{activeDirectoryEmployee.email}</span>
+                
+                <div className="mt-2 flex items-center gap-1.5 text-[9px] font-mono font-semibold text-slate-400 bg-slate-50 border border-slate-200/30 rounded-full px-2.5 py-0.5">
+                  <span className="w-1 h-1 bg-slate-400 rounded-full" />
+                  <span>Hub: {activeDirectoryEmployee.team || "Core Engineering"}</span>
+                </div>
+              </div>
             </div>
 
-            <div className="w-full border-t border-dashed border-slate-200 my-5" />
+            {/* Modern gradient accent separator */}
+            <div className="w-full h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent my-6" />
 
             {/* Clean Progress Tracker */}
-            <div className="w-full space-y-1.5 text-left relative">
-              <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+            <div className="w-full space-y-2 text-left relative">
+              <div className="flex justify-between text-[9px] font-extrabold text-slate-400 uppercase tracking-widest font-mono">
                 <span>Dossier Quality</span>
-                <span className="text-slate-900 font-bold">{profileCompletion}%</span>
+                <span className="text-slate-900 font-black">{profileCompletion}%</span>
               </div>
-              <div className="h-1.5 w-full bg-slate-200/40 rounded-full overflow-hidden">
+              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden p-[1px] border border-slate-200/30">
                 <div
-                  className="h-full bg-slate-900 rounded-full transition-all duration-1000"
+                  className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-1000 shadow-[0_0_8px_rgba(79,70,229,0.3)]"
                   style={{ width: `${profileCompletion}%` }}
                 />
               </div>
 
               {/* Collapsible Dossier Tips Checklist */}
               {profileCompletion < 100 ? (
-                <div className="mt-3 bg-slate-50 border border-slate-200/60 p-2.5 rounded-xl text-left space-y-1.5">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-1">
-                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider font-mono flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-indigo-500 animate-pulse" /> Improve Quality
+                <div className="mt-4 bg-slate-50/50 backdrop-blur-xs border border-slate-200/60 p-3.5 rounded-2xl text-left space-y-2">
+                  <div className="flex items-center justify-between border-b border-slate-150 pb-1.5">
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider font-mono flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-indigo-500" /> Improve Quality
                     </span>
-                    <span className="text-[8px] font-bold text-amber-600 bg-amber-50 px-1 rounded uppercase font-mono">
+                    <span className="text-[8px] font-bold text-amber-700 bg-amber-50 border border-amber-100/60 px-1.5 py-0.5 rounded uppercase font-mono">
                       Missing Fields
                     </span>
                   </div>
-                  <div className="space-y-1 max-h-[100px] overflow-y-auto no-scrollbar">
+                  <div className="space-y-1.5 max-h-[120px] overflow-y-auto no-scrollbar">
                     {!activeDirectoryEmployee.phone && (
                       <button
                         onClick={() => handleOpenEditEmployee(activeDirectoryEmployee)}
-                        className="w-full text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-white p-1 rounded border border-transparent hover:border-slate-200 transition-all flex items-center gap-1.5 text-left cursor-pointer"
+                        className="w-full text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-white hover:shadow-2xs p-1.5 rounded-lg border border-transparent hover:border-slate-200/80 transition-all flex items-center justify-between text-left cursor-pointer group/item"
                       >
-                        <Plus className="w-2.5 h-2.5 text-indigo-500 shrink-0" />
-                        Add Phone (+12.5%)
+                        <span className="flex items-center gap-1.5">
+                          <Plus className="w-3 h-3 text-indigo-500 shrink-0" />
+                          Add Phone
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 group-hover/item:text-indigo-500 font-bold">+12.5%</span>
                       </button>
                     )}
                     {!activeDirectoryEmployee.notes && (
                       <button
                         onClick={() => handleOpenEditEmployee(activeDirectoryEmployee)}
-                        className="w-full text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-white p-1 rounded border border-transparent hover:border-slate-200 transition-all flex items-center gap-1.5 text-left cursor-pointer"
+                        className="w-full text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-white hover:shadow-2xs p-1.5 rounded-lg border border-transparent hover:border-slate-200/80 transition-all flex items-center justify-between text-left cursor-pointer group/item"
                       >
-                        <Plus className="w-2.5 h-2.5 text-indigo-500 shrink-0" />
-                        Add R&D notes (+12.5%)
+                        <span className="flex items-center gap-1.5">
+                          <Plus className="w-3 h-3 text-indigo-500 shrink-0" />
+                          Add R&D notes
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 group-hover/item:text-indigo-500 font-bold">+12.5%</span>
                       </button>
                     )}
                     {sshKeys.length === 0 && (
                       <button
                         onClick={() => setActiveTab("dev_env")}
-                        className="w-full text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-white p-1 rounded border border-transparent hover:border-slate-200 transition-all flex items-center gap-1.5 text-left cursor-pointer"
+                        className="w-full text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-white hover:shadow-2xs p-1.5 rounded-lg border border-transparent hover:border-slate-200/80 transition-all flex items-center justify-between text-left cursor-pointer group/item"
                       >
-                        <Plus className="w-2.5 h-2.5 text-indigo-500 shrink-0" />
-                        Add SSH Key (+12.5%)
+                        <span className="flex items-center gap-1.5">
+                          <Plus className="w-3 h-3 text-indigo-500 shrink-0" />
+                          Add SSH Key
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 group-hover/item:text-indigo-500 font-bold">+12.5%</span>
                       </button>
                     )}
                     {!activeDirectoryEmployee.salary && (
                       <button
                         onClick={() => handleOpenEditEmployee(activeDirectoryEmployee)}
-                        className="w-full text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-white p-1 rounded border border-transparent hover:border-slate-200 transition-all flex items-center gap-1.5 text-left cursor-pointer"
+                        className="w-full text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-white hover:shadow-2xs p-1.5 rounded-lg border border-transparent hover:border-slate-200/80 transition-all flex items-center justify-between text-left cursor-pointer group/item"
                       >
-                        <Plus className="w-2.5 h-2.5 text-indigo-500 shrink-0" />
-                        Set Salary (+12.5%)
+                        <span className="flex items-center gap-1.5">
+                          <Plus className="w-3 h-3 text-indigo-500 shrink-0" />
+                          Set Salary
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 group-hover/item:text-indigo-500 font-bold">+12.5%</span>
                       </button>
                     )}
                     {!activeDirectoryEmployee.bloodGroup && (
                       <button
                         onClick={() => handleOpenEditEmployee(activeDirectoryEmployee)}
-                        className="w-full text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-white p-1 rounded border border-transparent hover:border-slate-200 transition-all flex items-center gap-1.5 text-left cursor-pointer"
+                        className="w-full text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-white hover:shadow-2xs p-1.5 rounded-lg border border-transparent hover:border-slate-200/80 transition-all flex items-center justify-between text-left cursor-pointer group/item"
                       >
-                        <Plus className="w-2.5 h-2.5 text-indigo-500 shrink-0" />
-                        Set Blood Group
+                        <span className="flex items-center gap-1.5">
+                          <Plus className="w-3 h-3 text-indigo-500 shrink-0" />
+                          Set Blood Group
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400 group-hover/item:text-indigo-500 font-bold">Audit</span>
                       </button>
                     )}
                   </div>
                 </div>
               ) : (
-                <div className="mt-2.5 bg-emerald-50 border border-emerald-200/50 p-2.5 rounded-xl text-left flex items-center gap-2">
-                  <div className="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center shrink-0">
-                    <Check className="w-2.5 h-2.5 text-white stroke-[3px]" />
+                <div className="mt-3 bg-emerald-50/60 border border-emerald-200/50 p-3 rounded-2xl text-left flex items-center gap-2.5">
+                  <div className="w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center shrink-0 shadow-xs">
+                    <Check className="w-3 h-3 text-white stroke-[3px]" />
                   </div>
                   <div>
                     <span className="block text-[9px] font-black text-emerald-800 uppercase tracking-widest font-mono">Dossier Complete</span>
-                    <p className="text-[9px] text-emerald-600 leading-none">Passed HR administrative audit.</p>
+                    <p className="text-[10px] text-emerald-600/90 leading-tight">Passed HR administrative audit.</p>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Compact Action Panel with Elegant Labelings */}
-            <div className="flex items-center justify-center gap-2 w-full border-t border-dashed border-slate-200 pt-4 mt-5">
+            {/* Compact Action Panel with Elegant Labelings - Redesigned as a Premium utility dock */}
+            <div className="flex items-center justify-center gap-2.5 w-full border-t border-slate-100 pt-4 mt-6">
               <button
                 onClick={() => handleOpenEditEmployee(activeDirectoryEmployee)}
-                className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 transition-all cursor-pointer border border-slate-200 text-[10px] font-bold"
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 hover:text-slate-900 text-slate-700 transition-all cursor-pointer border border-slate-200 hover:border-slate-300 text-[10px] font-bold shadow-2xs active:scale-98"
                 title="Edit Developer Information"
               >
                 <Edit3 className="w-3 h-3" /> Edit
@@ -1144,14 +1189,14 @@ export function EmployeeDossier({
                   });
                   setIsIncrementModalOpen(true);
                 }}
-                className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 hover:text-slate-900 transition-all cursor-pointer border border-slate-300 text-[10px] font-bold"
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-800 transition-all cursor-pointer border border-indigo-150 text-[10px] font-bold shadow-2xs active:scale-98"
                 title="Log Annual Hike"
               >
                 <TrendingUp className="w-3 h-3" /> Hike
               </button>
               <button
                 onClick={() => handleDeleteEmployeeClick(activeDirectoryEmployee)}
-                className="p-2 rounded-xl bg-rose-50/40 hover:bg-rose-100/60 text-rose-600 hover:text-rose-700 transition-all cursor-pointer border border-rose-200/30"
+                className="p-2.5 rounded-xl bg-rose-50/50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 transition-all cursor-pointer border border-rose-200/40 active:scale-95"
                 title="De-register Developer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -1161,7 +1206,7 @@ export function EmployeeDossier({
           </div>
 
           {/* Left Vertical Navigation tabs (Sleeker, Border-anchored list design with check indicators) */}
-          <div className="bg-white/70 backdrop-blur-md border border-slate-200/60 rounded-2xl p-3 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all duration-300 flex flex-col gap-1.5">
+          <div className="bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-3xl p-3.5 shadow-2xs hover:shadow-md transition-all duration-300 flex flex-col gap-1.5">
             {[
               { id: "profile", label: "Developer Profile", isCompleted: isProfileComplete, icon: <User className="w-3.5 h-3.5" /> },
               { id: "skills", label: "Tech Stack & Skills", isCompleted: isSkillsComplete, icon: <Code2 className="w-3.5 h-3.5" /> },
@@ -1178,29 +1223,29 @@ export function EmployeeDossier({
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs transition-all duration-200 cursor-pointer text-left border ${
+                  className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-xs transition-all duration-200 cursor-pointer text-left border ${
                     isSelected
-                      ? "bg-slate-900 border-slate-950 text-white font-semibold shadow-sm"
-                      : "bg-transparent border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                      ? "bg-slate-900 border-slate-950 text-white font-semibold shadow-xs translate-x-1"
+                      : "bg-transparent border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900 hover:translate-x-0.5"
                   }`}
                 >
-                  <span className="flex items-center gap-2 font-medium">
-                    <span className={isSelected ? "text-white" : tab.highlight ? "text-slate-800 font-bold" : "text-slate-400"}>
+                  <span className="flex items-center gap-2.5 font-medium">
+                    <span className={isSelected ? "text-white" : tab.highlight ? "text-indigo-600 font-bold" : "text-slate-400"}>
                       {tab.icon}
                     </span>
-                    <span className={tab.highlight && !isSelected ? "text-slate-800 font-bold" : ""}>
+                    <span className={tab.highlight && !isSelected ? "text-indigo-600 font-extrabold" : ""}>
                       {tab.label}
                     </span>
                   </span>
                   
                   {tab.isCompleted ? (
                     <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
-                      isSelected ? "bg-white/10 text-white" : "bg-emerald-50 border border-emerald-100 text-emerald-600 shadow-2xs"
+                      isSelected ? "bg-white/10 text-white" : "bg-emerald-50/80 border border-emerald-100 text-emerald-600 shadow-2xs"
                     }`}>
-                      <Check className="w-2.5 h-2.5 stroke-[3px]" />
+                      <Check className="w-2.5 h-2.5 stroke-[3.5px]" />
                     </div>
                   ) : (
-                    <div className="w-4 h-4 rounded-full border border-slate-200 shrink-0" />
+                    <div className="w-4 h-4 rounded-full border border-slate-200/80 shrink-0" />
                   )}
                 </button>
               );
@@ -1210,13 +1255,26 @@ export function EmployeeDossier({
         </div>
 
         {/* RIGHT COLUMN: Tab Panel Display Panel - High End Visual Polish */}
-        <div className="lg:col-span-8 bg-white border border-slate-200/60 rounded-2xl p-6 sm:p-8 shadow-2xs hover:shadow-sm transition-all duration-300 flex flex-col justify-between min-h-[700px] relative overflow-hidden">
+        <div className="lg:col-span-8 bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between min-h-[700px] relative overflow-hidden group">
           
-          <div className="w-full">
+          {/* Subtle tech gridlines inside panel */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.03)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none" />
+          
+          {/* Decorative radial gradients under glass */}
+          <div className="absolute -bottom-40 -right-40 w-80 h-80 rounded-full bg-gradient-to-tr from-indigo-500/5 to-purple-500/5 blur-3xl pointer-events-none" />
+          <div className="absolute -top-40 -left-40 w-80 h-80 rounded-full bg-gradient-to-br from-blue-500/4 to-teal-500/4 blur-3xl pointer-events-none" />
+
+          {/* Technical decorative corners */}
+          <div className="absolute top-4 left-4 w-2 h-2 border-t border-l border-slate-300/60 pointer-events-none z-10" />
+          <div className="absolute top-4 right-4 w-2 h-2 border-t border-r border-slate-300/60 pointer-events-none z-10" />
+          <div className="absolute bottom-4 left-4 w-2 h-2 border-b border-l border-slate-300/60 pointer-events-none z-10" />
+          <div className="absolute bottom-4 right-4 w-2 h-2 border-b border-r border-slate-300/60 pointer-events-none z-10" />
+          
+          <div className="w-full relative z-10">
             
             {/* Header Title with quick edit triggers */}
-            <div className="flex items-center justify-between border-b border-dashed border-slate-200 pb-4 mb-6">
-              <h2 className="text-xs font-bold text-slate-400 tracking-widest uppercase font-mono flex items-center gap-2">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6 relative z-10">
+              <h2 className="text-[10px] font-extrabold text-slate-400 tracking-widest uppercase font-mono flex items-center gap-2">
                 {activeTab === "profile" && <User className="w-4 h-4 text-slate-500" />}
                 {activeTab === "skills" && <Code2 className="w-4 h-4 text-slate-500" />}
                 {activeTab === "projects" && <CheckSquare className="w-4 h-4 text-slate-500" />}
@@ -1665,7 +1723,7 @@ export function EmployeeDossier({
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div className="bg-white/90 border border-slate-200/60 p-4 rounded-2xl space-y-2 shadow-2xs relative group cursor-help">
+                        <div className="bg-white/90 border border-slate-200/60 p-4 rounded-2xl space-y-2 shadow-2xs relative">
                           <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Committed Stacks</span>
                           <div className="flex items-baseline gap-1.5">
                             <span className="text-xl font-extrabold text-slate-800 font-mono">18</span>
@@ -1675,17 +1733,9 @@ export function EmployeeDossier({
                             <div className="h-full bg-slate-900 rounded-full" style={{ width: "78%" }} />
                           </div>
                           <span className="text-[9px] text-slate-400 font-medium block">Top Skill: TypeScript</span>
-
-                          {/* Tooltip on hover */}
-                          <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none w-56 left-1/2 -translate-x-1/2">
-                            <div className="bg-slate-950 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
-                              <strong>Committed Stacks:</strong> 18 unique corporate technology skills. Calculated as a ratio relative to target baseline (23 skills, giving a 78% index).
-                            </div>
-                            <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
-                          </div>
                         </div>
 
-                        <div className="bg-white/90 border border-slate-200/60 p-4 rounded-2xl space-y-2 shadow-2xs relative group cursor-help">
+                        <div className="bg-white/90 border border-slate-200/60 p-4 rounded-2xl space-y-2 shadow-2xs relative">
                           <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Sprint Velocity</span>
                           <div className="flex items-baseline gap-1.5">
                             <span className="text-xl font-extrabold text-slate-800 font-mono">38</span>
@@ -1695,17 +1745,9 @@ export function EmployeeDossier({
                             <div className="h-full bg-slate-900 rounded-full" style={{ width: "87%" }} />
                           </div>
                           <span className="text-[9px] text-slate-400 font-medium block">87.5% completion rate</span>
-
-                          {/* Tooltip on hover */}
-                          <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none w-56 left-1/2 -translate-x-1/2">
-                            <div className="bg-slate-950 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
-                              <strong>Sprint Velocity:</strong> Aggregate story points (SP) assigned in the current cycle. Bar shows active completion rate (87.5%).
-                            </div>
-                            <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
-                          </div>
                         </div>
 
-                        <div className="bg-white/90 border border-slate-200/60 p-4 rounded-2xl space-y-2 shadow-2xs relative group cursor-help">
+                        <div className="bg-white/90 border border-slate-200/60 p-4 rounded-2xl space-y-2 shadow-2xs relative">
                           <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Attendance Ratio</span>
                           <div className="flex items-baseline gap-1.5">
                             <span className="text-xl font-extrabold text-slate-800 font-mono">{activeRecord?.attendance || 98}%</span>
@@ -1715,14 +1757,6 @@ export function EmployeeDossier({
                             <div className="h-full bg-slate-900 rounded-full" style={{ width: `${activeRecord?.attendance || 98}%` }} />
                           </div>
                           <span className="text-[9px] text-slate-400 font-medium block">Dhaka Hub Standard Shift</span>
-
-                          {/* Tooltip on hover */}
-                          <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none w-56 left-1/2 -translate-x-1/2">
-                            <div className="bg-slate-950 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
-                              <strong>Attendance Ratio:</strong> Calculated as (Present Days / Total Working Days) * 100 in the active cycle, excluding weekends and holidays.
-                            </div>
-                            <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -1800,13 +1834,6 @@ export function EmployeeDossier({
                                     }`} />
                                   )}
 
-                                  {/* Tooltip on hover */}
-                                  <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-20 pointer-events-none">
-                                    <div className="bg-slate-950/95 text-white text-[10px] py-1 px-2.5 rounded-lg whitespace-nowrap shadow-md border border-slate-800 font-mono">
-                                      Day {cell.dayNumber}: {statusText}
-                                    </div>
-                                    <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
-                                  </div>
                                 </div>
                               );
                             })}
@@ -1857,7 +1884,7 @@ export function EmployeeDossier({
                             </div>
                           </div>
 
-                           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center space-y-1 relative group cursor-help">
+                           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center space-y-1 relative">
                             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider font-mono block">Roster Compliance</span>
                             <span className="text-base font-black font-mono text-slate-900">
                               {daysArray.workingDaysCount > 0 
@@ -1865,16 +1892,6 @@ export function EmployeeDossier({
                                 : "100%"}
                             </span>
                             <p className="text-[9px] text-slate-400">Calculated as Present Days / Working Days in cycle.</p>
-
-                            {/* Tooltip on hover */}
-                            <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none w-56 left-1/2 -translate-x-1/2">
-                              <div className="bg-slate-950 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
-                                <strong>Roster Compliance formula:</strong><br />
-                                ({daysArray.pCount} Present Days / {daysArray.workingDaysCount} Working Days) * 100.<br />
-                                Working days exclude weekends ({daysArray.cells.filter(c => c.status === "Weekend").length} days in cycle).
-                              </div>
-                              <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
-                            </div>
                           </div>
                         </div>
                       </div>
@@ -2093,7 +2110,7 @@ export function EmployeeDossier({
                         </div>
 
                         {/* Premium Visual Rating Card */}
-                        <div className="bg-slate-900 text-white p-5 rounded-3xl relative overflow-hidden shadow-sm border border-slate-800 group cursor-help">
+                        <div className="bg-slate-900 text-white p-5 rounded-3xl relative overflow-hidden shadow-sm border border-slate-800">
                           <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                             <Flame className="w-32 h-32 stroke-[1px]" />
                           </div>
@@ -2103,14 +2120,6 @@ export function EmployeeDossier({
                             <p className="text-[11px] text-slate-300 leading-relaxed">
                               Verified across {Object.values(skillsGrouped).flat().length} corporate technologies. Excellent microservices synergy.
                             </p>
-                          </div>
-
-                          {/* Tooltip on hover */}
-                          <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none w-64 left-1/2 -translate-x-1/2">
-                            <div className="bg-slate-950 text-white text-[10px] py-1.5 px-3 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
-                              <strong>Grade & Title Derivation:</strong> Role grading matches corporate taxonomy based on unique technical skill tags ({Object.values(skillsGrouped).flat().length} tags) combined with the developer seniority index.
-                            </div>
-                            <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
                           </div>
                         </div>
 
@@ -2135,18 +2144,10 @@ export function EmployeeDossier({
                           Refactoring monolithic session controls into HttpOnly secure cookies. Integrated to containerized environments on Cloud Run.
                         </p>
                       </div>
-                      <div className="bg-slate-50 px-4 py-3 rounded-xl border border-slate-200 text-center shrink-0 min-w-[120px] shadow-2xs relative group cursor-help">
+                      <div className="bg-slate-50 px-4 py-3 rounded-xl border border-slate-200 text-center shrink-0 min-w-[120px] shadow-2xs relative">
                         <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Velocity Target</span>
                         <span className="block text-lg font-mono font-extrabold text-slate-900 mt-0.5">38 SP</span>
                         <span className="text-[9px] text-slate-400 font-bold">Q3 Goal Aligned</span>
-
-                        {/* Tooltip on hover */}
-                        <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none w-56 left-1/2 -translate-x-1/2">
-                          <div className="bg-slate-950 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
-                            <strong>Velocity Target:</strong> Total planned story points for active development (38 SP across closed & open issues).
-                          </div>
-                          <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
-                        </div>
                       </div>
                     </div>
 
@@ -2260,16 +2261,8 @@ export function EmployeeDossier({
                                       {t.status}
                                     </button>
                                   </td>
-                                  <td className="px-4 py-3 text-xs font-mono font-bold text-slate-500 text-center relative group cursor-help">
+                                  <td className="px-4 py-3 text-xs font-mono font-bold text-slate-500 text-center relative">
                                     {t.loggedHours} hrs
-
-                                    {/* Tooltip on hover */}
-                                    <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none w-48 left-1/2 -translate-x-1/2">
-                                      <div className="bg-slate-950 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
-                                        <strong>Timesheet Logs:</strong> Hours logged on {t.id} sprint ticket relative to its estimate of {t.sp || 3} story points (target: 8 hrs/SP).
-                                      </div>
-                                      <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
-                                    </div>
                                   </td>
                                   <td className="px-4 py-3 text-right">
                                     <div className="flex items-center justify-end gap-1.5">
@@ -2406,7 +2399,7 @@ export function EmployeeDossier({
                   <div className="space-y-6">
                     
                     {/* Machine Specifications */}
-                    <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden shadow-2xs group cursor-help">
+                    <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden shadow-2xs">
                       <div className="flex items-center gap-3.5">
                         <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-800 shadow-2xs shrink-0">
                           <Laptop className="w-5 h-5" />
@@ -2420,14 +2413,6 @@ export function EmployeeDossier({
                       <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 border border-slate-200 text-slate-700 font-mono">
                         Hardware Insured
                       </span>
-
-                      {/* Tooltip on hover */}
-                      <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none w-64 left-1/2 -translate-x-1/2">
-                        <div className="bg-slate-950 text-white text-[10px] py-1.5 px-3 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
-                          <strong>Hardware Allocation:</strong> MacBook workstation resource. Depreciation, warranty limits, and active telemetry logs synced with enterprise IT asset registries.
-                        </div>
-                        <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
-                      </div>
                     </div>
 
                     {/* Local Docker Containers */}
@@ -2653,25 +2638,17 @@ export function EmployeeDossier({
 
                     {/* Metrics Grid */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">                      {[
-                        { label: "Commits Pushed", value: "148 commits", desc: "This Month Cycle", tooltip: "Total commits pushed to corporate mainline and feature branches during the active billing cycle." },
-                        { label: "Pull Requests Merged", value: "22 PRs", desc: "100% Approval Rate", tooltip: "Code integration pull requests completed. Checked by Git hooks and branch rules." },
-                        { label: "Peer Reviews Completed", value: "18 logs", desc: "R&D Collaborations", tooltip: "Total code pull reviews submitted for peer developers, maintaining engineering quality baselines." },
-                        { label: "Lines of Code (LoC)", value: "+14,200", desc: "-4,800 Clean deletions", tooltip: "Direct volume index. Highlights net positive refactoring additions versus legacy file pruning." },
-                        { label: "Test Coverage Average", value: "87.4%", desc: "Strict Jest Validations", tooltip: "Dynamic percentage of statement coverage across codebase components tracked by Jest." },
-                        { label: "CI Pipeline Runtime", value: "3m 42s", desc: "Standard Actions runtime", tooltip: "Average execution duration for automated linting, container builds, and deployment stages on Cloud Run." }
+                        { label: "Commits Pushed", value: "148 commits", desc: "This Month Cycle" },
+                        { label: "Pull Requests Merged", value: "22 PRs", desc: "100% Approval Rate" },
+                        { label: "Peer Reviews Completed", value: "18 logs", desc: "R&D Collaborations" },
+                        { label: "Lines of Code (LoC)", value: "+14,200", desc: "-4,800 Clean deletions" },
+                        { label: "Test Coverage Average", value: "87.4%", desc: "Strict Jest Validations" },
+                        { label: "CI Pipeline Runtime", value: "3m 42s", desc: "Standard Actions runtime" }
                       ].map((stat, i) => (
-                        <div key={i} className="bg-white/90 border border-slate-200/60 p-4 rounded-xl shadow-2xs space-y-1 relative group cursor-help">
+                        <div key={i} className="bg-white/90 border border-slate-200/60 p-4 rounded-xl shadow-2xs space-y-1 relative">
                           <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">{stat.label}</span>
                           <span className="block text-sm font-extrabold font-mono text-slate-900">{stat.value}</span>
                           <span className="block text-[10px] text-slate-400 font-semibold">{stat.desc}</span>
-
-                          {/* Tooltip on hover */}
-                          <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none w-48 left-1/2 -translate-x-1/2">
-                            <div className="bg-slate-950 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
-                              <strong>{stat.label}:</strong> {stat.tooltip}
-                            </div>
-                            <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
-                          </div>
                         </div>
                       ))}
                     </div>
@@ -2711,22 +2688,14 @@ export function EmployeeDossier({
                     {/* Time Off Balance Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       {[
-                        { label: "Casual Leaves (Paid)", balance: "7 / 10 days", used: "3 used", color: "border-slate-200 text-slate-800 bg-slate-50 shadow-2xs", tooltip: "Available casual leave quota. Allocated on a monthly accrual basis." },
-                        { label: "Sick Leaves (Medical)", balance: "12 / 14 days", used: "2 used", color: "border-slate-200 text-slate-800 bg-slate-50 shadow-2xs", tooltip: "Unused medical / sick leave allowance. Standard validation rules apply." },
-                        { label: "Festival / Holiday Break", balance: "4 / 8 days", used: "4 used", color: "border-slate-200 text-slate-800 bg-slate-50 shadow-2xs", tooltip: "Holiday allocation for national, cultural, and standard calendar breaks." }
+                        { label: "Casual Leaves (Paid)", balance: "7 / 10 days", used: "3 used", color: "border-slate-200 text-slate-800 bg-slate-50 shadow-2xs" },
+                        { label: "Sick Leaves (Medical)", balance: "12 / 14 days", used: "2 used", color: "border-slate-200 text-slate-800 bg-slate-50 shadow-2xs" },
+                        { label: "Festival / Holiday Break", balance: "4 / 8 days", used: "4 used", color: "border-slate-200 text-slate-800 bg-slate-50 shadow-2xs" }
                       ].map((bal, i) => (
-                        <div key={i} className={`border p-4 rounded-xl text-center space-y-1 relative group cursor-help ${bal.color}`}>
+                        <div key={i} className={`border p-4 rounded-xl text-center space-y-1 relative ${bal.color}`}>
                           <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">{bal.label}</span>
                           <span className="block text-xs font-extrabold font-mono text-slate-800">{bal.balance}</span>
                           <span className="block text-[10px] text-slate-400 font-mono">{bal.used}</span>
-
-                          {/* Tooltip on hover */}
-                          <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-50 pointer-events-none w-48 left-1/2 -translate-x-1/2">
-                            <div className="bg-slate-950 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
-                              <strong>{bal.label}:</strong> {bal.tooltip}
-                            </div>
-                            <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
-                          </div>
                         </div>
                       ))}
                     </div>

@@ -551,6 +551,12 @@ export default function App() {
         });
         if (res.ok) {
           showToast("Employee profile updated successfully.", "success");
+          if (selectedDirectoryEmpId === editingEmployee.id && employeeFormData.id !== editingEmployee.id) {
+            setSelectedDirectoryEmpId(employeeFormData.id);
+          }
+          if (selectedPerfEmployee && selectedPerfEmployee.id === editingEmployee.id && employeeFormData.id !== editingEmployee.id) {
+            setSelectedPerfEmployee({ ...selectedPerfEmployee, id: employeeFormData.id });
+          }
           fetchData();
           setIsEmployeeModalOpen(false);
         } else {
@@ -3135,7 +3141,18 @@ export default function App() {
                   {/* TAB 1: CORPORATE */}
                   {modalTab === "corporate" && (
                     <div className="space-y-4 animate-fadeIn">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 mb-1">Employee UID / ID *</label>
+                          <input 
+                            type="text" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none font-mono font-medium" 
+                            value={employeeFormData.id || ''} 
+                            onChange={(e) => setEmployeeFormData({...employeeFormData, id: e.target.value})} 
+                            placeholder="e.g. emp-100" 
+                            required 
+                          />
+                        </div>
                         <div>
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Full Name *</label>
                           <input 
