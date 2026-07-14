@@ -37,7 +37,8 @@ import {
   Activity,
   Shield,
   Brain,
-  Bot
+  Bot,
+  Menu
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -91,6 +92,7 @@ import { get3DAvatarUrl } from "./utils";
 
 export default function App() {
   const [activePortal, setActivePortal] = useState<"performance" | "leaves" | "employees">("performance");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [profileSubTab, setProfileSubTab] = useState<"overview" | "performance" | "progression" | "leaves" | "copilot">("overview");
   const [activeTab, setActiveTab] = useState<"profile" | "team" | "roster" | "compare">("profile");
 
@@ -495,6 +497,7 @@ export default function App() {
 
   const handleOpenEditEmployee = (emp: Employee) => {
     console.log("Edit", emp);
+    setEditingEmployee(emp);
     setModalTab("corporate");
     setEmployeeFormData({
       id: emp.id,
@@ -1023,9 +1026,19 @@ export default function App() {
     return <LoginPage onLogin={setLoggedInManager} />;
   }
   return (
-    <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
+    <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden relative">
+      {/* GLOBAL SIDEBAR BACKDROP */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs z-45 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* GLOBAL SIDEBAR */}
-      <aside className="w-64 flex-shrink-0 bg-white border-r border-slate-200 flex flex-col z-50">
+      <aside className={`w-64 flex-shrink-0 bg-white border-r border-slate-200 flex flex-col z-50 fixed inset-y-0 left-0 lg:relative transform ${
+        isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      } transition-transform duration-300 ease-in-out`}>
         <div className="h-20 flex items-center px-6 border-b border-slate-100/50 bg-white/50 backdrop-blur-xl">
           <div className="flex items-center gap-3 w-full">
             <div className="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center shadow-lg shadow-slate-900/10 shrink-0 relative overflow-hidden group">
@@ -1048,7 +1061,10 @@ export default function App() {
             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-3">Main Navigation</div>
               
             <button
-              onClick={() => setActivePortal("performance")}
+              onClick={() => {
+                setActivePortal("performance");
+                setIsSidebarOpen(false);
+              }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all group relative ${
                 activePortal === "performance" ? "bg-slate-900 text-white font-medium shadow-md shadow-slate-900/10" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
               }`}
@@ -1060,7 +1076,10 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => setActivePortal("leaves")}
+              onClick={() => {
+                setActivePortal("leaves");
+                setIsSidebarOpen(false);
+              }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all group relative ${
                 activePortal === "leaves" ? "bg-slate-900 text-white font-medium shadow-md shadow-slate-900/10" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
               }`}
@@ -1072,7 +1091,10 @@ export default function App() {
             </button>
             
             <button
-              onClick={() => setActivePortal("employees")}
+              onClick={() => {
+                setActivePortal("employees");
+                setIsSidebarOpen(false);
+              }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all group relative ${
                 activePortal === "employees" ? "bg-slate-900 text-white font-medium shadow-md shadow-slate-900/10" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
               }`}
@@ -1131,6 +1153,14 @@ export default function App() {
         
         <div className="w-full h-16 px-6 lg:px-10 xl:px-12 flex items-center justify-between">
           <div className="flex items-center gap-4">
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="lg:hidden p-2 -ml-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-850 transition-colors cursor-pointer flex items-center justify-center shrink-0"
+              aria-label="Toggle Navigation Sidebar"
+              title="Toggle Menu"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
             <div className="flex flex-col">
               <h1 className="text-lg font-medium text-slate-800 tracking-tight">
                 {activePortal === "performance" && "Performance Overview"}

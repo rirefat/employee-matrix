@@ -53,6 +53,51 @@ export interface Employee {
   probationPeriod?: string;
   workLocation?: string;
   employmentType?: string;
+
+  // Extension for Full Manager Editable Properties (persisted to database)
+  skillsGrouped?: {
+    languages: string[];
+    frontend: string[];
+    backend: string[];
+    cloudDevops: string[];
+    databases: string[];
+  };
+  tickets?: {
+    id: string;
+    title: string;
+    status: string;
+    priority: string;
+    loggedHours: number;
+    sp: number;
+  }[];
+  containers?: {
+    id: string;
+    name: string;
+    image: string;
+    port: string;
+    status: string;
+  }[];
+  sshKeys?: {
+    id: string;
+    name: string;
+    type: string;
+    fingerprint: string;
+    date: string;
+  }[];
+  leaveRequests?: {
+    id: string;
+    type: string;
+    start: string;
+    end: string;
+    days: number;
+    status: string;
+    notes: string;
+  }[];
+  okrs?: {
+    title: string;
+    pct: number;
+    metric: string;
+  }[];
 }
 
 export interface PerformanceRecord {
