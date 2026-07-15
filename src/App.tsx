@@ -1337,9 +1337,6 @@ export default function App() {
                         <div className="absolute -bottom-24 -left-24 w-48 h-48 rounded-full bg-gradient-to-br from-emerald-500/10 to-teal-500/15 blur-3xl pointer-events-none" />
                         <div className="absolute top-1/2 left-1/3 w-32 h-32 rounded-full bg-blue-500/5 blur-3xl pointer-events-none" />
 
-                        {/* Creative technical background gridlines */}
-                        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.06)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none" />
-                        
                         {/* Technical decorative crosshairs and corner lines for a premium aesthetic */}
                         <div className="absolute top-3 left-3 w-1.5 h-1.5 border-t border-l border-slate-300 pointer-events-none" />
                         <div className="absolute top-3 right-3 w-1.5 h-1.5 border-t border-r border-slate-300 pointer-events-none" />
@@ -1596,9 +1593,6 @@ export default function App() {
                     <div className="absolute -top-12 -left-12 w-32 h-32 rounded-full bg-indigo-500/10 blur-2xl pointer-events-none" />
                     <div className="absolute -bottom-12 -right-12 w-32 h-32 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" />
                     
-                    {/* Grid decorative background */}
-                    <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.04)_1px,transparent_1px)] bg-[size:15px_15px] pointer-events-none" />
-
                     {/* Top-3/Right-3 indicators */}
                     <div className="absolute top-3 left-3 w-1 h-1 border-t border-l border-slate-300 pointer-events-none" />
                     <div className="absolute top-3 right-3 w-1 h-1 border-t border-r border-slate-300 pointer-events-none" />
@@ -2428,8 +2422,6 @@ export default function App() {
                       {/* Decorative ambient subtle light-mode spotlights */}
                       <div className="absolute top-0 left-0 w-64 h-64 bg-blue-50/40 rounded-full blur-3xl pointer-events-none" />
                       <div className="absolute bottom-0 right-0 w-64 h-64 bg-emerald-50/40 rounded-full blur-3xl pointer-events-none" />
-                      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.03)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
-                      
                       <div className="relative z-10">
                         {/* Title block */}
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">
@@ -2708,8 +2700,6 @@ export default function App() {
                     <div className="lg:col-span-5 space-y-6">
                       {/* Mini Footprint Radar Chart */}
                       <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-xs relative overflow-hidden flex flex-col justify-between">
-                        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.02)_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
-                        
                         <div className="relative z-10">
                           <div className="flex justify-between items-start mb-2">
                             <div>

@@ -98,6 +98,16 @@ export interface Employee {
     pct: number;
     metric: string;
   }[];
+  portfolioItems?: {
+    id: string;
+    title: string;
+    description: string;
+    category: "Open Source" | "Internal Product" | "Technical Writing" | "Research & Patent";
+    technologies: string[];
+    link?: string;
+    metrics?: string;
+    date: string;
+  }[];
 }
 
 export interface PerformanceRecord {

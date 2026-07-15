@@ -101,7 +101,7 @@ export function EmployeeDossier({
 }: EmployeeDossierProps) {
   // Navigation tabs - curated for an elite Software R&D Workspace
   const [activeTab, setActiveTab] = useState<
-    "profile" | "skills" | "projects" | "dev_env" | "git_pulse" | "leaves" | "career" | "copilot"
+    "profile" | "skills" | "projects" | "portfolio" | "leaves" | "career" | "copilot"
   >("profile");
 
   const [isHeaderDropdownOpen, setIsHeaderDropdownOpen] = useState(false);
@@ -280,6 +280,28 @@ export function EmployeeDossier({
   const [newOkrMetric, setNewOkrMetric] = useState("");
   const [isAddingOkr, setIsAddingOkr] = useState(false);
 
+  // Portfolio Showcase Items
+  const [portfolioItems, setPortfolioItems] = useState<{
+    id: string;
+    title: string;
+    description: string;
+    category: "Open Source" | "Internal Product" | "Technical Writing" | "Research & Patent";
+    technologies: string[];
+    link?: string;
+    metrics?: string;
+    date: string;
+  }[]>([]);
+
+  // States for new Portfolio item form
+  const [isAddingPortfolio, setIsAddingPortfolio] = useState(false);
+  const [newPortfolioTitle, setNewPortfolioTitle] = useState("");
+  const [newPortfolioDesc, setNewPortfolioDesc] = useState("");
+  const [newPortfolioCat, setNewPortfolioCat] = useState<"Open Source" | "Internal Product" | "Technical Writing" | "Research & Patent">("Open Source");
+  const [newPortfolioTechs, setNewPortfolioTechs] = useState("");
+  const [newPortfolioLink, setNewPortfolioLink] = useState("");
+  const [newPortfolioMetrics, setNewPortfolioMetrics] = useState("");
+  const [newPortfolioDate, setNewPortfolioDate] = useState("July 2026");
+
   // Persistence callback helper
   const saveEmployeeChanges = async (updates: Partial<Employee>) => {
     if (!activeDirectoryEmployee) return;
@@ -366,6 +388,43 @@ export function EmployeeDossier({
           { title: "Active mentorship & pairing with 2 junior software engineers", pct: 100, metric: "Goal: 2 direct reports successfully trained" }
         ]);
       }
+
+      if (activeDirectoryEmployee.portfolioItems) {
+        setPortfolioItems(activeDirectoryEmployee.portfolioItems);
+      } else {
+        setPortfolioItems([
+          {
+            id: "port-1",
+            title: "Enterprise Distributed Auth Service",
+            description: "High-throughput token validation and stateful session control middleware using secure HttpOnly cookies and distributed Redis cache. Reduced API lookup latency by 45%.",
+            category: "Open Source",
+            technologies: ["TypeScript", "Redis", "Express", "Docker"],
+            link: "github.com/nexus-labs/auth-service",
+            metrics: "1.2k Stars // v2.4.0 Stable",
+            date: "May 2026"
+          },
+          {
+            id: "port-2",
+            title: "Real-time Operations Sync Console",
+            description: "Interactive WebSockets-driven control center that synchronizes development server states and logs. Built on React with resilient auto-reconnect fallback algorithms.",
+            category: "Internal Product",
+            technologies: ["React", "WebSockets", "Tailwind CSS", "Vite"],
+            link: "internal.nexus.corp/dashboard",
+            metrics: "Deploys in 12 Hubs // Active",
+            date: "Jan 2026"
+          },
+          {
+            id: "port-3",
+            title: "Dynamic Infrastructure Provisioner",
+            description: "A declarative cloud resource optimizer executing container playbooks. Synchronizes secure key registries and auto-scales container deployment states.",
+            category: "Research & Patent",
+            technologies: ["Docker", "Kubernetes", "Cloud Run", "Bash"],
+            link: "patents.google.com/99201",
+            metrics: "Patent Pending #281-9",
+            date: "Nov 2025"
+          }
+        ]);
+      }
     }
   }, [activeDirectoryEmployee]);
 
@@ -389,8 +448,7 @@ export function EmployeeDossier({
   const isProfileComplete = useMemo(() => profileCompletion >= 80, [profileCompletion]);
   const isSkillsComplete = useMemo(() => Object.values(skillsGrouped).flat().length >= 8, [skillsGrouped]);
   const isProjectsComplete = useMemo(() => tickets.length > 0, [tickets]);
-  const isDevEnvComplete = useMemo(() => sshKeys.length > 0 && containers.some(c => c.status === "running"), [sshKeys, containers]);
-  const isGitPulseComplete = true;
+  const isPortfolioComplete = useMemo(() => portfolioItems.length > 0, [portfolioItems]);
   const isLeavesComplete = useMemo(() => leaveRequests.length > 0, [leaveRequests]);
   const isCareerComplete = useMemo(() => (activeDirectoryEmployee?.salary || 0) > 0, [activeDirectoryEmployee]);
 
@@ -761,6 +819,47 @@ export function EmployeeDossier({
     showToast(`Cryptographic credential [${name}] revoked from Git registries`, "success");
   };
 
+  // Portfolio Showcase Handlers
+  const handleCreatePortfolio = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPortfolioTitle.trim() || !newPortfolioDesc.trim()) {
+      showToast("Please provide both a project title and description.", "error");
+      return;
+    }
+
+    const newPortfolioItem = {
+      id: "port-" + Math.random().toString(36).substring(2, 11),
+      title: newPortfolioTitle.trim(),
+      description: newPortfolioDesc.trim(),
+      category: newPortfolioCat,
+      technologies: newPortfolioTechs.split(",").map(t => t.trim()).filter(Boolean),
+      link: newPortfolioLink.trim() || undefined,
+      metrics: newPortfolioMetrics.trim() || undefined,
+      date: newPortfolioDate.trim() || "July 2026"
+    };
+
+    const updatedPortfolio = [newPortfolioItem, ...portfolioItems];
+    setPortfolioItems(updatedPortfolio);
+    saveEmployeeChanges({ portfolioItems: updatedPortfolio });
+
+    // Reset form states
+    setNewPortfolioTitle("");
+    setNewPortfolioDesc("");
+    setNewPortfolioTechs("");
+    setNewPortfolioLink("");
+    setNewPortfolioMetrics("");
+    setIsAddingPortfolio(false);
+
+    showToast("Portfolio item listed successfully", "success");
+  };
+
+  const handleDeletePortfolio = (id: string, title: string) => {
+    const updatedPortfolio = portfolioItems.filter(p => p.id !== id);
+    setPortfolioItems(updatedPortfolio);
+    saveEmployeeChanges({ portfolioItems: updatedPortfolio });
+    showToast(`Removed [${title}] from developer portfolio`, "success");
+  };
+
   // Leave system integration
   const handleApplyLeave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -889,9 +988,6 @@ export function EmployeeDossier({
   return (
     <div className="flex-1 w-full px-6 lg:px-10 xl:px-12 py-8 overflow-y-auto overflow-x-hidden bg-transparent text-slate-800 relative h-[calc(100vh-4rem)] font-sans">
       
-      {/* Premium subtle grid overlay with smooth and elegant gradients */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.075)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.075)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
-      
       {/* Decorative gradient glowing spots matching the performance portal's signature aesthetic */}
       <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-gradient-to-tr from-blue-500/8 to-indigo-500/8 blur-3xl pointer-events-none" />
       <div className="absolute top-1/4 -right-40 w-96 h-96 rounded-full bg-gradient-to-bl from-indigo-500/8 to-purple-500/8 blur-3xl pointer-events-none" />
@@ -990,9 +1086,6 @@ export function EmployeeDossier({
             <div className="absolute -bottom-24 -left-24 w-48 h-48 rounded-full bg-gradient-to-br from-indigo-500/4 to-purple-500/8 blur-3xl pointer-events-none" />
             <div className="absolute top-1/2 left-1/4 w-32 h-32 rounded-full bg-emerald-500/4 blur-3xl pointer-events-none" />
 
-            {/* Creative technical background gridlines */}
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.04)_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
-            
             {/* Technical decorative crosshairs and corner lines for a premium aesthetic */}
             <div className="absolute top-3 left-3 w-1.5 h-1.5 border-t border-l border-slate-300 pointer-events-none" />
             <div className="absolute top-3 right-3 w-1.5 h-1.5 border-t border-r border-slate-300 pointer-events-none" />
@@ -1005,40 +1098,53 @@ export function EmployeeDossier({
               Active R&D Sync
             </div>
 
-            <button 
-              onClick={() => showToast(`Dossier assessment completeness at ${profileCompletion}%`, "success")}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-950 transition-colors cursor-pointer relative z-10"
-            >
-              <Info className="w-4 h-4" />
-            </button>
 
-            {/* Premium Avatar Visualizer with Double Halo Gradient */}
-            <div className="relative mt-8 mb-5">
-              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 opacity-12 blur-md scale-110" />
-              <svg className="w-24 h-24 transform -rotate-90">
+
+            {/* Premium Avatar Visualizer with Rotating Cyber HUD & Double Halo */}
+            <div className="relative mt-8 mb-6 group/avatar cursor-pointer">
+              {/* Pulsing Backlight Halo */}
+              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 opacity-12 blur-xl scale-125 group-hover/avatar:scale-135 transition-all duration-500" />
+              
+              {/* Outer Decorative Spinning Cyber Dash Ring */}
+              <div className="absolute -inset-2.5 rounded-full border border-dashed border-slate-300/60 animate-[spin_30s_linear_infinite] pointer-events-none" />
+              
+              {/* Outer Interactive HUD SVG Ring */}
+              <svg className="w-28 h-28 transform -rotate-90 relative z-10 transition-transform duration-500 group-hover/avatar:scale-105">
+                {/* Thin background ring */}
                 <circle
-                  cx="48"
-                  cy="48"
-                  r="44"
-                  className="text-slate-200/40"
-                  strokeWidth="2"
+                  cx="56"
+                  cy="56"
+                  r="52"
+                  className="text-slate-100"
+                  strokeWidth="1.5"
                   stroke="currentColor"
                   fill="transparent"
                 />
+                {/* Glowing Progress ring */}
                 <circle
-                  cx="48"
-                  cy="48"
-                  r="44"
-                  className="text-indigo-600 transition-all duration-1000 ease-out"
-                  strokeWidth="2.5"
-                  strokeDasharray={276.46}
-                  strokeDashoffset={276.46 - (276.46 * profileCompletion) / 100}
+                  cx="56"
+                  cy="56"
+                  r="52"
+                  className="text-indigo-600 transition-all duration-1000 ease-out drop-shadow-[0_0_6px_rgba(79,70,229,0.4)]"
+                  strokeWidth="3"
+                  strokeDasharray={326.72}
+                  strokeDashoffset={326.72 - (326.72 * profileCompletion) / 100}
                   strokeLinecap="round"
                   stroke="currentColor"
                   fill="transparent"
                 />
+                
+                {/* Accent mini dots orbiting */}
+                <circle
+                  cx="56"
+                  cy="4"
+                  r="2.5"
+                  className="fill-indigo-500 shadow-lg"
+                />
               </svg>
-              <div className="absolute inset-2 rounded-full overflow-hidden bg-slate-50 border border-slate-200/80 p-1 shadow-inner">
+              
+              {/* Inner Avatar frame with micro-notches */}
+              <div className="absolute inset-2 rounded-full overflow-hidden bg-white border border-slate-200 p-1.5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.06),0_10px_20px_rgba(0,0,0,0.04)] z-10 transition-all duration-500 group-hover/avatar:scale-98">
                 <img
                   src={get3DAvatarUrl(activeDirectoryEmployee.name)}
                   alt={activeDirectoryEmployee.name}
@@ -1048,127 +1154,96 @@ export function EmployeeDossier({
             </div>
 
             {/* Profile Identifiers & Meta */}
-            <div className="space-y-2 w-full flex flex-col items-center">
-              <h3 className="text-lg font-bold text-slate-900 tracking-tight font-display">{activeDirectoryEmployee.name}</h3>
+            <div className="space-y-4 w-full flex flex-col items-center relative z-10">
               
-              <div className="inline-flex items-center gap-1 bg-slate-50 border border-slate-200/60 px-2.5 py-0.5 rounded-lg text-[10px] font-mono font-medium text-slate-500 select-none shadow-2xs">
-                <span className="text-slate-400 font-bold">UID //</span> {activeDirectoryEmployee.id}
+              {/* Certified Flag */}
+              <span className="inline-flex items-center gap-1 bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200/80 px-2.5 py-0.5 rounded-full text-[8px] font-extrabold text-slate-500 tracking-widest uppercase font-mono shadow-3xs select-none">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                Active Personnel
+              </span>
+
+              <div className="space-y-1 text-center">
+                <h3 className="text-xl font-black text-slate-900 tracking-tight font-display group-hover:text-indigo-600 transition-colors duration-300">
+                  {activeDirectoryEmployee.name}
+                </h3>
+                <span className="text-[11px] font-mono font-medium text-slate-400 block select-all">
+                  {activeDirectoryEmployee.email}
+                </span>
               </div>
 
-              <div className="pt-1.5 flex flex-col items-center gap-1">
-                <span className="text-xs font-semibold text-slate-800 bg-slate-100 border border-slate-200/50 px-3 py-1 rounded-full font-mono">
-                  {activeDirectoryEmployee.role}
-                </span>
-                <span className="text-[11px] text-slate-500 font-medium select-all mt-0.5">{activeDirectoryEmployee.email}</span>
+              {/* Combined Glass ID Capsule Grid */}
+              <div className="grid grid-cols-2 gap-2 w-full mt-2">
                 
-                <div className="mt-2 flex items-center gap-1.5 text-[9px] font-mono font-semibold text-slate-400 bg-slate-50 border border-slate-200/30 rounded-full px-2.5 py-0.5">
-                  <span className="w-1 h-1 bg-slate-400 rounded-full" />
-                  <span>Hub: {activeDirectoryEmployee.team || "Core Engineering"}</span>
+                {/* ID Badge */}
+                <div className="bg-slate-50/60 backdrop-blur-md border border-slate-200/60 rounded-xl p-2.5 flex flex-col items-center justify-center text-center shadow-3xs group/cell hover:bg-white hover:border-slate-300 transition-all duration-300 cursor-default">
+                  <span className="text-[8px] font-bold uppercase tracking-wider text-slate-400 font-mono mb-0.5">Dossier ID</span>
+                  <span className="text-[11px] font-black text-slate-800 font-mono">
+                    #{activeDirectoryEmployee.id}
+                  </span>
+                </div>
+
+                {/* Role Capsule */}
+                <div className="bg-slate-50/60 backdrop-blur-md border border-slate-200/60 rounded-xl p-2.5 flex flex-col items-center justify-center text-center shadow-3xs group/cell hover:bg-white hover:border-slate-300 transition-all duration-300 cursor-default">
+                  <span className="text-[8px] font-bold uppercase tracking-wider text-slate-400 font-mono mb-0.5">Designation</span>
+                  <span className="text-[11px] font-bold text-indigo-700 font-mono truncate max-w-full">
+                    {activeDirectoryEmployee.role}
+                  </span>
+                </div>
+                
+              </div>
+
+              {/* Bento Attributes Strip */}
+              <div className="w-full bg-slate-50/40 border border-slate-200/50 rounded-2xl p-3 grid grid-cols-3 gap-1 divide-x divide-slate-200/60 text-center shadow-3xs mt-2 select-none">
+                <div>
+                  <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest font-mono">Hub</span>
+                  <span className="block text-[10px] font-extrabold text-slate-700 font-display truncate mt-0.5">
+                    {activeDirectoryEmployee.team || "Nexus"}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest font-mono">Depart.</span>
+                  <span className="block text-[10px] font-extrabold text-slate-700 font-display truncate mt-0.5">
+                    {activeDirectoryEmployee.department || "Core R&D"}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest font-mono">Blood Gp</span>
+                  <span className="block text-[10px] font-extrabold text-indigo-600 font-mono mt-0.5">
+                    {activeDirectoryEmployee.bloodGroup || "O+"}
+                  </span>
                 </div>
               </div>
+
             </div>
 
             {/* Modern gradient accent separator */}
             <div className="w-full h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent my-6" />
 
-            {/* Clean Progress Tracker */}
-            <div className="w-full space-y-2 text-left relative">
-              <div className="flex justify-between text-[9px] font-extrabold text-slate-400 uppercase tracking-widest font-mono">
-                <span>Dossier Quality</span>
-                <span className="text-slate-900 font-black">{profileCompletion}%</span>
+            {/* Segmented Cyberpunk/Modern Progress Tracker */}
+            <div className="w-full space-y-2 text-left relative mt-2">
+              <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">
+                <span className="flex items-center gap-1.5 text-slate-500">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                  Dossier Integrity
+                </span>
+                <span className="text-slate-900 font-extrabold bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded font-mono">{profileCompletion}%</span>
               </div>
-              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden p-[1px] border border-slate-200/30">
-                <div
-                  className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-1000 shadow-[0_0_8px_rgba(79,70,229,0.3)]"
-                  style={{ width: `${profileCompletion}%` }}
-                />
+              <div className="flex gap-1 w-full justify-between mt-1">
+                {Array.from({ length: 12 }).map((_, i) => {
+                  const threshold = (i / 12) * 100;
+                  const isFilled = profileCompletion >= threshold;
+                  return (
+                    <div
+                      key={i}
+                      className={`h-1.5 flex-1 rounded-xs transition-all duration-500 ${
+                        isFilled
+                          ? "bg-gradient-to-t from-indigo-500 to-indigo-600 shadow-[0_0_8px_rgba(79,70,229,0.3)]"
+                          : "bg-slate-100 border border-slate-200/40"
+                      }`}
+                    />
+                  );
+                })}
               </div>
-
-              {/* Collapsible Dossier Tips Checklist */}
-              {profileCompletion < 100 ? (
-                <div className="mt-4 bg-slate-50/50 backdrop-blur-xs border border-slate-200/60 p-3.5 rounded-2xl text-left space-y-2">
-                  <div className="flex items-center justify-between border-b border-slate-150 pb-1.5">
-                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider font-mono flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-indigo-500" /> Improve Quality
-                    </span>
-                    <span className="text-[8px] font-bold text-amber-700 bg-amber-50 border border-amber-100/60 px-1.5 py-0.5 rounded uppercase font-mono">
-                      Missing Fields
-                    </span>
-                  </div>
-                  <div className="space-y-1.5 max-h-[120px] overflow-y-auto no-scrollbar">
-                    {!activeDirectoryEmployee.phone && (
-                      <button
-                        onClick={() => handleOpenEditEmployee(activeDirectoryEmployee)}
-                        className="w-full text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-white hover:shadow-2xs p-1.5 rounded-lg border border-transparent hover:border-slate-200/80 transition-all flex items-center justify-between text-left cursor-pointer group/item"
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <Plus className="w-3 h-3 text-indigo-500 shrink-0" />
-                          Add Phone
-                        </span>
-                        <span className="text-[9px] font-mono text-slate-400 group-hover/item:text-indigo-500 font-bold">+12.5%</span>
-                      </button>
-                    )}
-                    {!activeDirectoryEmployee.notes && (
-                      <button
-                        onClick={() => handleOpenEditEmployee(activeDirectoryEmployee)}
-                        className="w-full text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-white hover:shadow-2xs p-1.5 rounded-lg border border-transparent hover:border-slate-200/80 transition-all flex items-center justify-between text-left cursor-pointer group/item"
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <Plus className="w-3 h-3 text-indigo-500 shrink-0" />
-                          Add R&D notes
-                        </span>
-                        <span className="text-[9px] font-mono text-slate-400 group-hover/item:text-indigo-500 font-bold">+12.5%</span>
-                      </button>
-                    )}
-                    {sshKeys.length === 0 && (
-                      <button
-                        onClick={() => setActiveTab("dev_env")}
-                        className="w-full text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-white hover:shadow-2xs p-1.5 rounded-lg border border-transparent hover:border-slate-200/80 transition-all flex items-center justify-between text-left cursor-pointer group/item"
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <Plus className="w-3 h-3 text-indigo-500 shrink-0" />
-                          Add SSH Key
-                        </span>
-                        <span className="text-[9px] font-mono text-slate-400 group-hover/item:text-indigo-500 font-bold">+12.5%</span>
-                      </button>
-                    )}
-                    {!activeDirectoryEmployee.salary && (
-                      <button
-                        onClick={() => handleOpenEditEmployee(activeDirectoryEmployee)}
-                        className="w-full text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-white hover:shadow-2xs p-1.5 rounded-lg border border-transparent hover:border-slate-200/80 transition-all flex items-center justify-between text-left cursor-pointer group/item"
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <Plus className="w-3 h-3 text-indigo-500 shrink-0" />
-                          Set Salary
-                        </span>
-                        <span className="text-[9px] font-mono text-slate-400 group-hover/item:text-indigo-500 font-bold">+12.5%</span>
-                      </button>
-                    )}
-                    {!activeDirectoryEmployee.bloodGroup && (
-                      <button
-                        onClick={() => handleOpenEditEmployee(activeDirectoryEmployee)}
-                        className="w-full text-[10px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-white hover:shadow-2xs p-1.5 rounded-lg border border-transparent hover:border-slate-200/80 transition-all flex items-center justify-between text-left cursor-pointer group/item"
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <Plus className="w-3 h-3 text-indigo-500 shrink-0" />
-                          Set Blood Group
-                        </span>
-                        <span className="text-[9px] font-mono text-slate-400 group-hover/item:text-indigo-500 font-bold">Audit</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-3 bg-emerald-50/60 border border-emerald-200/50 p-3 rounded-2xl text-left flex items-center gap-2.5">
-                  <div className="w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center shrink-0 shadow-xs">
-                    <Check className="w-3 h-3 text-white stroke-[3px]" />
-                  </div>
-                  <div>
-                    <span className="block text-[9px] font-black text-emerald-800 uppercase tracking-widest font-mono">Dossier Complete</span>
-                    <p className="text-[10px] text-emerald-600/90 leading-tight">Passed HR administrative audit.</p>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Compact Action Panel with Elegant Labelings - Redesigned as a Premium utility dock */}
@@ -1211,8 +1286,7 @@ export function EmployeeDossier({
               { id: "profile", label: "Developer Profile", isCompleted: isProfileComplete, icon: <User className="w-3.5 h-3.5" /> },
               { id: "skills", label: "Tech Stack & Skills", isCompleted: isSkillsComplete, icon: <Code2 className="w-3.5 h-3.5" /> },
               { id: "projects", label: "Active Sprint Tickets", isCompleted: isProjectsComplete, icon: <CheckSquare className="w-3.5 h-3.5" /> },
-              { id: "dev_env", label: "Docker Setup & SSH", isCompleted: isDevEnvComplete, icon: <Terminal className="w-3.5 h-3.5" /> },
-              { id: "git_pulse", label: "Git Metrics (CI/CD)", isCompleted: isGitPulseComplete, icon: <GitBranch className="w-3.5 h-3.5" /> },
+              { id: "portfolio", label: "Developer Portfolio", isCompleted: isPortfolioComplete, icon: <Briefcase className="w-3.5 h-3.5" /> },
               { id: "leaves", label: "Leaves & Schedule", isCompleted: isLeavesComplete, icon: <Calendar className="w-3.5 h-3.5" /> },
               { id: "career", label: "Compensation & OKRs", isCompleted: isCareerComplete, icon: <Award className="w-3.5 h-3.5" /> },
               { id: "copilot", label: "Gemini Dev Co-pilot", isCompleted: true, highlight: true, icon: <Bot className="w-3.5 h-3.5" /> }
@@ -1257,9 +1331,6 @@ export function EmployeeDossier({
         {/* RIGHT COLUMN: Tab Panel Display Panel - High End Visual Polish */}
         <div className="lg:col-span-8 bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between min-h-[700px] relative overflow-hidden group">
           
-          {/* Subtle tech gridlines inside panel */}
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.03)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none" />
-          
           {/* Decorative radial gradients under glass */}
           <div className="absolute -bottom-40 -right-40 w-80 h-80 rounded-full bg-gradient-to-tr from-indigo-500/5 to-purple-500/5 blur-3xl pointer-events-none" />
           <div className="absolute -top-40 -left-40 w-80 h-80 rounded-full bg-gradient-to-br from-blue-500/4 to-teal-500/4 blur-3xl pointer-events-none" />
@@ -1278,8 +1349,7 @@ export function EmployeeDossier({
                 {activeTab === "profile" && <User className="w-4 h-4 text-slate-500" />}
                 {activeTab === "skills" && <Code2 className="w-4 h-4 text-slate-500" />}
                 {activeTab === "projects" && <CheckSquare className="w-4 h-4 text-slate-500" />}
-                {activeTab === "dev_env" && <Terminal className="w-4 h-4 text-slate-500" />}
-                {activeTab === "git_pulse" && <GitBranch className="w-4 h-4 text-slate-500" />}
+                {activeTab === "portfolio" && <Briefcase className="w-4 h-4 text-slate-500" />}
                 {activeTab === "leaves" && <Calendar className="w-4 h-4 text-slate-500" />}
                 {activeTab === "career" && <Award className="w-4 h-4 text-slate-500" />}
                 {activeTab === "copilot" && <Bot className="w-4 h-4 text-blue-500" />}
@@ -1287,19 +1357,12 @@ export function EmployeeDossier({
                 {activeTab === "profile" && "Developer Profile & Core Details"}
                 {activeTab === "skills" && "Interactive Technology Stack Matrices"}
                 {activeTab === "projects" && "Sprint Velocity Board & Assigned Issues"}
-                {activeTab === "dev_env" && "Local Containers & Cloud Keys"}
-                {activeTab === "git_pulse" && "Git Contributions & Quality pipelines"}
+                {activeTab === "portfolio" && "Developer Portfolio Showcase"}
                 {activeTab === "leaves" && "Leaves Roster & Timesheets Compliance"}
                 {activeTab === "career" && "Career Progression Timeline & OKRs"}
                 {activeTab === "copilot" && "Gemini Technical Advisor Hub"}
               </h2>
-              <button
-                onClick={() => handleOpenEditEmployee(activeDirectoryEmployee)}
-                className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 border border-slate-200 transition-all cursor-pointer"
-                title="Edit This Record"
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-              </button>
+              {/* No top-right edit button as per request */}
             </div>
 
             <AnimatePresence mode="wait">
@@ -1784,7 +1847,14 @@ export function EmployeeDossier({
                           {/* Weekdays Header */}
                           <div className="grid grid-cols-7 gap-1 text-center">
                             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-                              <span key={day} className="text-[9px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+                              <span
+                                key={day}
+                                className={`text-[10px] font-bold uppercase tracking-wider font-mono ${
+                                  day === "Sun" || day === "Sat"
+                                    ? "text-slate-800 font-extrabold"
+                                    : "text-slate-500"
+                                }`}
+                              >
                                 {day}
                               </span>
                             ))}
@@ -1804,7 +1874,7 @@ export function EmployeeDossier({
                                 cellClass += "bg-slate-50/40 border border-dashed border-slate-200 text-slate-400 cursor-not-allowed";
                                 statusText = "Future Roster";
                               } else if (cell.status === "Weekend") {
-                                cellClass += "bg-slate-100 border border-slate-200 text-slate-400";
+                                cellClass += "bg-blue-50/50 border border-blue-200/60 text-blue-800 hover:bg-blue-100/60 shadow-2xs";
                                 statusText = "Weekend (Non-Working)";
                               } else if (cell.status === "Present") {
                                 cellClass += "bg-emerald-50 border border-emerald-200/60 text-emerald-800 hover:bg-emerald-100";
@@ -1876,10 +1946,10 @@ export function EmployeeDossier({
                               {/* Weekend */}
                               <div className="flex items-center justify-between text-xs border-t border-dashed border-slate-200 pt-2.5">
                                 <div className="flex items-center gap-2">
-                                  <span className="w-2.5 h-2.5 rounded-md bg-slate-200 border border-slate-300" />
-                                  <span className="text-slate-500 font-medium">Weekends</span>
+                                  <span className="w-2.5 h-2.5 rounded-md bg-blue-50/60 border border-blue-200/60" />
+                                  <span className="text-slate-600 font-semibold">Weekends</span>
                                 </div>
-                                <span className="font-mono text-slate-500 font-semibold">{daysArray.cells.filter(c => c.status === "Weekend").length} days</span>
+                                <span className="font-mono font-extrabold text-slate-800">{daysArray.cells.filter(c => c.status === "Weekend").length} days</span>
                               </div>
                             </div>
                           </div>
@@ -2391,261 +2461,19 @@ export function EmployeeDossier({
                         )}
                       </div>
                     </div>
-                  </div>
-                )}
-
-                {/* 4. DOCKER SETUP & CRYPTOGRAPHIC KEYS */}
-                {activeTab === "dev_env" && (
+                          {/* 4. DEVELOPER PORTFOLIO SHOWCASE */}
+                {activeTab === "portfolio" && (
                   <div className="space-y-6">
                     
-                    {/* Machine Specifications */}
-                    <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden shadow-2xs">
-                      <div className="flex items-center gap-3.5">
-                        <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-800 shadow-2xs shrink-0">
-                          <Laptop className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <span className="block text-[9px] font-mono font-bold text-slate-400 uppercase tracking-widest">Enterprise Asset ID: HN-M3-8820</span>
-                          <h4 className="text-xs font-bold text-slate-800 font-display">Apple MacBook Pro 16" (M3 Max)</h4>
-                          <p className="text-[10px] text-slate-500 font-mono">16-Core CPU / 36GB Unified RAM / 1TB SSD / macOS Sequoia</p>
-                        </div>
-                      </div>
-                      <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 border border-slate-200 text-slate-700 font-mono">
-                        Hardware Insured
-                      </span>
-                    </div>
-
-                    {/* Local Docker Containers */}
-                    <div className="space-y-3.5">
-                      <div>
-                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono flex items-center gap-1.5">
-                          <TerminalSquare className="w-3.5 h-3.5 text-slate-700" /> Local Docker Sandboxes
-                        </h4>
-                        <p className="text-[10px] text-slate-400">Simulated environments running on localhost developers loop.</p>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {containers.map((c) => (
-                          <div key={c.id} className="bg-white border border-slate-200/80 rounded-xl p-4 flex items-center justify-between shadow-2xs">
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-slate-800 font-mono">{c.name}</span>
-                                <span className={`inline-block w-2 h-2 rounded-full ${c.status === "running" ? "bg-emerald-500 animate-pulse" : "bg-slate-300"}`} />
-                              </div>
-                              <p className="text-[9px] text-slate-400 font-mono">{c.image} | Port: {c.port}</p>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <button
-                                onClick={() => handleToggleDocker(c.id, c.name, c.status)}
-                                className={`px-2.5 py-1 rounded-lg border text-[10px] font-bold transition-all cursor-pointer ${
-                                  c.status === "running" ? "bg-rose-50 border border-rose-100 text-rose-700 hover:bg-rose-100/50" : "bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100"
-                                }`}
-                              >
-                                {c.status === "running" ? "Stop" : "Start"}
-                              </button>
-                              <button
-                                onClick={() => handleRestartDocker(c.name)}
-                                className="p-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 transition-colors cursor-pointer"
-                                title="Restart container daemon"
-                              >
-                                <RotateCw className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteDocker(c.id, c.name)}
-                                className="p-1.5 rounded-lg bg-slate-50 hover:bg-rose-50 hover:text-rose-600 text-slate-400 border border-slate-200 transition-colors cursor-pointer"
-                                title="Prune and Delete Container"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Register Container Sandbox Manager Form */}
-                      <div className="bg-slate-50/80 border border-slate-200/60 rounded-xl p-4 space-y-3.5 mt-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">Register Container Sandbox</h4>
-                            <p className="text-[10px] text-slate-400">Launch a new backend mock container service in localhost sandbox environment.</p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setIsAddingContainer(!isAddingContainer)}
-                            className="text-[10px] font-bold text-slate-800 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow-2xs"
-                          >
-                            {isAddingContainer ? "Hide Form" : "Add Service"}
-                          </button>
-                        </div>
-
-                        {isAddingContainer && (
-                          <form onSubmit={handleCreateDocker} className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                            <div className="space-y-1">
-                              <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Container Name</label>
-                              <input
-                                type="text"
-                                placeholder="e.g. postgres-replica"
-                                value={newContainerName}
-                                onChange={(e) => setNewContainerName(e.target.value)}
-                                className="w-full px-2.5 py-1.5 bg-white border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800 placeholder:text-slate-400"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Docker Image</label>
-                              <input
-                                type="text"
-                                placeholder="e.g. postgres:16-alpine"
-                                value={newContainerImage}
-                                onChange={(e) => setNewContainerImage(e.target.value)}
-                                className="w-full px-2.5 py-1.5 bg-white border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800 placeholder:text-slate-400"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Host Ports mapping</label>
-                              <input
-                                type="text"
-                                placeholder="e.g. 5433:5432"
-                                value={newContainerPort}
-                                onChange={(e) => setNewContainerPort(e.target.value)}
-                                className="w-full px-2.5 py-1.5 bg-white border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800 placeholder:text-slate-400"
-                              />
-                            </div>
-                            <div className="sm:col-span-3 pt-1">
-                              <button
-                                type="submit"
-                                className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-xs transition-colors shadow-2xs cursor-pointer"
-                              >
-                                Deploy Service to Sandbox
-                              </button>
-                            </div>
-                          </form>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* SSH Public Keys */}                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-dashed border-slate-200">
-                      
-                      {/* Active keys */}
-                      <div className="space-y-3">
-                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">SSH Public Registries</h4>
-                        <div className="space-y-3">
-                          {sshKeys.map((k) => (
-                            <div key={k.id} className="bg-white border border-slate-200/80 rounded-xl p-3.5 space-y-2 text-xs relative shadow-2xs">
-                              <button
-                                onClick={() => handleRemoveSSHKey(k.id, k.name)}
-                                className="absolute top-3.5 right-3.5 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                                title="Revoke access GPG"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                              <div className="space-y-0.5">
-                                <h5 className="font-bold text-slate-900 font-display">{k.name}</h5>
-                                <p className="text-[10px] text-slate-400 font-mono">{k.type} | Added: {k.date}</p>
-                              </div>
-                              <div className="flex items-center gap-1.5 bg-slate-50 p-2 rounded-lg border border-slate-200">
-                                <span className="font-mono text-[9px] text-slate-600 truncate flex-1 leading-none select-all">
-                                  {k.fingerprint}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => copyToClipboard(k.fingerprint, "SSH Fingerprint")}
-                                  className="text-slate-400 hover:text-slate-700 transition-colors cursor-pointer shrink-0"
-                                  title="Copy Fingerprint"
-                                >
-                                  <Copy className="w-3 h-3" />
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                          {sshKeys.length === 0 && (
-                            <div className="text-center py-8 text-slate-400 text-xs italic">
-                              No public credentials registered.
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Add SSH credentials */}
-                      <div className="bg-white/90 border border-slate-200/60 p-5 rounded-2xl shadow-2xs space-y-4">
-                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-display">Enlist GPG/SSH public key</h4>
-                        <form onSubmit={handleAddSSHKey} className="space-y-3.5">
-                          <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1.5">Identifier</label>
-                            <input
-                              type="text"
-                              placeholder="e.g. mbp-workstation"
-                              value={newKeyName}
-                              onChange={(e) => setNewKeyName(e.target.value)}
-                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800/10 focus:bg-white rounded-xl text-xs outline-none transition-all font-semibold text-slate-800"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1.5">Cipher Type</label>
-                            <select
-                              value={newKeyType}
-                              onChange={(e) => setNewKeyType(e.target.value)}
-                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800/10 focus:bg-white rounded-xl text-xs outline-none cursor-pointer transition-all font-semibold text-slate-700"
-                            >
-                              <option value="ssh-ed25519">ssh-ed25519 (Secure)</option>
-                              <option value="ssh-rsa">ssh-rsa (Legacy)</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1.5">Public Content</label>
-                            <textarea
-                              rows={3}
-                              placeholder="ssh-ed25519 AAAA..."
-                              value={newKeyContent}
-                              onChange={(e) => setNewKeyContent(e.target.value)}
-                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800/10 focus:bg-white rounded-xl text-xs outline-none transition-all font-mono text-slate-700 text-[11px] resize-none leading-relaxed"
-                            />
-                          </div>
-                          <button
-                            type="submit"
-                            className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-colors shadow-sm cursor-pointer"
-                          >
-                            Deploy Key Token
-                          </button>
-                        </form>
-                      </div>
-
-                    </div>
-
-                  </div>
-                )}
-
-                {/* 5. GIT PULSE & CI/CD PIPELINE */}
-                {activeTab === "git_pulse" && (
-                  <div className="space-y-6">
-                    
-                    {/* Manual action trigger */}
-                    <div className="bg-white/90 border border-slate-200/60 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-2xs">
-                      <div className="space-y-1">
-                        <span className="inline-flex items-center gap-1.5 text-[9px] font-bold text-slate-800 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full font-mono uppercase">
-                          GitHub Deployment: Passing
-                        </span>
-                        <h4 className="text-xs font-bold text-slate-800 font-display">Production Webhook Sync Lock</h4>
-                        <p className="text-[11px] text-slate-500 font-medium">Continuous deployments triggers commits directly onto live staging containers.</p>
-                      </div>
-                      <button
-                        onClick={handleTriggerBuild}
-                        disabled={isBuildTriggering}
-                        className={`px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white text-xs font-bold rounded-xl flex items-center gap-2 cursor-pointer transition-all shadow-sm ${isBuildTriggering ? "animate-pulse" : ""}`}
-                      >
-                        <Play className="w-3.5 h-3.5" /> {isBuildTriggering ? "Building Sandbox..." : "Trigger Deployment"}
-                      </button>
-                    </div>
-
-                    {/* Metrics Grid */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">                      {[
-                        { label: "Commits Pushed", value: "148 commits", desc: "This Month Cycle" },
-                        { label: "Pull Requests Merged", value: "22 PRs", desc: "100% Approval Rate" },
-                        { label: "Peer Reviews Completed", value: "18 logs", desc: "R&D Collaborations" },
-                        { label: "Lines of Code (LoC)", value: "+14,200", desc: "-4,800 Clean deletions" },
-                        { label: "Test Coverage Average", value: "87.4%", desc: "Strict Jest Validations" },
-                        { label: "CI Pipeline Runtime", value: "3m 42s", desc: "Standard Actions runtime" }
+                    {/* Portfolio Stats Bento Bar */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      {[
+                        { label: "Total Projects Listed", value: `${portfolioItems.length} products`, desc: "In active showcases" },
+                        { label: "Open Source Repos", value: `${portfolioItems.filter(p => p.category === "Open Source").length} projects`, desc: "Publicly visible" },
+                        { label: "Internal Deployments", value: `${portfolioItems.filter(p => p.category === "Internal Product").length} systems`, desc: "In-house tools" },
+                        { label: "Research & Publications", value: `${portfolioItems.filter(p => p.category === "Research & Patent" || p.category === "Technical Writing").length} papers`, desc: "Patents & write-ups" }
                       ].map((stat, i) => (
-                        <div key={i} className="bg-white/90 border border-slate-200/60 p-4 rounded-xl shadow-2xs space-y-1 relative">
+                        <div key={i} className="bg-slate-50 border border-slate-200/80 p-4 rounded-xl text-center space-y-1 relative">
                           <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">{stat.label}</span>
                           <span className="block text-sm font-extrabold font-mono text-slate-900">{stat.value}</span>
                           <span className="block text-[10px] text-slate-400 font-semibold">{stat.desc}</span>
@@ -2653,32 +2481,196 @@ export function EmployeeDossier({
                       ))}
                     </div>
 
-                    {/* Progress bars */}
-                    <div className="bg-white/90 border border-slate-200/60 rounded-2xl p-5 space-y-4 shadow-2xs">
-                      <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">Continuous Quality Inspections</h4>
-                      <div className="space-y-4">
-                        {[
-                          { label: "Production Build Stability Health", val: 98, color: "bg-slate-900" },
-                          { label: "Unit & Core Integration Coverage Ratio", val: 87.4, color: "bg-slate-700" },
-                          { label: "Linting & Code Smells Quality index", val: 94, color: "bg-slate-800" }
-                        ].map((bar, idx) => (
-                          <div key={idx} className="space-y-1.5 text-left text-xs">
-                            <div className="flex justify-between text-slate-500 font-semibold text-[11px]">
-                              <span>{bar.label}</span>
-                              <span className="font-mono font-bold text-slate-800">{bar.val}%</span>
+                    {/* Manage Portfolio items */}
+                    <div className="bg-slate-50/80 border border-slate-200/60 rounded-xl p-5 space-y-3.5">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">Enlist Showcase Artifact</h4>
+                          <p className="text-[10px] text-slate-400">Add an open-source library, system deployment, patent, or technical paper to this developer's official portfolio.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsAddingPortfolio(!isAddingPortfolio)}
+                          className="text-[10px] font-bold text-slate-800 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 px-3 py-1.5 rounded-lg transition-all cursor-pointer shadow-2xs"
+                        >
+                          {isAddingPortfolio ? "Hide Form" : "Add Portfolio Item"}
+                        </button>
+                      </div>
+
+                      {isAddingPortfolio && (
+                        <form onSubmit={handleCreatePortfolio} className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3.5 border-t border-dashed border-slate-200">
+                          <div className="space-y-1">
+                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Artifact Title</label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="e.g. Distributed Consensus Engine"
+                              value={newPortfolioTitle}
+                              onChange={(e) => setNewPortfolioTitle(e.target.value)}
+                              className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800 placeholder:text-slate-400"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Artifact Category</label>
+                            <select
+                              value={newPortfolioCat}
+                              onChange={(e) => setNewPortfolioCat(e.target.value as any)}
+                              className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none cursor-pointer font-semibold text-slate-700"
+                            >
+                              <option value="Open Source">Open Source GitHub Project</option>
+                              <option value="Internal Product">Internal Corporate Product</option>
+                              <option value="Technical Writing">Technical Blog & Writing</option>
+                              <option value="Research & Patent">Academic Research / Patent</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-1 sm:col-span-2">
+                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Brief Description</label>
+                            <textarea
+                              rows={2}
+                              required
+                              placeholder="Describe the architectural impact, performance metrics, and features."
+                              value={newPortfolioDesc}
+                              onChange={(e) => setNewPortfolioDesc(e.target.value)}
+                              className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800 placeholder:text-slate-400 resize-none"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Technologies (comma separated)</label>
+                            <input
+                              type="text"
+                              placeholder="TypeScript, Redis, Docker, gRPC"
+                              value={newPortfolioTechs}
+                              onChange={(e) => setNewPortfolioTechs(e.target.value)}
+                              className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800 placeholder:text-slate-400"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Performance Metrics / Status</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. 1.2k Stars // v2.4.0 Active"
+                              value={newPortfolioMetrics}
+                              onChange={(e) => setNewPortfolioMetrics(e.target.value)}
+                              className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800 placeholder:text-slate-400"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Live Link / Source Repository URL</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. github.com/user/project"
+                              value={newPortfolioLink}
+                              onChange={(e) => setNewPortfolioLink(e.target.value)}
+                              className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800 placeholder:text-slate-400"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Date Accomplished</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. June 2026"
+                              value={newPortfolioDate}
+                              onChange={(e) => setNewPortfolioDate(e.target.value)}
+                              className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800 placeholder:text-slate-400"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2 pt-2">
+                            <button
+                              type="submit"
+                              className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-xs transition-colors shadow-2xs cursor-pointer"
+                            >
+                              Publish Artifact to Portfolio
+                            </button>
+                          </div>
+                        </form>
+                      )}
+                    </div>
+
+                    {/* Active Portfolio Grid */}
+                    <div className="space-y-4">
+                      {portfolioItems.map((item) => (
+                        <div key={item.id} className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col gap-4 relative overflow-hidden shadow-2xs hover:shadow-xs transition-all duration-200">
+                          {/* Top row */}
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                            <div className="flex items-center gap-2.5">
+                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider font-mono ${
+                                item.category === "Open Source" ? "bg-emerald-50 border border-emerald-200/80 text-emerald-700" :
+                                item.category === "Internal Product" ? "bg-blue-50 border border-blue-200/80 text-blue-700" :
+                                item.category === "Technical Writing" ? "bg-indigo-50 border border-indigo-200/80 text-indigo-700" :
+                                "bg-amber-50 border border-amber-200/80 text-amber-700"
+                              }`}>
+                                {item.category}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-bold font-mono">{item.date}</span>
                             </div>
-                            <div className="h-1.5 w-full bg-slate-200/40 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full ${bar.color} rounded-full transition-all duration-1000`}
-                                style={{ width: `${bar.val}%` }}
-                              />
+
+                            {/* Actions */}
+                            <div className="flex items-center gap-1.5">
+                              {item.link && (
+                                <a
+                                  href={item.link.startsWith("http") ? item.link : `https://${item.link}`}
+                                  target="_blank"
+                                  referrerPolicy="no-referrer"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-lg transition-all"
+                                >
+                                  View Live <ArrowUpRight className="w-3 h-3" />
+                                </a>
+                              )}
+                              <button
+                                onClick={() => handleDeletePortfolio(item.id, item.title)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50/50 border border-slate-200 transition-colors cursor-pointer"
+                                title="Delete artifact"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           </div>
-                        ))}
-                      </div>
+
+                          {/* Body */}
+                          <div className="space-y-1">
+                            <h4 className="text-sm font-extrabold text-slate-950 font-display">{item.title}</h4>
+                            <p className="text-xs text-slate-600 leading-relaxed font-medium">{item.description}</p>
+                          </div>
+
+                          {/* Bottom Row */}
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-3.5 border-t border-slate-100">
+                            {/* Technology pills */}
+                            <div className="flex flex-wrap gap-1.5">
+                              {item.technologies.map((t, idx) => (
+                                <span key={idx} className="px-2 py-0.5 rounded-lg text-[9px] font-bold bg-slate-100 text-slate-600 border border-slate-200/40 font-mono">
+                                  {t}
+                                </span>
+                              ))}
+                            </div>
+
+                            {/* Metrics indicator */}
+                            {item.metrics && (
+                              <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-bold font-mono bg-slate-50 px-2.5 py-1 border border-slate-200/60 rounded-lg">
+                                <Activity className="w-3.5 h-3.5 text-slate-400" />
+                                <span>{item.metrics}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+
+                      {portfolioItems.length === 0 && (
+                        <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+                          <p className="text-xs text-slate-500 font-medium font-mono">No portfolio items showcase registered.</p>
+                          <p className="text-[10px] text-slate-400">Click the 'Add Portfolio Item' button above to highlight their technical achievements.</p>
+                        </div>
+                      )}
                     </div>
 
                   </div>
+                )}          </div>
                 )}
 
                 {/* 6. LEAVES & TIMESHEET SCHEDULES */}
@@ -2712,124 +2704,67 @@ export function EmployeeDossier({
                       </span>
                     </div>
 
-                    {/* PTO Apply form & application logs */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      
-                      {/* PTO Apply form */}
-                      <div className="bg-white/90 border border-slate-200/60 p-5 rounded-2xl shadow-2xs space-y-4">
-                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-display">Apply for Time Off</h4>
-                        <form onSubmit={handleApplyLeave} className="space-y-3.5">
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1">Start Date</label>
-                              <input
-                                type="date"
-                                value={leaveStart}
-                                onChange={(e) => setLeaveStart(e.target.value)}
-                                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1">End Date</label>
-                              <input
-                                type="date"
-                                value={leaveEnd}
-                                onChange={(e) => setLeaveEnd(e.target.value)}
-                                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800"
-                              />
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1.5">Leave Classification</label>
-                            <select
-                              value={leaveType}
-                              onChange={(e) => setLeaveType(e.target.value as any)}
-                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800/10 rounded-xl text-xs outline-none cursor-pointer font-semibold text-slate-700"
-                            >
-                              <option value="Casual">Casual Leave (Paid)</option>
-                              <option value="Sick">Sick Leave (Medical)</option>
-                              <option value="Gov/Fest">Festival / Religious Break</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1.5">Cover Notes / Remarks</label>
-                            <textarea
-                              rows={2}
-                              placeholder="Describe purpose of paid time off..."
-                              value={leaveNotes}
-                              onChange={(e) => setLeaveNotes(e.target.value)}
-                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800/10 rounded-xl text-xs outline-none resize-none text-slate-700 text-[11px]"
-                            />
-                          </div>
-                          <button
-                            type="submit"
-                            className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer shadow-sm"
-                          >
-                            Submit Leave Application
-                          </button>
-                        </form>
+                    {/* PTO application logs */}
+                    <div className="space-y-3.5">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">Employee Leave History</h4>
+                        <span className="text-[10px] font-mono text-slate-400">Total Records: {leaveRequests.length}</span>
                       </div>
-
-                      {/* Request audits list */}
-                      <div className="space-y-3">
-                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">My PTO Logs</h4>
-                        <div className="space-y-3">
-                          {leaveRequests.map((lr) => (
-                            <div key={lr.id} className="bg-white/90 border border-slate-200/60 rounded-xl p-3.5 space-y-2.5 text-xs shadow-2xs relative">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <span className="font-bold text-slate-900 font-mono">{lr.type} Leave ({lr.days} days)</span>
-                                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">{lr.start} to {lr.end}</p>
-                                </div>
-                                <div className="flex flex-col items-end gap-1.5">
-                                  <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${
-                                    lr.status === "Approved" ? "bg-emerald-50 border-emerald-200 text-emerald-800" : lr.status === "Rejected" ? "bg-rose-50 border-rose-200 text-rose-800" : "bg-amber-50 border-amber-200 text-amber-800"
-                                  }`}>
-                                    {lr.status}
-                                  </span>
-                                </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {leaveRequests.map((lr) => (
+                          <div key={lr.id} className="bg-white/90 border border-slate-200/60 rounded-2xl p-4 space-y-3.5 text-xs shadow-2xs relative hover:shadow-xs transition-all duration-300">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <span className="font-extrabold text-slate-900 font-mono text-xs">{lr.type} Leave ({lr.days} days)</span>
+                                <p className="text-[10px] text-slate-400 font-mono mt-0.5">{lr.start} to {lr.end}</p>
                               </div>
-                              <p className="text-slate-600 leading-relaxed italic text-[11px]">"{lr.notes}"</p>
-
-                              {/* Manager quick audits */}
-                              <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-[10px]">
-                                <span className="text-slate-400 font-mono font-bold">Audit Controls:</span>
-                                <div className="flex items-center gap-1.5">
-                                  {lr.status === "Pending" && (
-                                    <>
-                                      <button
-                                        onClick={() => handleUpdateLeaveStatus(lr.id, "Approved")}
-                                        className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded cursor-pointer"
-                                      >
-                                        Approve
-                                      </button>
-                                      <button
-                                        onClick={() => handleUpdateLeaveStatus(lr.id, "Rejected")}
-                                        className="px-2 py-0.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded cursor-pointer"
-                                      >
-                                        Reject
-                                      </button>
-                                    </>
-                                  )}
-                                  <button
-                                    onClick={() => handleDeleteLeaveRequest(lr.id)}
-                                    className="p-1 rounded bg-slate-50 hover:bg-rose-50 hover:text-rose-600 text-slate-400 border border-slate-200 cursor-pointer"
-                                    title="Cancel Request"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </button>
-                                </div>
+                              <div className="flex flex-col items-end gap-1.5">
+                                <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${
+                                  lr.status === "Approved" ? "bg-emerald-50 border-emerald-200 text-emerald-800" : lr.status === "Rejected" ? "bg-rose-50 border-rose-200 text-rose-800" : "bg-amber-50 border-amber-200 text-amber-800"
+                                }`}>
+                                  {lr.status}
+                                </span>
                               </div>
                             </div>
-                          ))}
-                          {leaveRequests.length === 0 && (
-                            <div className="text-center py-8 text-slate-400 text-xs italic">
-                              No leave logs or pending applications.
+                            <p className="text-slate-600 leading-relaxed italic text-[11px] bg-slate-50/50 p-2.5 rounded-xl border border-slate-150/50">"{lr.notes}"</p>
+
+                            {/* Manager quick audits */}
+                            <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-[10px]">
+                              <span className="text-slate-400 font-mono font-bold">Audit Controls:</span>
+                              <div className="flex items-center gap-1.5">
+                                {lr.status === "Pending" && (
+                                  <>
+                                    <button
+                                      onClick={() => handleUpdateLeaveStatus(lr.id, "Approved")}
+                                      className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded cursor-pointer transition-colors"
+                                    >
+                                      Approve
+                                    </button>
+                                    <button
+                                      onClick={() => handleUpdateLeaveStatus(lr.id, "Rejected")}
+                                      className="px-2 py-0.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded cursor-pointer transition-colors"
+                                    >
+                                      Reject
+                                    </button>
+                                  </>
+                                )}
+                                <button
+                                  onClick={() => handleDeleteLeaveRequest(lr.id)}
+                                  className="p-1 rounded bg-slate-50 hover:bg-rose-50 hover:text-rose-600 text-slate-400 border border-slate-200 cursor-pointer transition-colors"
+                                  title="Cancel Request"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
                             </div>
-                          )}
+                          </div>
+                        ))}
+                      </div>
+                      {leaveRequests.length === 0 && (
+                        <div className="text-center py-12 bg-slate-50/50 border border-dashed border-slate-200 rounded-2xl text-slate-400 text-xs italic">
+                          No leave logs or pending applications.
                         </div>
-                      </div>
-
+                      )}
                     </div>
 
                   </div>
