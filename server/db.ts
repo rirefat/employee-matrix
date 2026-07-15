@@ -1,7 +1,7 @@
 import { MongoClient, Db, Collection } from "mongodb";
 import fs from "fs";
 import path from "path";
-import { Employee, PerformanceRecord, MonthlyReport, MonthlyTarget, DBStatus, LeaveRequest } from "../src/types";
+import { Employee, PerformanceRecord, MonthlyReport, MonthlyTarget, DBStatus, LeaveRequest, Manager } from "../src/types";
 
 const LOCAL_DB_PATH = path.join(process.cwd(), "data.json");
 
@@ -1429,12 +1429,132 @@ const initialReports: MonthlyReport[] = [
   }
 ];
 
+const initialManagers: Manager[] = [
+  { 
+    id: 'm1', 
+    name: 'Alice Smith', 
+    email: 'alice@nexus.com', 
+    role: 'Custom Dev Manager', 
+    teams: ['Custom', 'Node'],
+    employeeId: 'NEX-2024-081',
+    department: 'Engineering',
+    joinDate: '2024-03-15',
+    reportingTo: 'Sarah Jenkins (VP of Engineering)',
+    emergencyContactName: 'John Smith',
+    emergencyContactPhone: '+1 (555) 012-3456',
+    employeeType: 'Full-Time',
+    skills: ['React', 'TypeScript', 'Node.js', 'System Architecture', 'Agile'],
+    jobConfirmed: 'Confirmed on 2024-03-20',
+    phone: '+1 (555) 019-2834',
+    location: 'San Francisco, CA',
+    bio: 'Dedicated Manager at Nexus, currently directing operations, tracking key performance indices, and organizing teammate resources to maximize velocity and workspace synergy.',
+    workHours: '9:00 AM - 5:00 PM PST',
+    workStyle: 'Remote',
+    costCenter: 'CC-402-ENG',
+    allocatedEquipment: 'MacBook Pro 16", LG 34" UltraWide Monitor',
+    education: 'M.S. in Computer Science - Stanford University',
+    certifications: 'AWS Certified Solutions Architect, Scrum Alliance CSP-SM',
+    linkedinLink: 'https://linkedin.com/in/alice-smith-nexus',
+    githubLink: 'https://github.com/alice-smith-nexus',
+    preferredLanguage: 'English (US)',
+    timezone: 'America/Los_Angeles'
+  },
+  { 
+    id: 'm2', 
+    name: 'Bob Johnson', 
+    email: 'bob@nexus.com', 
+    role: 'Shopify Manager', 
+    teams: ['Shopify'],
+    employeeId: 'NEX-2023-102',
+    department: 'E-commerce',
+    joinDate: '2023-08-01',
+    reportingTo: 'Sarah Jenkins (VP of Engineering)',
+    emergencyContactName: 'Linda Johnson',
+    emergencyContactPhone: '+1 (555) 014-9876',
+    employeeType: 'Full-Time',
+    skills: ['Shopify Liquid', 'E-commerce', 'JavaScript', 'Google Analytics'],
+    jobConfirmed: 'Confirmed on 2023-08-15',
+    phone: '+1 (555) 011-4720',
+    location: 'Austin, TX',
+    bio: 'Overseeing all custom Shopify application extensions and storefront performance. Focused on delivering high-conversion shopping workflows.',
+    workHours: '8:30 AM - 5:30 PM CST',
+    workStyle: 'Hybrid',
+    costCenter: 'CC-309-ECO',
+    allocatedEquipment: 'MacBook Pro 14", Dell Thunderbolt Dock',
+    education: 'B.S. in Management Information Systems - UT Austin',
+    certifications: 'Shopify Plus Partner Certified, Certified ScrumMaster (CSM)',
+    linkedinLink: 'https://linkedin.com/in/bob-johnson-ecommerce',
+    githubLink: 'https://github.com/bob-johnson-dev',
+    preferredLanguage: 'English (US)',
+    timezone: 'America/Chicago'
+  },
+  { 
+    id: 'm3', 
+    name: 'Charlie Davis', 
+    email: 'charlie@nexus.com', 
+    role: 'WordPress Manager', 
+    teams: ['WordPress'],
+    employeeId: 'NEX-2022-409',
+    department: 'Marketing Platforms',
+    joinDate: '2022-11-10',
+    reportingTo: 'Marcus Aurelius (Director of Marketing)',
+    emergencyContactName: 'David Davis',
+    emergencyContactPhone: '+1 (555) 015-1122',
+    employeeType: 'Full-Time',
+    skills: ['PHP', 'WordPress REST API', 'SEO', 'Security Hardening'],
+    jobConfirmed: 'Pending Verification',
+    phone: '+1 (555) 018-9382',
+    location: 'Chicago, IL',
+    bio: 'Managing corporate CMS setups, enterprise plugins, and performance optimization for our global multi-site marketing portals.',
+    workHours: '9:00 AM - 6:00 PM EST',
+    workStyle: 'Onsite',
+    costCenter: 'CC-102-MKT',
+    allocatedEquipment: 'Lenovo ThinkPad X1 Carbon, Dell 27" 4K Monitor',
+    education: 'B.A. in Web Design & Interactive Media - Columbia College Chicago',
+    certifications: 'Google Analytics Individual Qualification, W3Schools PHP Certification',
+    linkedinLink: 'https://linkedin.com/in/charlie-davis-web',
+    githubLink: 'https://github.com/charlie-davis-wp',
+    preferredLanguage: 'English (US)',
+    timezone: 'America/New_York'
+  },
+  { 
+    id: 'm4', 
+    name: 'Diana Prince', 
+    email: 'diana@nexus.com', 
+    role: 'UI/UX Manager', 
+    teams: ['UI/UX'],
+    employeeId: 'NEX-2024-005',
+    department: 'Design & Creative',
+    joinDate: '2024-01-08',
+    reportingTo: 'Sarah Jenkins (VP of Engineering)',
+    emergencyContactName: 'Hippolyta Prince',
+    emergencyContactPhone: '+1 (555) 017-7777',
+    employeeType: 'Full-Time',
+    skills: ['Figma', 'Design Systems', 'Interactive Prototyping', 'User Research'],
+    jobConfirmed: 'Confirmed on 2024-01-10',
+    phone: '+1 (555) 019-3311',
+    location: 'Los Angeles, CA',
+    bio: 'Leading the user experience design initiative at Nexus. Passionate about beautiful typography, intuitive mental models, and pixel-perfect micro-interactions.',
+    workHours: '10:00 AM - 6:00 PM PST',
+    workStyle: 'Remote',
+    costCenter: 'CC-505-DSN',
+    allocatedEquipment: 'iPad Pro 12.9" with Apple Pencil, MacBook Pro 16"',
+    education: 'B.F.A. in Graphic Design - Rhode Island School of Design (RISD)',
+    certifications: 'Nielsen Norman Group UX Master Certified (UXMC)',
+    linkedinLink: 'https://linkedin.com/in/diana-prince-ux',
+    githubLink: 'https://github.com/diana-prince-designs',
+    preferredLanguage: 'English (US)',
+    timezone: 'America/Los_Angeles'
+  }
+];
+
 interface LocalSchema {
   employees: Employee[];
   performance: PerformanceRecord[];
   reports: MonthlyReport[];
   targets: MonthlyTarget[];
   leaveRequests: LeaveRequest[];
+  managers: Manager[];
 }
 
 class DatabaseService {
@@ -1453,7 +1573,8 @@ class DatabaseService {
     performance: initialPerformance,
     reports: initialReports,
     targets: initialTargets,
-    leaveRequests: initialLeaveRequests
+    leaveRequests: initialLeaveRequests,
+    managers: initialManagers
   };
 
   constructor() {
@@ -1509,7 +1630,8 @@ class DatabaseService {
         performance: initialPerformance,
         reports: initialReports,
         targets: initialTargets,
-        leaveRequests: initialLeaveRequests
+        leaveRequests: initialLeaveRequests,
+        managers: initialManagers
       };
       try {
         fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(initialData, null, 2));
@@ -1556,6 +1678,14 @@ class DatabaseService {
         const cleanTargets = JSON.parse(JSON.stringify(initialTargets));
         await this.db.collection("monthly_targets").insertMany(cleanTargets);
       }
+
+      const managersColl = this.db.collection("managers");
+      const managersCount = await managersColl.countDocuments();
+      if (managersCount === 0) {
+        console.log("Seeding initial managers into MongoDB...");
+        const cleanManagers = JSON.parse(JSON.stringify(initialManagers));
+        await this.db.collection("managers").insertMany(cleanManagers);
+      }
       
       console.log("MongoDB initialization/seeding check complete.");
     } catch (err) {
@@ -1572,6 +1702,7 @@ class DatabaseService {
         await this.db.collection("performance_records").deleteMany({});
         await this.db.collection("monthly_reports").deleteMany({});
         await this.db.collection("monthly_targets").deleteMany({});
+        await this.db.collection("managers").deleteMany({});
         
         await this.seedMongoIfNeeded();
         return true;
@@ -1586,7 +1717,8 @@ class DatabaseService {
         performance: initialPerformance,
         reports: initialReports,
         targets: initialTargets,
-        leaveRequests: initialLeaveRequests
+        leaveRequests: initialLeaveRequests,
+        managers: initialManagers
       };
       this.memoryDb = JSON.parse(JSON.stringify(initialData));
       try {
@@ -1609,6 +1741,9 @@ class DatabaseService {
         const parsed = JSON.parse(fs.readFileSync(LOCAL_DB_PATH, "utf8"));
         if (!parsed.targets) {
           parsed.targets = [];
+        }
+        if (!parsed.managers) {
+          parsed.managers = initialManagers;
         }
         return parsed as LocalSchema;
       }
@@ -2063,6 +2198,42 @@ class DatabaseService {
       this.writeLocal(data);
     }
     return newRequest;
+  }
+
+  // --- MANAGERS API ---
+  public async getManagers(): Promise<Manager[]> {
+    await this.ensureInitialized();
+    if (this.db && this.dbStatus.connectionType === "mongodb") {
+      const docs = await this.db.collection("managers").find({}).toArray();
+      return docs.map(doc => {
+        const { _id, ...rest } = doc;
+        return { ...rest, id: rest.id || _id.toString() } as Manager;
+      });
+    } else {
+      const data = this.readLocal();
+      return data.managers || [];
+    }
+  }
+
+  public async updateManager(id: string, manager: Partial<Manager>): Promise<Manager | null> {
+    await this.ensureInitialized();
+    if (this.db && this.dbStatus.connectionType === "mongodb") {
+      await this.db.collection("managers").updateOne(
+        { id: id },
+        { $set: manager }
+      );
+      const doc = await this.db.collection("managers").findOne({ id: id });
+      if (!doc) return null;
+      const { _id, ...rest } = doc;
+      return { ...rest, id: rest.id || _id.toString() } as Manager;
+    } else {
+      const data = this.readLocal();
+      const idx = data.managers.findIndex(m => m.id === id);
+      if (idx === -1) return null;
+      data.managers[idx] = { ...data.managers[idx], ...manager };
+      this.writeLocal(data);
+      return data.managers[idx];
+    }
   }
 }
 

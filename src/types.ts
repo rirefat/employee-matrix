@@ -5,6 +5,36 @@ export interface IncrementRecord {
   remarks?: string;
 }
 
+export interface Manager {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  teams: string[];
+  employeeId?: string;
+  department?: string;
+  joinDate?: string;
+  reportingTo?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  employeeType?: string; // e.g. Full-Time, Contractor, etc.
+  skills?: string[];
+  jobConfirmed?: string;
+  phone?: string;
+  location?: string;
+  bio?: string;
+  workHours?: string;
+  workStyle?: string;
+  costCenter?: string;
+  allocatedEquipment?: string;
+  education?: string;
+  certifications?: string;
+  linkedinLink?: string;
+  githubLink?: string;
+  preferredLanguage?: string;
+  timezone?: string;
+}
+
 export interface ManagerNote {
   id: string;
   author: string;

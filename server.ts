@@ -314,6 +314,31 @@ app.post("/api/targets", async (req, res) => {
   }
 });
 
+// --- MANAGERS API ---
+
+app.get("/api/managers", async (req, res) => {
+  try {
+    const managers = await dbService.getManagers();
+    res.json(managers);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to fetch managers" });
+  }
+});
+
+app.put("/api/managers/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = { ...req.body };
+    const updated = await dbService.updateManager(id, updateData);
+    if (!updated) {
+      return res.status(404).json({ error: "Manager not found" });
+    }
+    res.json(updated);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to update manager" });
+  }
+});
+
 // --- VITE DEV MIDDLEWARE OR PRODUCTION STATIC ROUTING ---
 if (process.env.NODE_ENV !== "production") {
   console.log("Setting up Vite Development Server middleware...");

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { 
   User, 
   Mail, 
@@ -20,10 +20,15 @@ import {
   Award,
   Armchair,
   Sparkles,
-  Lock
+  Laptop,
+  GraduationCap,
+  Globe,
+  Clock,
+  Compass,
+  Link as LinkIcon
 } from "lucide-react";
 import { get3DAvatarUrl } from "../utils";
-import { Manager } from "./LoginPage";
+import { Manager } from "../types";
 
 interface ManagerProfileProps {
   manager: Manager;
@@ -31,41 +36,48 @@ interface ManagerProfileProps {
   showToast: (message: string, type: "success" | "error" | "info") => void;
 }
 
-type TabType = "personal" | "hr" | "safety";
+type TabType = "personal" | "work" | "safety";
 
 export function ManagerProfile({ manager, onSave, showToast }: ManagerProfileProps) {
-  // Tabs for sub-forms
+  // Tabs for sub-forms (Renamed and simplified)
   const [activeSubTab, setActiveSubTab] = useState<TabType>("personal");
 
-  // State initialization
+  // State initialization - Personal Info
   const [name, setName] = useState(manager.name);
   const [email, setEmail] = useState(manager.email);
-  const [role, setRole] = useState(manager.role);
-  const [phone, setPhone] = useState(manager.phone || "+1 (555) 019-2834");
-  const [location, setLocation] = useState(manager.location || "San Francisco, CA");
-  const [bio, setBio] = useState(
-    manager.bio || 
-    `Dedicated Manager at Nexus, currently directing operations, tracking key performance indices, and organizing teammate resources to maximize velocity and workspace synergy.`
-  );
-  
-  // HR/Office state
-  const [employeeId, setEmployeeId] = useState(manager.employeeId || "NEX-2026-009");
-  const [department, setDepartment] = useState(manager.department || "Operations");
-  const [joinDate, setJoinDate] = useState(manager.joinDate || "2026-01-15");
-  const [reportingTo, setReportingTo] = useState(manager.reportingTo || "Sarah Jenkins (VP of Operations)");
-  const [employeeType, setEmployeeType] = useState(manager.employeeType || "Full-Time");
-  const [deskNumber, setDeskNumber] = useState(manager.deskNumber || "Floor 3, Zone B-4");
-  
-  // Emergency state
-  const [emergencyContactName, setEmergencyContactName] = useState(manager.emergencyContactName || "John Smith");
-  const [emergencyContactPhone, setEmergencyContactPhone] = useState(manager.emergencyContactPhone || "+1 (555) 012-3456");
+  const [phone, setPhone] = useState(manager.phone || "");
+  const [location, setLocation] = useState(manager.location || "");
+  const [bio, setBio] = useState(manager.bio || "");
+  const [education, setEducation] = useState(manager.education || "");
+  const [certifications, setCertifications] = useState(manager.certifications || "");
+  const [linkedinLink, setLinkedinLink] = useState(manager.linkedinLink || "");
+  const [githubLink, setGithubLink] = useState(manager.githubLink || "");
+  const [preferredLanguage, setPreferredLanguage] = useState(manager.preferredLanguage || "English (US)");
 
-  // Teams list
+  // State initialization - Work Preferences & Status
+  const [employeeId, setEmployeeId] = useState(manager.employeeId || "");
+  const [department, setDepartment] = useState(manager.department || "");
+  const [role, setRole] = useState(manager.role || "");
+  const [employeeType, setEmployeeType] = useState(manager.employeeType || "Full-Time");
+  const [joinDate, setJoinDate] = useState(manager.joinDate || "");
+  const [jobConfirmed, setJobConfirmed] = useState(manager.jobConfirmed || "");
+  const [reportingTo, setReportingTo] = useState(manager.reportingTo || "");
+  const [workHours, setWorkHours] = useState("9:00 AM - 6:00 PM");
+  const [workStyle, setWorkStyle] = useState(manager.workStyle || "Remote");
+  const [costCenter, setCostCenter] = useState(manager.costCenter || "CC-401");
+  const [allocatedEquipment, setAllocatedEquipment] = useState(manager.allocatedEquipment || "Standard Issue Laptop");
+  const [timezone, setTimezone] = useState(manager.timezone || "UTC");
+
+  // Emergency state
+  const [emergencyContactName, setEmergencyContactName] = useState(manager.emergencyContactName || "");
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState(manager.emergencyContactPhone || "");
+
+  // Managed Teams/Hubs list
   const [teams, setTeams] = useState<string[]>(manager.teams || []);
   const [newTeamInput, setNewTeamInput] = useState("");
 
   // Skills list
-  const [skills, setSkills] = useState<string[]>(manager.skills || ["React", "TypeScript", "Management"]);
+  const [skills, setSkills] = useState<string[]>(manager.skills || []);
   const [newSkillInput, setNewSkillInput] = useState("");
 
   const handleAddTeam = (e: React.FormEvent) => {
@@ -91,7 +103,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
     const cleanSkill = newSkillInput.trim();
     if (!cleanSkill) return;
     if (skills.includes(cleanSkill)) {
-      showToast("Skill/Expertise is already added", "error");
+      showToast("Skill is already added", "error");
       return;
     }
     setSkills([...skills, cleanSkill]);
@@ -107,24 +119,33 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
   const handleReset = () => {
     setName(manager.name);
     setEmail(manager.email);
-    setRole(manager.role);
-    setPhone(manager.phone || "+1 (555) 019-2834");
-    setLocation(manager.location || "San Francisco, CA");
-    setBio(
-      manager.bio || 
-      `Dedicated Manager at Nexus, currently directing operations, tracking key performance indices, and organizing teammate resources to maximize velocity and workspace synergy.`
-    );
-    setEmployeeId(manager.employeeId || "NEX-2026-009");
-    setDepartment(manager.department || "Operations");
-    setJoinDate(manager.joinDate || "2026-01-15");
-    setReportingTo(manager.reportingTo || "Sarah Jenkins (VP of Operations)");
+    setPhone(manager.phone || "");
+    setLocation(manager.location || "");
+    setBio(manager.bio || "");
+    setEducation(manager.education || "");
+    setCertifications(manager.certifications || "");
+    setLinkedinLink(manager.linkedinLink || "");
+    setGithubLink(manager.githubLink || "");
+    setPreferredLanguage(manager.preferredLanguage || "English (US)");
+
+    setEmployeeId(manager.employeeId || "");
+    setDepartment(manager.department || "");
+    setRole(manager.role || "");
     setEmployeeType(manager.employeeType || "Full-Time");
-    setDeskNumber(manager.deskNumber || "Floor 3, Zone B-4");
-    setEmergencyContactName(manager.emergencyContactName || "John Smith");
-    setEmergencyContactPhone(manager.emergencyContactPhone || "+1 (555) 012-3456");
+    setJoinDate(manager.joinDate || "");
+    setJobConfirmed(manager.jobConfirmed || "");
+    setReportingTo(manager.reportingTo || "");
+    setWorkHours("9:00 AM - 6:00 PM");
+    setWorkStyle(manager.workStyle || "Remote");
+    setCostCenter(manager.costCenter || "CC-401");
+    setAllocatedEquipment(manager.allocatedEquipment || "Standard Issue Laptop");
+    setTimezone(manager.timezone || "UTC");
+
+    setEmergencyContactName(manager.emergencyContactName || "");
+    setEmergencyContactPhone(manager.emergencyContactPhone || "");
     setTeams(manager.teams || []);
-    setSkills(manager.skills || ["React", "TypeScript", "Management"]);
-    showToast("Profile changes reset to records", "info");
+    setSkills(manager.skills || []);
+    showToast("Profile changes reset to current records", "info");
   };
 
   const handleSave = (e: React.FormEvent) => {
@@ -147,19 +168,29 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
       phone: phone.trim(),
       location: location.trim(),
       bio: bio.trim(),
+      education: education.trim(),
+      certifications: certifications.trim(),
+      linkedinLink: linkedinLink.trim(),
+      githubLink: githubLink.trim(),
+      preferredLanguage: preferredLanguage.trim(),
       employeeId: employeeId.trim(),
       department: department.trim(),
-      joinDate: joinDate.trim(),
-      reportingTo: reportingTo.trim(),
       employeeType: employeeType.trim(),
-      deskNumber: deskNumber.trim(),
+      joinDate: joinDate.trim(),
+      jobConfirmed: jobConfirmed.trim(),
+      reportingTo: reportingTo.trim(),
+      workHours: workHours.trim(),
+      workStyle: workStyle.trim(),
+      costCenter: costCenter.trim(),
+      allocatedEquipment: allocatedEquipment.trim(),
+      timezone: timezone.trim(),
       emergencyContactName: emergencyContactName.trim(),
       emergencyContactPhone: emergencyContactPhone.trim(),
       skills: skills
     };
 
     onSave(updated);
-    showToast("Your profile has been updated successfully!", "success");
+    showToast("Your profile records have been updated successfully!", "success");
   };
 
   return (
@@ -178,7 +209,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                 className="w-full h-full object-cover" 
               />
             </div>
-            <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-1.5 rounded-xl border-4 border-white shadow-sm flex items-center justify-center">
+            <div className="absolute -bottom-2 -right-2 bg-indigo-600 text-white p-1.5 rounded-xl border-4 border-white shadow-sm flex items-center justify-center">
               <ShieldCheck className="w-4 h-4 stroke-[2.5]" />
             </div>
           </div>
@@ -217,9 +248,9 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest font-mono">
-                    HR & Profile Management
+                    Profile & Professional Details
                   </h3>
-                  <p className="text-xs text-slate-400 mt-1">Configure your official company records, personal details, and safety parameters.</p>
+                  <p className="text-xs text-slate-400 mt-1">Configure your personal biography, workspace configurations, and emergency preferences.</p>
                 </div>
               </div>
 
@@ -234,18 +265,18 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                       : "text-slate-500 hover:text-slate-800"
                   }`}
                 >
-                  Personal & Bio
+                  Personal & Socials
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveSubTab("hr")}
+                  onClick={() => setActiveSubTab("work")}
                   className={`flex-1 py-2 text-center rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    activeSubTab === "hr" 
+                    activeSubTab === "work" 
                       ? "bg-white text-slate-950 shadow-3xs" 
                       : "text-slate-500 hover:text-slate-800"
                   }`}
                 >
-                  HR & Office
+                  Employment & Style
                 </button>
                 <button
                   type="button"
@@ -265,6 +296,8 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
             <form onSubmit={handleSave} className="p-6 flex-1 flex flex-col justify-between">
               
               <div className="space-y-5 min-h-[300px]">
+                
+                {/* SUB TAB 1: PERSONAL & SOCIALS */}
                 {activeSubTab === "personal" && (
                   <motion.div 
                     initial={{ opacity: 0, y: 5 }}
@@ -334,9 +367,67 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                     </div>
 
                     <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1.5">Highest Educational Degree</label>
+                      <div className="relative">
+                        <GraduationCap className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input 
+                          type="text"
+                          value={education}
+                          onChange={(e) => setEducation(e.target.value)}
+                          placeholder="e.g. M.S. in Computer Science - Stanford"
+                          className="w-full pl-10 pr-4 h-10 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-bold text-slate-700 transition-all outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1.5">LinkedIn Profile Link</label>
+                        <div className="relative">
+                          <LinkIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                          <input 
+                            type="url"
+                            value={linkedinLink}
+                            onChange={(e) => setLinkedinLink(e.target.value)}
+                            placeholder="https://linkedin.com/in/..."
+                            className="w-full pl-10 pr-4 h-10 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-bold text-slate-700 transition-all outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1.5">GitHub / Portfolio Link</label>
+                        <div className="relative">
+                          <LinkIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                          <input 
+                            type="url"
+                            value={githubLink}
+                            onChange={(e) => setGithubLink(e.target.value)}
+                            placeholder="https://github.com/..."
+                            className="w-full pl-10 pr-4 h-10 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-bold text-slate-700 transition-all outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1.5">Preferred Workspace Language</label>
+                      <div className="relative">
+                        <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input 
+                          type="text"
+                          value={preferredLanguage}
+                          onChange={(e) => setPreferredLanguage(e.target.value)}
+                          placeholder="e.g. English (US)"
+                          className="w-full pl-10 pr-4 h-10 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-bold text-slate-700 transition-all outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
                       <label className="block text-xs font-semibold text-slate-500 mb-1.5">Personal Biography / Statement</label>
                       <textarea 
-                        rows={4}
+                        rows={3}
                         value={bio}
                         onChange={(e) => setBio(e.target.value)}
                         placeholder="Tell your team about yourself..."
@@ -346,7 +437,8 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                   </motion.div>
                 )}
 
-                {activeSubTab === "hr" && (
+                {/* SUB TAB 2: EMPLOYMENT & STYLE */}
+                {activeSubTab === "work" && (
                   <motion.div 
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -354,7 +446,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                   >
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-500 mb-1.5">Employee Badge ID</label>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1.5">Employee Identification Badge</label>
                         <div className="relative">
                           <Fingerprint className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                           <input 
@@ -369,7 +461,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-slate-500 mb-1.5">Primary Department</label>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1.5">Primary Department / Division</label>
                         <div className="relative">
                           <Building className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                           <input 
@@ -386,7 +478,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-500 mb-1.5">Managerial Role Title</label>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1.5">Professional Role Title</label>
                         <div className="relative">
                           <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                           <input 
@@ -401,7 +493,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-slate-500 mb-1.5">Employment Type</label>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1.5">Employment Type Class</label>
                         <div className="relative">
                           <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                           <select 
@@ -414,7 +506,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                             <option value="Contractor">Contractor (1099)</option>
                             <option value="Intern">Internship</option>
                           </select>
-                          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
                             ▼
                           </div>
                         </div>
@@ -423,61 +515,107 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-500 mb-1.5">Date of Hire / Join Date</label>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1.5 flex items-center justify-between">
+                          <span>Date of Hire</span>
+                          <span className="text-[10px] text-indigo-600 font-mono font-bold uppercase tracking-wide bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100/60">Controlled by HR</span>
+                        </label>
                         <div className="relative">
-                          <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-450" />
                           <input 
                             type="date"
                             value={joinDate}
-                            onChange={(e) => setJoinDate(e.target.value)}
-                            className="w-full pl-10 pr-4 h-10 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-bold text-slate-700 transition-all outline-none"
+                            disabled
+                            className="w-full pl-10 pr-4 h-10 bg-slate-100 border border-slate-200 text-xs font-bold text-slate-450 transition-all outline-none cursor-not-allowed"
                           />
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-slate-500 mb-1.5">Desk / Office Location</label>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1.5">Job Confirmed Status</label>
                         <div className="relative">
-                          <Armchair className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <ShieldCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
                           <input 
                             type="text"
-                            value={deskNumber}
-                            onChange={(e) => setDeskNumber(e.target.value)}
-                            placeholder="e.g. Floor 3, Desk A-12"
-                            className="w-full pl-10 pr-4 h-10 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-bold text-slate-700 transition-all outline-none"
+                            value={jobConfirmed}
+                            onChange={(e) => setJobConfirmed(e.target.value)}
+                            placeholder="e.g. Confirmed on 2026-03-20"
+                            className="w-full pl-10 pr-4 h-10 bg-slate-50 border border-slate-200 focus:border-emerald-400 focus:bg-white rounded-xl text-xs font-bold text-slate-700 transition-all outline-none"
                           />
                         </div>
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1.5">Reports Directly To (Superior)</label>
-                      <div className="relative">
-                        <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <input 
-                          type="text"
-                          value={reportingTo}
-                          onChange={(e) => setReportingTo(e.target.value)}
-                          placeholder="e.g. Sarah Jenkins (VP of Engineering)"
-                          className="w-full pl-10 pr-4 h-10 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-bold text-slate-700 transition-all outline-none"
-                        />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1.5">Working Style Preference</label>
+                        <div className="relative">
+                          <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <select 
+                            value={workStyle}
+                            onChange={(e) => setWorkStyle(e.target.value)}
+                            className="w-full pl-10 pr-4 h-10 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-bold text-slate-700 transition-all outline-none appearance-none cursor-pointer"
+                          >
+                            <option value="Remote">100% Fully Remote</option>
+                            <option value="Hybrid">Hybrid Work Schedule</option>
+                            <option value="Onsite">100% On-Site Location</option>
+                          </select>
+                          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
+                            ▼
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1.5 flex items-center justify-between">
+                          <span>Standard Core Working Hours</span>
+                          <span className="text-[10px] text-indigo-600 font-mono font-bold uppercase tracking-wide bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100/60">Fixed Core Hours</span>
+                        </label>
+                        <div className="relative">
+                          <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-450" />
+                          <input 
+                            type="text"
+                            value={workHours}
+                            disabled
+                            className="w-full pl-10 pr-4 h-10 bg-slate-100 border border-slate-200 text-xs font-bold text-slate-450 transition-all outline-none cursor-not-allowed"
+                          />
+                        </div>
                       </div>
                     </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="sm:col-span-2">
+                        <label className="block text-xs font-semibold text-slate-500 mb-1.5 flex items-center justify-between">
+                          <span>Direct Team Leader / Supervisor</span>
+                          <span className="text-[10px] text-indigo-600 font-mono font-bold uppercase tracking-wide bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100/60">Assigned by Management</span>
+                        </label>
+                        <div className="relative">
+                          <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-450" />
+                          <input 
+                            type="text"
+                            value={reportingTo}
+                            disabled
+                            className="w-full pl-10 pr-4 h-10 bg-slate-100 border border-slate-200 text-xs font-bold text-slate-450 transition-all outline-none cursor-not-allowed"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                   </motion.div>
                 )}
 
+                {/* SUB TAB 3: EMERGENCY CONTACT */}
                 {activeSubTab === "safety" && (
                   <motion.div 
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="space-y-5"
                   >
-                    <div className="p-4 bg-rose-50 border border-rose-100/60 rounded-2xl flex items-start gap-3">
-                      <ShieldAlert className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                    <div className="p-4 bg-indigo-50/50 border border-indigo-100/60 rounded-2xl flex items-start gap-3">
+                      <ShieldAlert className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
                       <div>
-                        <h4 className="text-xs font-bold text-rose-800 uppercase tracking-wider">Safety & Duty of Care</h4>
-                        <p className="text-[11px] text-rose-600 mt-0.5 leading-relaxed">
-                          Please list a primary contact for security notifications or health emergencies. This details are kept confidential within the HR department.
+                        <h4 className="text-xs font-bold text-indigo-800 uppercase tracking-wider">Duty of Care Support</h4>
+                        <p className="text-[11px] text-indigo-600 mt-0.5 leading-relaxed font-medium">
+                          Please list a primary contact for security notifications or urgent support alerts. These details are kept strictly confidential within secure administrative directories.
                         </p>
                       </div>
                     </div>
@@ -522,13 +660,13 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                   onClick={handleReset}
                   className="flex-1 min-w-[120px] h-10 border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold rounded-xl text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" /> Reset Form
+                  <RotateCcw className="w-3.5 h-3.5" /> Reset Records
                 </button>
                 <button
                   type="submit"
                   className="flex-1 min-w-[120px] h-10 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <Save className="w-3.5 h-3.5" /> Save Profile
+                  <Save className="w-3.5 h-3.5" /> Save Changes
                 </button>
               </div>
 

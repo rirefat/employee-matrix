@@ -64,11 +64,11 @@ import {
   Bar,
   Legend
 } from "recharts";
-import { Employee, PerformanceRecord, MonthlyReport, MonthlyTarget, LeaveRequest } from "./types";
+import { Employee, PerformanceRecord, MonthlyReport, MonthlyTarget, LeaveRequest, Manager } from "./types";
 import { ReportViewer } from "./components/ReportViewer";
 import { DashboardTab } from "./components/DashboardTab";
 import { EmployeeCard } from "./components/EmployeeCard";
-import { LoginPage, Manager } from "./components/LoginPage";
+import { LoginPage } from "./components/LoginPage";
 import { MonthPicker } from "./components/MonthPicker";
 import { EmployeeDossier } from "./components/EmployeeDossier";
 import { ManagerProfile } from "./components/ManagerProfile";
@@ -543,6 +543,28 @@ export default function App() {
   const showToast = (message: string, type: "success" | "error") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
+  };
+
+  const handleSaveManagerProfile = async (updated: Manager) => {
+    try {
+      const res = await fetch(`/api/managers/${updated.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(updated)
+      });
+      if (!res.ok) {
+        throw new Error("Failed to persist updated profile to database");
+      }
+      const data = await res.json();
+      setLoggedInManager(data);
+    } catch (err) {
+      console.error("Error saving manager profile:", err);
+      // Fallback update in state anyway
+      setLoggedInManager(updated);
+      showToast("Profile updated in memory, but could not be persisted to the database.", "error");
+    }
   };
 
   // --- EMPLOYEE LOGIC ---
@@ -1415,9 +1437,9 @@ export default function App() {
                 <LayoutDashboard className="h-4 w-4" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-bold tracking-tight">Dashboard</div>
+                <div className="text-xs font-bold tracking-tight">Performance Hub</div>
                 <div className={`text-[10px] font-mono leading-none mt-0.5 truncate ${activePortal === "performance" ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-500"}`}>
-                  Metrics & reports
+                  KPI metrics & reports
                 </div>
               </div>
               {activePortal === "performance" && (
@@ -1441,9 +1463,9 @@ export default function App() {
                 <Calendar className="h-4 w-4" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-bold tracking-tight">Time Off</div>
+                <div className="text-xs font-bold tracking-tight">Leave Planner</div>
                 <div className={`text-[10px] font-mono leading-none mt-0.5 truncate ${activePortal === "leaves" ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-500"}`}>
-                  Leave & calendar
+                  Time off & calendar
                 </div>
               </div>
               {activePortal === "leaves" && (
@@ -1467,9 +1489,9 @@ export default function App() {
                 <Users className="h-4 w-4" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-bold tracking-tight">Teammates</div>
+                <div className="text-xs font-bold tracking-tight">Teammate Directory</div>
                 <div className={`text-[10px] font-mono leading-none mt-0.5 truncate ${activePortal === "employees" ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-500"}`}>
-                  Directory & roles
+                  Profiles & responsibilities
                 </div>
               </div>
               {activePortal === "employees" && (
@@ -1493,9 +1515,9 @@ export default function App() {
                 <User className="h-4 w-4" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-bold tracking-tight">My Profile</div>
+                <div className="text-xs font-bold tracking-tight">My Profile Info</div>
                 <div className={`text-[10px] font-mono leading-none mt-0.5 truncate ${activePortal === "profile" ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-500"}`}>
-                  View & edit information
+                  View & edit my details
                 </div>
               </div>
               {activePortal === "profile" && (
@@ -1579,10 +1601,10 @@ export default function App() {
             </button>
             <div className="flex flex-col">
               <h1 className="text-lg font-bold text-slate-800 tracking-tight">
-                {activePortal === "performance" && "Performance Dashboard"}
-                {activePortal === "leaves" && "Time Off & Leaves"}
-                {activePortal === "employees" && "Teammates Directory"}
-                {activePortal === "profile" && "My Account & Profile"}
+                {activePortal === "performance" && "Performance & KPIs"}
+                {activePortal === "leaves" && "Time Off & Leave Calendar"}
+                {activePortal === "employees" && "Teammates & Roles"}
+                {activePortal === "profile" && "Profile & Employment Details"}
               </h1>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500">
@@ -4523,7 +4545,7 @@ export default function App() {
       {activePortal === "profile" && loggedInManager && (
         <ManagerProfile
           manager={loggedInManager}
-          onSave={setLoggedInManager}
+          onSave={handleSaveManagerProfile}
           showToast={showToast}
         />
       )}

@@ -2,26 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Lock, Mail, ArrowRight, ShieldCheck, Zap, AlertCircle } from 'lucide-react';
 import { get3DAvatarUrl } from '../utils';
-
-export interface Manager {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  teams: string[];
-  employeeId?: string;
-  department?: string;
-  joinDate?: string;
-  reportingTo?: string;
-  emergencyContactName?: string;
-  emergencyContactPhone?: string;
-  employeeType?: string; // e.g. Full-Time, Contractor, etc.
-  skills?: string[];
-  deskNumber?: string;
-  phone?: string;
-  location?: string;
-  bio?: string;
-}
+import { Manager } from '../types';
 
 export const dummyManagers: Manager[] = [
   { 
@@ -38,10 +19,20 @@ export const dummyManagers: Manager[] = [
     emergencyContactPhone: '+1 (555) 012-3456',
     employeeType: 'Full-Time',
     skills: ['React', 'TypeScript', 'Node.js', 'System Architecture', 'Agile'],
-    deskNumber: 'Floor 4, Desk 42',
+    jobConfirmed: 'Confirmed on 2024-03-20',
     phone: '+1 (555) 019-2834',
     location: 'San Francisco, CA',
-    bio: 'Dedicated Manager at Nexus, currently directing operations, tracking key performance indices, and organizing teammate resources to maximize velocity and workspace synergy.'
+    bio: 'Dedicated Manager at Nexus, currently directing operations, tracking key performance indices, and organizing teammate resources to maximize velocity and workspace synergy.',
+    workHours: '9:00 AM - 5:00 PM PST',
+    workStyle: 'Remote',
+    costCenter: 'CC-402-ENG',
+    allocatedEquipment: 'MacBook Pro 16", LG 34" UltraWide Monitor',
+    education: 'M.S. in Computer Science - Stanford University',
+    certifications: 'AWS Certified Solutions Architect, Scrum Alliance CSP-SM',
+    linkedinLink: 'https://linkedin.com/in/alice-smith-nexus',
+    githubLink: 'https://github.com/alice-smith-nexus',
+    preferredLanguage: 'English (US)',
+    timezone: 'America/Los_Angeles'
   },
   { 
     id: 'm2', 
@@ -57,10 +48,20 @@ export const dummyManagers: Manager[] = [
     emergencyContactPhone: '+1 (555) 014-9876',
     employeeType: 'Full-Time',
     skills: ['Shopify Liquid', 'E-commerce', 'JavaScript', 'Google Analytics'],
-    deskNumber: 'Floor 3, Desk 12',
+    jobConfirmed: 'Confirmed on 2023-08-15',
     phone: '+1 (555) 011-4720',
     location: 'Austin, TX',
-    bio: 'Overseeing all custom Shopify application extensions and storefront performance. Focused on delivering high-conversion shopping workflows.'
+    bio: 'Overseeing all custom Shopify application extensions and storefront performance. Focused on delivering high-conversion shopping workflows.',
+    workHours: '8:30 AM - 5:30 PM CST',
+    workStyle: 'Hybrid',
+    costCenter: 'CC-309-ECO',
+    allocatedEquipment: 'MacBook Pro 14", Dell Thunderbolt Dock',
+    education: 'B.S. in Management Information Systems - UT Austin',
+    certifications: 'Shopify Plus Partner Certified, Certified ScrumMaster (CSM)',
+    linkedinLink: 'https://linkedin.com/in/bob-johnson-ecommerce',
+    githubLink: 'https://github.com/bob-johnson-dev',
+    preferredLanguage: 'English (US)',
+    timezone: 'America/Chicago'
   },
   { 
     id: 'm3', 
@@ -76,10 +77,20 @@ export const dummyManagers: Manager[] = [
     emergencyContactPhone: '+1 (555) 015-1122',
     employeeType: 'Full-Time',
     skills: ['PHP', 'WordPress REST API', 'SEO', 'Security Hardening'],
-    deskNumber: 'Floor 2, Desk 05',
+    jobConfirmed: 'Pending Verification',
     phone: '+1 (555) 018-9382',
     location: 'Chicago, IL',
-    bio: 'Managing corporate CMS setups, enterprise plugins, and performance optimization for our global multi-site marketing portals.'
+    bio: 'Managing corporate CMS setups, enterprise plugins, and performance optimization for our global multi-site marketing portals.',
+    workHours: '9:00 AM - 6:00 PM EST',
+    workStyle: 'Onsite',
+    costCenter: 'CC-102-MKT',
+    allocatedEquipment: 'Lenovo ThinkPad X1 Carbon, Dell 27" 4K Monitor',
+    education: 'B.A. in Web Design & Interactive Media - Columbia College Chicago',
+    certifications: 'Google Analytics Individual Qualification, W3Schools PHP Certification',
+    linkedinLink: 'https://linkedin.com/in/charlie-davis-web',
+    githubLink: 'https://github.com/charlie-davis-wp',
+    preferredLanguage: 'English (US)',
+    timezone: 'America/New_York'
   },
   { 
     id: 'm4', 
@@ -95,10 +106,20 @@ export const dummyManagers: Manager[] = [
     emergencyContactPhone: '+1 (555) 017-7777',
     employeeType: 'Full-Time',
     skills: ['Figma', 'Design Systems', 'Interactive Prototyping', 'User Research'],
-    deskNumber: 'Floor 5, Desk 18',
+    jobConfirmed: 'Confirmed on 2024-01-10',
     phone: '+1 (555) 019-3311',
     location: 'Los Angeles, CA',
-    bio: 'Leading the user experience design initiative at Nexus. Passionate about beautiful typography, intuitive mental models, and pixel-perfect micro-interactions.'
+    bio: 'Leading the user experience design initiative at Nexus. Passionate about beautiful typography, intuitive mental models, and pixel-perfect micro-interactions.',
+    workHours: '10:00 AM - 6:00 PM PST',
+    workStyle: 'Remote',
+    costCenter: 'CC-505-DSN',
+    allocatedEquipment: 'iPad Pro 12.9" with Apple Pencil, MacBook Pro 16"',
+    education: 'B.F.A. in Graphic Design - Rhode Island School of Design (RISD)',
+    certifications: 'Nielsen Norman Group UX Master Certified (UXMC)',
+    linkedinLink: 'https://linkedin.com/in/diana-prince-ux',
+    githubLink: 'https://github.com/diana-prince-designs',
+    preferredLanguage: 'English (US)',
+    timezone: 'America/Los_Angeles'
   },
 ];
 
@@ -107,17 +128,34 @@ interface LoginPageProps {
 }
 
 export function LoginPage({ onLogin }: LoginPageProps) {
+  const [managers, setManagers] = useState<Manager[]>(dummyManagers);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
+  React.useEffect(() => {
+    fetch('/api/managers')
+      .then(res => {
+        if (res.ok) return res.json();
+        throw new Error('Failed to fetch from backend');
+      })
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setManagers(data);
+        }
+      })
+      .catch(err => {
+        console.warn('Could not fetch managers, using dummy managers fallback', err);
+      });
+  }, []);
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    const manager = dummyManagers.find(m => m.email === email && password === 'admin123');
+    const manager = managers.find(m => m.email.toLowerCase() === email.trim().toLowerCase() && password === 'admin123');
     if (manager) {
       onLogin(manager);
     } else {
-      setError('Invalid credentials. Use one of the dummy accounts below.');
+      setError('Invalid credentials. Use one of the accounts below.');
     }
   };
 
@@ -206,7 +244,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           </div>
 
           <div className="space-y-3">
-            {dummyManagers.slice(0, 3).map((manager, idx) => (
+            {managers.slice(0, 3).map((manager, idx) => (
               <motion.div 
                 key={manager.id}
                 initial={{ opacity: 0, x: 20 }}
