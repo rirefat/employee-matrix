@@ -40,7 +40,11 @@ import {
   Shield,
   Brain,
   Bot,
-  Menu
+  Menu,
+  LayoutDashboard,
+  BookOpen,
+  ExternalLink,
+  ShieldAlert
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -1362,99 +1366,157 @@ export default function App() {
       )}
 
       {/* GLOBAL SIDEBAR */}
-      <aside className={`w-64 flex-shrink-0 bg-white border-r border-slate-200 flex flex-col z-50 fixed inset-y-0 left-0 lg:relative transform ${
+      <aside className={`w-64 flex-shrink-0 bg-white border-r border-slate-200/80 flex flex-col z-50 fixed inset-y-0 left-0 lg:relative transform ${
         isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       } transition-transform duration-300 ease-in-out`}>
-        <div className="h-20 flex items-center px-6 border-b border-slate-100/50 bg-white/50 backdrop-blur-xl">
-          <div className="flex items-center gap-3 w-full">
-            <div className="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center shadow-lg shadow-slate-900/10 shrink-0 relative overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-              <Layers className="h-5 w-5 text-white" />
+        {/* SIDEBAR HEADER */}
+        <div className="h-24 flex items-center px-6 border-b border-slate-100 bg-white relative overflow-hidden shrink-0">
+          {/* Ambient subtle light source */}
+          <div className="absolute top-0 left-10 w-24 h-24 bg-indigo-50/60 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="flex items-center gap-3 w-full relative z-10">
+            <div className="relative w-10 h-10 rounded-xl bg-gradient-to-tr from-slate-50 to-slate-100 flex items-center justify-center border border-slate-200/80 shadow-3xs shrink-0 overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/10 to-violet-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <Layers className="h-5 w-5 text-indigo-600 group-hover:scale-105 transition-all duration-300" />
             </div>
             <div className="flex flex-col">
-              <span className="text-base font-extrabold text-slate-900 tracking-tight leading-none">
-                Employee<span className="text-blue-600 font-light">Matrix</span>
+              <span className="text-sm font-black text-slate-900 tracking-widest uppercase font-mono leading-none">
+                Matrix<span className="text-indigo-600 font-extrabold">.</span>
               </span>
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1.5 font-mono">
                 Workspace
               </span>
             </div>
           </div>
         </div>
         
-        <div className="flex-1 overflow-y-auto py-8 px-4 space-y-8">
+        {/* SIDEBAR BODY LINKS */}
+        <div className="flex-1 overflow-y-auto py-6 px-3.5 space-y-6 relative">
           <div className="space-y-2">
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-3">Main Navigation</div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.25em] mb-3 px-2 font-mono">
+              Portals
+            </div>
               
+            {/* LINK 1 */}
             <button
               onClick={() => {
                 setActivePortal("performance");
                 setIsSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all group relative ${
-                activePortal === "performance" ? "bg-slate-900 text-white font-medium shadow-md shadow-slate-900/10" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+              className={`w-full text-left rounded-xl transition-all group relative border p-2.5 flex items-center gap-3 cursor-pointer ${
+                activePortal === "performance" 
+                  ? "bg-indigo-50/80 text-slate-900 font-bold shadow-3xs shadow-indigo-100/30 border-indigo-100" 
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent hover:translate-x-1"
               }`}
             >
-              <div className={`p-1.5 rounded-lg ${activePortal === "performance" ? "bg-white/10" : "bg-slate-200 group-hover:bg-white"} transition-colors`}>
-                <TrendingUp className="h-4 w-4" />
+              <div className={`p-1.5 rounded-lg shrink-0 ${activePortal === "performance" ? "bg-indigo-600 text-white shadow-3xs shadow-indigo-500/10" : "bg-slate-50 text-slate-450 border border-slate-200/60 group-hover:bg-slate-100 group-hover:text-slate-700"} transition-colors`}>
+                <LayoutDashboard className="h-4 w-4" />
               </div>
-              Performance
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-bold tracking-tight">Dashboard</div>
+                <div className={`text-[10px] font-mono leading-none mt-0.5 truncate ${activePortal === "performance" ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-500"}`}>
+                  Metrics & reports
+                </div>
+              </div>
+              {activePortal === "performance" && (
+                <div className="w-1.5 h-6 rounded-full bg-indigo-600 absolute left-0 top-1/2 -translate-y-1/2 -translate-x-0.5 shadow-md shadow-indigo-500/80" />
+              )}
             </button>
 
+            {/* LINK 2 */}
             <button
               onClick={() => {
                 setActivePortal("leaves");
                 setIsSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all group relative ${
-                activePortal === "leaves" ? "bg-slate-900 text-white font-medium shadow-md shadow-slate-900/10" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+              className={`w-full text-left rounded-xl transition-all group relative border p-2.5 flex items-center gap-3 cursor-pointer ${
+                activePortal === "leaves" 
+                  ? "bg-indigo-50/80 text-slate-900 font-bold shadow-3xs shadow-indigo-100/30 border-indigo-100" 
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent hover:translate-x-1"
               }`}
             >
-              <div className={`p-1.5 rounded-lg ${activePortal === "leaves" ? "bg-white/10" : "bg-slate-200 group-hover:bg-white"} transition-colors`}>
+              <div className={`p-1.5 rounded-lg shrink-0 ${activePortal === "leaves" ? "bg-indigo-600 text-white shadow-3xs shadow-indigo-500/10" : "bg-slate-50 text-slate-450 border border-slate-200/60 group-hover:bg-slate-100 group-hover:text-slate-700"} transition-colors`}>
                 <Calendar className="h-4 w-4" />
               </div>
-              Leave Mgmt
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-bold tracking-tight">Time Off</div>
+                <div className={`text-[10px] font-mono leading-none mt-0.5 truncate ${activePortal === "leaves" ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-500"}`}>
+                  Leave & calendar
+                </div>
+              </div>
+              {activePortal === "leaves" && (
+                <div className="w-1.5 h-6 rounded-full bg-indigo-600 absolute left-0 top-1/2 -translate-y-1/2 -translate-x-0.5 shadow-md shadow-indigo-500/80" />
+              )}
             </button>
             
+            {/* LINK 3 */}
             <button
               onClick={() => {
                 setActivePortal("employees");
                 setIsSidebarOpen(false);
               }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all group relative ${
-                activePortal === "employees" ? "bg-slate-900 text-white font-medium shadow-md shadow-slate-900/10" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+              className={`w-full text-left rounded-xl transition-all group relative border p-2.5 flex items-center gap-3 cursor-pointer ${
+                activePortal === "employees" 
+                  ? "bg-indigo-50/80 text-slate-900 font-bold shadow-3xs shadow-indigo-100/30 border-indigo-100" 
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent hover:translate-x-1"
               }`}
             >
-              <div className={`p-1.5 rounded-lg ${activePortal === "employees" ? "bg-white/10" : "bg-slate-200 group-hover:bg-white"} transition-colors`}>
+              <div className={`p-1.5 rounded-lg shrink-0 ${activePortal === "employees" ? "bg-indigo-600 text-white shadow-3xs shadow-indigo-500/10" : "bg-slate-50 text-slate-450 border border-slate-200/60 group-hover:bg-slate-100 group-hover:text-slate-700"} transition-colors`}>
                 <Users className="h-4 w-4" />
               </div>
-              Employees
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-bold tracking-tight">Teammates</div>
+                <div className={`text-[10px] font-mono leading-none mt-0.5 truncate ${activePortal === "employees" ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-500"}`}>
+                  Directory & roles
+                </div>
+              </div>
+              {activePortal === "employees" && (
+                <div className="w-1.5 h-6 rounded-full bg-indigo-600 absolute left-0 top-1/2 -translate-y-1/2 -translate-x-0.5 shadow-md shadow-indigo-500/80" />
+              )}
             </button>
           </div>
         </div>
         
-        <div className="p-4 border-t border-slate-100/50 mt-auto bg-slate-50/50 space-y-4">
-          <div className="flex items-center justify-between px-2">
-            <div className="flex items-center gap-2 group cursor-pointer">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        {/* SIDEBAR FOOTER */}
+        <div className="p-4 border-t border-slate-100 bg-slate-50/40 space-y-4 shrink-0">
+          {/* DOCUMENTATION & LINKS */}
+          <div className="pt-2 border-t border-slate-100 space-y-2.5">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-400 font-mono">RESOURCES</span>
+              <span className="flex items-center gap-1 text-[8.5px] font-bold text-emerald-700 font-mono tracking-wider bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded-md">
+                <span className="h-1 w-1 rounded-full bg-emerald-500 animate-ping shrink-0" />
+                SYSTEM LIVE
               </span>
-              <span className="text-[10px] font-semibold text-slate-500 group-hover:text-slate-900 transition-colors uppercase tracking-widest">All Systems Operational</span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-1.5">
+              <a 
+                href="#docs" 
+                className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200/60 hover:border-slate-300 text-[10px] text-slate-600 hover:text-slate-900 transition-all font-medium group shadow-3xs"
+              >
+                <BookOpen className="w-3 h-3 text-indigo-500 group-hover:scale-110 transition-transform" />
+                <span>Docs</span>
+                <ExternalLink className="w-2.5 h-2.5 text-slate-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+              </a>
+              <a 
+                href="#support" 
+                className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200/60 hover:border-slate-300 text-[10px] text-slate-600 hover:text-slate-900 transition-all font-medium group shadow-3xs"
+              >
+                <HelpCircle className="w-3 h-3 text-indigo-500 group-hover:scale-110 transition-transform" />
+                <span>Support</span>
+                <ExternalLink className="w-2.5 h-2.5 text-slate-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+              </a>
             </div>
           </div>
-          
-          <div className="flex flex-wrap gap-x-4 gap-y-2 text-[10px] font-medium text-slate-500 px-2">
-            <a href="#" className="hover:text-slate-900 transition-colors">Documentation</a>
-            <a href="#" className="hover:text-slate-900 transition-colors">Support</a>
-            <a href="#" className="hover:text-slate-900 transition-colors">API</a>
-          </div>
-          
-          <div className="flex items-center gap-2 px-2 pt-2 border-t border-slate-200/60">
-            <div className="flex flex-col text-left">
-              <span className="text-[10px] font-bold text-slate-700 leading-tight">Employee Matrix</span>
-              <span className="text-[9px] text-slate-400 font-medium">v1.0.0 &copy; {new Date().getFullYear()}</span>
-            </div>
+
+          {/* COPYRIGHT */}
+          <div className="pt-2 px-1 text-center border-t border-slate-100">
+            <p className="text-[9px] font-mono text-slate-450 font-bold tracking-wider uppercase">
+              Matrix Portal &copy; 2026
+            </p>
+            <p className="text-[8px] font-mono text-slate-400 mt-0.5 tracking-tight">
+              Enterprise HR Suite v1.2
+            </p>
           </div>
         </div>
       </aside>
@@ -1488,10 +1550,10 @@ export default function App() {
               <Menu className="h-5 w-5" />
             </button>
             <div className="flex flex-col">
-              <h1 className="text-lg font-medium text-slate-800 tracking-tight">
-                {activePortal === "performance" && "Performance Overview"}
-                {activePortal === "leaves" && "Leave Management"}
-                {activePortal === "employees" && "Employee Directory"}
+              <h1 className="text-lg font-bold text-slate-800 tracking-tight">
+                {activePortal === "performance" && "Performance Dashboard"}
+                {activePortal === "leaves" && "Time Off & Leaves"}
+                {activePortal === "employees" && "Teammates Directory"}
               </h1>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500">
