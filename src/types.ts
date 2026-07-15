@@ -33,6 +33,10 @@ export interface Manager {
   githubLink?: string;
   preferredLanguage?: string;
   timezone?: string;
+  dob?: string;
+  bloodGroup?: string;
+  resumeName?: string;
+  resumeUrl?: string;
 }
 
 export interface ManagerNote {
@@ -83,6 +87,8 @@ export interface Employee {
   probationPeriod?: string;
   workLocation?: string;
   employmentType?: string;
+  resumeName?: string;
+  resumeUrl?: string;
 
   // Extension for Full Manager Editable Properties (persisted to database)
   skillsGrouped?: {

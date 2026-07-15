@@ -45,7 +45,9 @@ import {
   BookOpen,
   ExternalLink,
   ShieldAlert,
-  User
+  User,
+  Paperclip,
+  Upload
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -313,7 +315,9 @@ export default function App() {
     bankIfscCode: "",
     probationPeriod: "None",
     workLocation: "Office",
-    employmentType: "Full-time"
+    employmentType: "Full-time",
+    resumeName: "",
+    resumeUrl: ""
   });
 
   const [isPerformanceModalOpen, setIsPerformanceModalOpen] = useState(false);
@@ -605,7 +609,9 @@ export default function App() {
       bankIfscCode: "",
       probationPeriod: "None",
       workLocation: "Office",
-      employmentType: "Full-time"
+      employmentType: "Full-time",
+      resumeName: "",
+      resumeUrl: ""
     });
     setIsEmployeeModalOpen(true);
   };
@@ -644,7 +650,9 @@ export default function App() {
       bankIfscCode: emp.bankIfscCode || "",
       probationPeriod: emp.probationPeriod || "None",
       workLocation: emp.workLocation || "Office",
-      employmentType: emp.employmentType || "Full-time"
+      employmentType: emp.employmentType || "Full-time",
+      resumeName: emp.resumeName || "",
+      resumeUrl: emp.resumeUrl || ""
     });
     setIsEmployeeModalOpen(true);
   };
@@ -2029,6 +2037,128 @@ export default function App() {
                         </div>
                         <div className="text-[9px] text-indigo-700 font-bold mt-2 truncate bg-indigo-500/10 border border-indigo-500/20 px-1.5 py-0.5 rounded-md inline-block w-max font-mono">
                           {activeRecord ? `${activeRecord.conductedMeetings} sessions run` : "No activity"}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Resume & Professional Credentials Dossier */}
+                    <div className="mt-6 p-5 border border-slate-200/60 rounded-2xl bg-white/50 backdrop-blur-md relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-indigo-500/5 to-purple-500/5 blur-2xl pointer-events-none" />
+                      
+                      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-slate-100 pb-4 mb-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                            <FileText className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest font-mono">
+                              Resume & Professional Credentials
+                            </h3>
+                            <p className="text-[10px] text-slate-400 font-medium">Verified HR portfolio, academic background, and attached documents.</p>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <button
+                            onClick={() => {
+                              setModalTab("professional");
+                              handleOpenEditEmployee(selectedReportEmployeeObj);
+                            }}
+                            className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                          >
+                            Update Dossier
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Column 1: Attached Resume File / Link */}
+                        <div className="md:col-span-1 flex flex-col justify-between p-4 bg-slate-50/50 border border-slate-100 rounded-xl">
+                          <div className="space-y-2.5">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Attached Document</span>
+                            {selectedReportEmployeeObj.resumeName ? (
+                              <div className="space-y-3">
+                                <div className="flex items-start gap-2 bg-white p-2.5 border border-slate-200/60 rounded-lg">
+                                  <Paperclip className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                                  <div className="overflow-hidden">
+                                    <p className="text-xs font-bold text-slate-800 truncate" title={selectedReportEmployeeObj.resumeName}>
+                                      {selectedReportEmployeeObj.resumeName}
+                                    </p>
+                                    <p className="text-[9px] text-slate-400">PDF / Word Document</p>
+                                  </div>
+                                </div>
+                                {selectedReportEmployeeObj.resumeUrl && (
+                                  <a
+                                    href={selectedReportEmployeeObj.resumeUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-full h-8 flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-[10px] uppercase tracking-wider transition-colors"
+                                  >
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    Open Document
+                                  </a>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-center py-4 space-y-2">
+                                <p className="text-xs text-slate-400 italic">No resume file attached.</p>
+                                <button
+                                  onClick={() => {
+                                    setModalTab("professional");
+                                    handleOpenEditEmployee(selectedReportEmployeeObj);
+                                  }}
+                                  className="text-[10px] font-bold text-slate-600 hover:text-indigo-600 bg-white border border-slate-200 px-2.5 py-1 rounded-lg transition-all"
+                                >
+                                  Attach Resume File
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Column 2: Qualifications & Experience */}
+                        <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Academic Qualification</span>
+                            <div className="p-3 bg-white border border-slate-200/50 rounded-xl">
+                              <p className="text-xs font-bold text-slate-800">
+                                {selectedReportEmployeeObj.highestQualification || "Not registered"}
+                              </p>
+                              <p className="text-[9px] text-slate-400 mt-0.5">Highest credential earned</p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Professional Experience</span>
+                            <div className="p-3 bg-white border border-slate-200/50 rounded-xl">
+                              <p className="text-xs font-bold text-slate-800 font-mono">
+                                {selectedReportEmployeeObj.experienceYears !== undefined ? `${selectedReportEmployeeObj.experienceYears} Years` : "Not registered"}
+                              </p>
+                              <p className="text-[9px] text-slate-400 mt-0.5">Total tenure in industry</p>
+                            </div>
+                          </div>
+
+                          <div className="sm:col-span-2 space-y-1.5">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Web CV Portfolio / Contact Reference</span>
+                            <div className="p-3 bg-white border border-slate-200/50 rounded-xl flex items-center justify-between gap-3 overflow-hidden">
+                              <div className="truncate">
+                                <p className="text-xs font-bold text-slate-800 truncate">
+                                  {selectedReportEmployeeObj.resumeUrl || selectedReportEmployeeObj.personalEmail || "Not registered"}
+                                </p>
+                                <p className="text-[9px] text-slate-400 mt-0.5">External CV or backup email reference</p>
+                              </div>
+                              {(selectedReportEmployeeObj.resumeUrl || selectedReportEmployeeObj.personalEmail) && (
+                                <a
+                                  href={selectedReportEmployeeObj.resumeUrl || `mailto:${selectedReportEmployeeObj.personalEmail}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-1.5 rounded-lg bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 text-indigo-600 transition-colors shrink-0"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -4929,6 +5059,143 @@ export default function App() {
                             onChange={(e) => setEmployeeFormData({...employeeFormData, taxId: e.target.value})} 
                             placeholder="e.g. TAX-3829103" 
                           />
+                        </div>
+                      </div>
+
+                      {/* Resume / CV Section */}
+                      <div className="border-t border-slate-100 pt-4 mt-2">
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                          <Paperclip className="w-3.5 h-3.5 text-indigo-500" />
+                          Employee Resume / CV Attachment
+                        </label>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Drag and Drop Upload Zone */}
+                          <div 
+                            className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center text-center transition-all cursor-pointer relative ${
+                              employeeFormData.resumeName 
+                                ? "border-emerald-300 bg-emerald-50/20" 
+                                : "border-slate-200 hover:border-indigo-400 hover:bg-slate-50/50 bg-slate-50/20"
+                            }`}
+                            onClick={() => {
+                              const fileInput = document.getElementById("resume-file-picker");
+                              if (fileInput) (fileInput as HTMLInputElement).click();
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.currentTarget.classList.add("border-indigo-400", "bg-indigo-50/10");
+                            }}
+                            onDragLeave={(e) => {
+                              e.preventDefault();
+                              e.currentTarget.classList.remove("border-indigo-400", "bg-indigo-50/10");
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              e.currentTarget.classList.remove("border-indigo-400", "bg-indigo-50/10");
+                              const files = e.dataTransfer.files;
+                              if (files && files.length > 0) {
+                                const file = files[0];
+                                setEmployeeFormData({
+                                  ...employeeFormData,
+                                  resumeName: file.name,
+                                  resumeUrl: employeeFormData.resumeUrl || `https://nexus-storage.local/resumes/${encodeURIComponent(file.name)}`
+                                });
+                              }
+                            }}
+                          >
+                            <input 
+                              type="file"
+                              id="resume-file-picker"
+                              accept=".pdf,.doc,.docx,.rtf,.txt"
+                              className="hidden"
+                              onChange={(e) => {
+                                const files = e.target.files;
+                                if (files && files.length > 0) {
+                                  const file = files[0];
+                                  setEmployeeFormData({
+                                    ...employeeFormData,
+                                    resumeName: file.name,
+                                    resumeUrl: employeeFormData.resumeUrl || `https://nexus-storage.local/resumes/${encodeURIComponent(file.name)}`
+                                  });
+                                }
+                              }}
+                            />
+                            
+                            {employeeFormData.resumeName ? (
+                              <div className="space-y-2">
+                                <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center mx-auto">
+                                  <FileText className="w-5 h-5 text-emerald-600" />
+                                </div>
+                                <div>
+                                  <p className="text-xs font-bold text-slate-800 line-clamp-1 max-w-[220px] mx-auto">
+                                    {employeeFormData.resumeName}
+                                  </p>
+                                  <p className="text-[10px] text-emerald-600 font-medium">Ready for sync</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEmployeeFormData({
+                                      ...employeeFormData,
+                                      resumeName: "",
+                                      resumeUrl: ""
+                                    });
+                                  }}
+                                  className="text-[10px] font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded transition-colors"
+                                >
+                                  Remove File
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="space-y-1.5 py-1">
+                                <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+                                  <Upload className="w-4 h-4" />
+                                </div>
+                                <div className="text-[11px] font-medium text-slate-500">
+                                  <span className="font-bold text-indigo-600">Click to upload</span> or drag & drop
+                                </div>
+                                <p className="text-[9px] text-slate-400">PDF, DOC, DOCX, TXT up to 10MB</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Online Resume Link alternative */}
+                          <div className="flex flex-col justify-between p-4 border border-slate-100 rounded-xl bg-slate-50/20">
+                            <div className="space-y-3">
+                              <div>
+                                <label className="block text-[11px] font-bold text-slate-500 mb-1">Direct URL to Resume (Alternative)</label>
+                                <input 
+                                  type="url"
+                                  className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-indigo-500 rounded-lg text-xs transition-all outline-none"
+                                  value={employeeFormData.resumeUrl || ""}
+                                  onChange={(e) => setEmployeeFormData({
+                                    ...employeeFormData, 
+                                    resumeUrl: e.target.value,
+                                    resumeName: employeeFormData.resumeName || (e.target.value ? "Attached Web Resume" : "")
+                                  })}
+                                  placeholder="e.g. https://drive.google.com/file/d/..."
+                                />
+                              </div>
+                              <p className="text-[10px] text-slate-400 leading-relaxed">
+                                Share a link to a Google Drive document, Dropbox PDF, LinkedIn profile, or personal CV portal.
+                              </p>
+                            </div>
+                            
+                            {employeeFormData.resumeUrl && (
+                              <div className="pt-2 flex items-center justify-between text-[10px] font-medium text-slate-500 border-t border-slate-100/50 mt-2">
+                                <span className="truncate max-w-[140px] font-mono text-[9px]">{employeeFormData.resumeUrl}</span>
+                                <a 
+                                  href={employeeFormData.resumeUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-0.5"
+                                >
+                                  Test Link <ExternalLink className="w-3 h-3" />
+                                </a>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
