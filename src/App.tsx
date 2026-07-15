@@ -44,7 +44,8 @@ import {
   LayoutDashboard,
   BookOpen,
   ExternalLink,
-  ShieldAlert
+  ShieldAlert,
+  User
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -70,6 +71,7 @@ import { EmployeeCard } from "./components/EmployeeCard";
 import { LoginPage, Manager } from "./components/LoginPage";
 import { MonthPicker } from "./components/MonthPicker";
 import { EmployeeDossier } from "./components/EmployeeDossier";
+import { ManagerProfile } from "./components/ManagerProfile";
 import { motion, AnimatePresence } from "motion/react";
 
 const DEPARTMENTS = ["Sales", "Operations"];
@@ -97,7 +99,7 @@ const getTeamIcon = (team: string) => {
 import { get3DAvatarUrl } from "./utils";
 
 export default function App() {
-  const [activePortal, setActivePortal] = useState<"performance" | "leaves" | "employees">("performance");
+  const [activePortal, setActivePortal] = useState<"performance" | "leaves" | "employees" | "profile">("performance");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [profileSubTab, setProfileSubTab] = useState<"overview" | "performance" | "progression" | "leaves" | "copilot">("overview");
   const [activeTab, setActiveTab] = useState<"profile" | "team" | "roster" | "compare">("profile");
@@ -1474,6 +1476,32 @@ export default function App() {
                 <div className="w-1.5 h-6 rounded-full bg-indigo-600 absolute left-0 top-1/2 -translate-y-1/2 -translate-x-0.5 shadow-md shadow-indigo-500/80" />
               )}
             </button>
+
+            {/* LINK 4: MY PROFILE */}
+            <button
+              onClick={() => {
+                setActivePortal("profile");
+                setIsSidebarOpen(false);
+              }}
+              className={`w-full text-left rounded-xl transition-all group relative border p-2.5 flex items-center gap-3 cursor-pointer ${
+                activePortal === "profile" 
+                  ? "bg-indigo-50/80 text-slate-900 font-bold shadow-3xs shadow-indigo-100/30 border-indigo-100" 
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent hover:translate-x-1"
+              }`}
+            >
+              <div className={`p-1.5 rounded-lg shrink-0 ${activePortal === "profile" ? "bg-indigo-600 text-white shadow-3xs shadow-indigo-500/10" : "bg-slate-50 text-slate-450 border border-slate-200/60 group-hover:bg-slate-100 group-hover:text-slate-700"} transition-colors`}>
+                <User className="h-4 w-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-bold tracking-tight">My Profile</div>
+                <div className={`text-[10px] font-mono leading-none mt-0.5 truncate ${activePortal === "profile" ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-500"}`}>
+                  View & edit information
+                </div>
+              </div>
+              {activePortal === "profile" && (
+                <div className="w-1.5 h-6 rounded-full bg-indigo-600 absolute left-0 top-1/2 -translate-y-1/2 -translate-x-0.5 shadow-md shadow-indigo-500/80" />
+              )}
+            </button>
           </div>
         </div>
         
@@ -1554,6 +1582,7 @@ export default function App() {
                 {activePortal === "performance" && "Performance Dashboard"}
                 {activePortal === "leaves" && "Time Off & Leaves"}
                 {activePortal === "employees" && "Teammates Directory"}
+                {activePortal === "profile" && "My Account & Profile"}
               </h1>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500">
@@ -1583,7 +1612,7 @@ export default function App() {
 
             {/* Profile area */}
             <div className="flex items-center gap-4 relative group ml-2">
-              <div className="flex items-center gap-3 cursor-pointer">
+              <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActivePortal("profile")}>
                 <div className="hidden md:flex flex-col items-end text-right">
                   <span className="text-xs font-semibold text-slate-700 group-hover:text-slate-900 transition-colors">{loggedInManager.name}</span>
                   <span className="text-[10px] text-slate-400 font-medium">{loggedInManager.role}</span>
@@ -1596,13 +1625,27 @@ export default function App() {
                 </div>
               </div>
               
-              {/* Sign Out Button - Revealed on hover */}
-              <div className="absolute right-0 top-full mt-2 w-full flex justify-end opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 translate-y-[-10px] group-hover:translate-y-0 z-50">
+              {/* Profile Dropdown Menu - Revealed on hover */}
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-200 rounded-2xl shadow-lg p-1.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 translate-y-[-10px] group-hover:translate-y-0 z-50 flex flex-col gap-1">
+                <button
+                  onClick={() => {
+                    setActivePortal("profile");
+                  }}
+                  className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                    activePortal === "profile" 
+                      ? "bg-indigo-50/80 text-indigo-600 font-bold" 
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
+                  }`}
+                >
+                  <User className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
+                  My Profile
+                </button>
+                <div className="h-px bg-slate-100 my-1" />
                 <button
                   onClick={() => setLoggedInManager(null)}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl shadow-md text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-all cursor-pointer whitespace-nowrap"
+                  className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-xs font-medium text-rose-600 hover:bg-rose-50/50 transition-all cursor-pointer"
                 >
-                  <LogOut className="h-3.5 w-3.5 text-slate-400" />
+                  <LogOut className="h-4 w-4 text-rose-400" />
                   Sign Out
                 </button>
               </div>
@@ -4474,6 +4517,14 @@ export default function App() {
           handleSendCopilotMessage={handleSendCopilotMessage}
           showToast={showToast}
           onRefreshEmployees={fetchData}
+        />
+      )}
+
+      {activePortal === "profile" && loggedInManager && (
+        <ManagerProfile
+          manager={loggedInManager}
+          onSave={setLoggedInManager}
+          showToast={showToast}
         />
       )}
 

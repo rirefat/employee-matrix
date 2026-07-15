@@ -9,13 +9,97 @@ export interface Manager {
   email: string;
   role: string;
   teams: string[];
+  employeeId?: string;
+  department?: string;
+  joinDate?: string;
+  reportingTo?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  employeeType?: string; // e.g. Full-Time, Contractor, etc.
+  skills?: string[];
+  deskNumber?: string;
+  phone?: string;
+  location?: string;
+  bio?: string;
 }
 
 export const dummyManagers: Manager[] = [
-  { id: 'm1', name: 'Alice Smith', email: 'alice@nexus.com', role: 'Custom Dev Manager', teams: ['Custom'] },
-  { id: 'm2', name: 'Bob Johnson', email: 'bob@nexus.com', role: 'Shopify Manager', teams: ['Shopify'] },
-  { id: 'm3', name: 'Charlie Davis', email: 'charlie@nexus.com', role: 'WordPress Manager', teams: ['WordPress'] },
-  { id: 'm4', name: 'Diana Prince', email: 'diana@nexus.com', role: 'UI/UX Manager', teams: ['UI/UX'] },
+  { 
+    id: 'm1', 
+    name: 'Alice Smith', 
+    email: 'alice@nexus.com', 
+    role: 'Custom Dev Manager', 
+    teams: ['Custom', 'Node'],
+    employeeId: 'NEX-2024-081',
+    department: 'Engineering',
+    joinDate: '2024-03-15',
+    reportingTo: 'Sarah Jenkins (VP of Engineering)',
+    emergencyContactName: 'John Smith',
+    emergencyContactPhone: '+1 (555) 012-3456',
+    employeeType: 'Full-Time',
+    skills: ['React', 'TypeScript', 'Node.js', 'System Architecture', 'Agile'],
+    deskNumber: 'Floor 4, Desk 42',
+    phone: '+1 (555) 019-2834',
+    location: 'San Francisco, CA',
+    bio: 'Dedicated Manager at Nexus, currently directing operations, tracking key performance indices, and organizing teammate resources to maximize velocity and workspace synergy.'
+  },
+  { 
+    id: 'm2', 
+    name: 'Bob Johnson', 
+    email: 'bob@nexus.com', 
+    role: 'Shopify Manager', 
+    teams: ['Shopify'],
+    employeeId: 'NEX-2023-102',
+    department: 'E-commerce',
+    joinDate: '2023-08-01',
+    reportingTo: 'Sarah Jenkins (VP of Engineering)',
+    emergencyContactName: 'Linda Johnson',
+    emergencyContactPhone: '+1 (555) 014-9876',
+    employeeType: 'Full-Time',
+    skills: ['Shopify Liquid', 'E-commerce', 'JavaScript', 'Google Analytics'],
+    deskNumber: 'Floor 3, Desk 12',
+    phone: '+1 (555) 011-4720',
+    location: 'Austin, TX',
+    bio: 'Overseeing all custom Shopify application extensions and storefront performance. Focused on delivering high-conversion shopping workflows.'
+  },
+  { 
+    id: 'm3', 
+    name: 'Charlie Davis', 
+    email: 'charlie@nexus.com', 
+    role: 'WordPress Manager', 
+    teams: ['WordPress'],
+    employeeId: 'NEX-2022-409',
+    department: 'Marketing Platforms',
+    joinDate: '2022-11-10',
+    reportingTo: 'Marcus Aurelius (Director of Marketing)',
+    emergencyContactName: 'David Davis',
+    emergencyContactPhone: '+1 (555) 015-1122',
+    employeeType: 'Full-Time',
+    skills: ['PHP', 'WordPress REST API', 'SEO', 'Security Hardening'],
+    deskNumber: 'Floor 2, Desk 05',
+    phone: '+1 (555) 018-9382',
+    location: 'Chicago, IL',
+    bio: 'Managing corporate CMS setups, enterprise plugins, and performance optimization for our global multi-site marketing portals.'
+  },
+  { 
+    id: 'm4', 
+    name: 'Diana Prince', 
+    email: 'diana@nexus.com', 
+    role: 'UI/UX Manager', 
+    teams: ['UI/UX'],
+    employeeId: 'NEX-2024-005',
+    department: 'Design & Creative',
+    joinDate: '2024-01-08',
+    reportingTo: 'Sarah Jenkins (VP of Engineering)',
+    emergencyContactName: 'Hippolyta Prince',
+    emergencyContactPhone: '+1 (555) 017-7777',
+    employeeType: 'Full-Time',
+    skills: ['Figma', 'Design Systems', 'Interactive Prototyping', 'User Research'],
+    deskNumber: 'Floor 5, Desk 18',
+    phone: '+1 (555) 019-3311',
+    location: 'Los Angeles, CA',
+    bio: 'Leading the user experience design initiative at Nexus. Passionate about beautiful typography, intuitive mental models, and pixel-perfect micro-interactions.'
+  },
 ];
 
 interface LoginPageProps {
