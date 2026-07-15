@@ -34,6 +34,8 @@ import {
   Building,
   ArrowLeftRight,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Activity,
   Shield,
   Brain,
@@ -119,7 +121,46 @@ export default function App() {
   const [targets, setTargets] = useState<MonthlyTarget[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>("2026-06");
+  const [behalfEmpId, setBehalfEmpId] = useState("");
+  const [behalfType, setBehalfType] = useState<"Sick" | "Casual" | "Gov/Fest">("Casual");
+  const [behalfStart, setBehalfStart] = useState("");
+  const [behalfEnd, setBehalfEnd] = useState("");
+  const [behalfNotes, setBehalfNotes] = useState("");
+  const [behalfStatus, setBehalfStatus] = useState<"Approved" | "Pending">("Approved");
+  const [leaveLedgerSearch, setLeaveLedgerSearch] = useState("");
+  const [calendarViewMode, setCalendarViewMode] = useState<"timeline" | "grid">("timeline");
+  const [calendarMonth, setCalendarMonth] = useState<string>("2026-06");
+  const [selectedCalendarDay, setSelectedCalendarDay] = useState<string | null>(null);
+
   const myEmployees = useMemo(() => employees.filter(emp => loggedInManager?.teams.includes(emp.team)), [employees, loggedInManager]);
+
+  const allPendingRequests = useMemo(() => {
+    const list: { employee: Employee; request: LeaveRequest }[] = [];
+    myEmployees.forEach(emp => {
+      if (emp.leaveRequests) {
+        emp.leaveRequests.forEach(lr => {
+          if (lr.status === "Pending") {
+            list.push({ employee: emp, request: lr });
+          }
+        });
+      }
+    });
+    return list;
+  }, [myEmployees]);
+
+  const allApprovedLeaves = useMemo(() => {
+    const list: { employee: Employee; request: LeaveRequest }[] = [];
+    myEmployees.forEach(emp => {
+      if (emp.leaveRequests) {
+        emp.leaveRequests.forEach(lr => {
+          if (lr.status === "Approved") {
+            list.push({ employee: emp, request: lr });
+          }
+        });
+      }
+    });
+    return list;
+  }, [myEmployees]);
   const filteredDirectoryEmployees = useMemo(() => {
     return myEmployees.filter(emp => {
       const deptMatches = selectedDirectoryDept === "All" || emp.department === selectedDirectoryDept;
@@ -834,6 +875,190 @@ export default function App() {
     } catch (err) {
       console.error("Error saving performance:", err);
       showToast("Error logging metrics.", "error");
+    }
+  };
+
+  // --- TEAM LEAVE PORTAL HELPERS ---
+  const handleUpdateTeammateLeaveStatus = async (employeeId: string, requestId: string, newStatus: "Approved" | "Rejected") => {
+    const emp = employees.find(e => e.id === employeeId);
+    if (!emp) return;
+
+    const reqs = emp.leaveRequests || [];
+    const updatedReqs = reqs.map(lr => {
+      if (lr.id === requestId) {
+        return { ...lr, status: newStatus };
+      }
+      return lr;
+    });
+
+    // Recalculate leaveBalance if approved
+    let updatedBalance = emp.leaveBalance || { sickLeaveUsed: 0, casualLeaveUsed: 0, govFestHolidaysUsed: 0 };
+    
+    if (newStatus === "Approved") {
+      const theReq = reqs.find(lr => lr.id === requestId);
+      if (theReq) {
+        const days = Number(theReq.days) || 1;
+        if (theReq.type === "Sick") {
+          updatedBalance = { ...updatedBalance, sickLeaveUsed: (updatedBalance.sickLeaveUsed || 0) + days };
+        } else if (theReq.type === "Casual") {
+          updatedBalance = { ...updatedBalance, casualLeaveUsed: (updatedBalance.casualLeaveUsed || 0) + days };
+        } else if (theReq.type === "Gov/Fest") {
+          updatedBalance = { ...updatedBalance, govFestHolidaysUsed: (updatedBalance.govFestHolidaysUsed || 0) + days };
+        }
+      }
+    }
+
+    try {
+      const res = await fetch(`/api/employees/${employeeId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...emp,
+          leaveRequests: updatedReqs,
+          leaveBalance: updatedBalance
+        })
+      });
+      if (res.ok) {
+        showToast(`Leave request marked as ${newStatus}`, "success");
+        fetchData();
+      } else {
+        showToast("Failed to update leave request status.", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Error updating leave request.", "error");
+    }
+  };
+
+  const handleDeleteTeammateLeaveRequest = async (employeeId: string, requestId: string) => {
+    const emp = employees.find(e => e.id === employeeId);
+    if (!emp) return;
+
+    if (!window.confirm("Are you sure you want to delete this leave request?")) return;
+
+    const reqs = emp.leaveRequests || [];
+    const theReq = reqs.find(lr => lr.id === requestId);
+    const updatedReqs = reqs.filter(lr => lr.id !== requestId);
+
+    // If deleting an already approved request, deduct the days
+    let updatedBalance = emp.leaveBalance || { sickLeaveUsed: 0, casualLeaveUsed: 0, govFestHolidaysUsed: 0 };
+    if (theReq && theReq.status === "Approved") {
+      const days = Number(theReq.days) || 1;
+      if (theReq.type === "Sick") {
+        updatedBalance = { ...updatedBalance, sickLeaveUsed: Math.max(0, (updatedBalance.sickLeaveUsed || 0) - days) };
+      } else if (theReq.type === "Casual") {
+        updatedBalance = { ...updatedBalance, casualLeaveUsed: Math.max(0, (updatedBalance.casualLeaveUsed || 0) - days) };
+      } else if (theReq.type === "Gov/Fest") {
+        updatedBalance = { ...updatedBalance, govFestHolidaysUsed: Math.max(0, (updatedBalance.govFestHolidaysUsed || 0) - days) };
+      }
+    }
+
+    try {
+      const res = await fetch(`/api/employees/${employeeId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...emp,
+          leaveRequests: updatedReqs,
+          leaveBalance: updatedBalance
+        })
+      });
+      if (res.ok) {
+        showToast("Leave request removed successfully.", "success");
+        fetchData();
+      } else {
+        showToast("Failed to delete leave request.", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Error deleting leave request.", "error");
+    }
+  };
+
+  const handleAddTeammateLeaveOnBehalf = async (
+    employeeId: string,
+    type: "Sick" | "Casual" | "Gov/Fest",
+    start: string,
+    end: string,
+    notes: string,
+    status: "Approved" | "Pending"
+  ) => {
+    const emp = employees.find(e => e.id === employeeId);
+    if (!emp) return;
+
+    const days = Math.max(1, Math.ceil((new Date(end).getTime() - new Date(start).getTime()) / (1000 * 3600 * 24)) + 1);
+
+    // Validate 28 days total allowance
+    const currentBalance = emp.leaveBalance || { sickLeaveUsed: 0, casualLeaveUsed: 0, govFestHolidaysUsed: 0 };
+    const sickRemain = 7 - (currentBalance.sickLeaveUsed || 0);
+    const casRemain = 7 - (currentBalance.casualLeaveUsed || 0);
+    const govRemain = 14 - (currentBalance.govFestHolidaysUsed || 0);
+    const currentRemaining = sickRemain + casRemain + govRemain;
+
+    if (days > currentRemaining) {
+      showToast(`Cannot log leave: Employee only has ${currentRemaining} days of leave remaining out of their 28-day annual allowance.`, "error");
+      return false;
+    }
+
+    // Check category limit
+    if (type === "Sick" && days > sickRemain) {
+      showToast(`Cannot log Sick Leave: Exceeds remaining Sick Leave allowance of ${sickRemain} days.`, "error");
+      return false;
+    }
+    if (type === "Casual" && days > casRemain) {
+      showToast(`Cannot log Casual Leave: Exceeds remaining Casual Leave allowance of ${casRemain} days.`, "error");
+      return false;
+    }
+    if (type === "Gov/Fest" && days > govRemain) {
+      showToast(`Cannot log Gov/Fest Leave: Exceeds remaining Gov/Fest allowance of ${govRemain} days.`, "error");
+      return false;
+    }
+
+    const newRequest = {
+      id: `LR-${Math.floor(1000 + Math.random() * 9000)}`,
+      type,
+      start,
+      end,
+      days,
+      status,
+      notes: notes || "Logged by manager"
+    };
+
+    const updatedReqs = [newRequest, ...(emp.leaveRequests || [])];
+    let updatedBalance = { ...currentBalance };
+
+    if (status === "Approved") {
+      if (type === "Sick") {
+        updatedBalance.sickLeaveUsed = (updatedBalance.sickLeaveUsed || 0) + days;
+      } else if (type === "Casual") {
+        updatedBalance.casualLeaveUsed = (updatedBalance.casualLeaveUsed || 0) + days;
+      } else if (type === "Gov/Fest") {
+        updatedBalance.govFestHolidaysUsed = (updatedBalance.govFestHolidaysUsed || 0) + days;
+      }
+    }
+
+    try {
+      const res = await fetch(`/api/employees/${employeeId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...emp,
+          leaveRequests: updatedReqs,
+          leaveBalance: updatedBalance
+        })
+      });
+      if (res.ok) {
+        showToast(`Logged ${days}-day ${type} leave successfully`, "success");
+        fetchData();
+        return true;
+      } else {
+        showToast("Failed to log leave record.", "error");
+        return false;
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Error adding leave record.", "error");
+      return false;
     }
   };
 
@@ -2895,137 +3120,984 @@ export default function App() {
       </>
       )}
 
-      {activePortal === "leaves" && (
-        <main className="flex-1 w-full px-6 lg:px-10 xl:px-12 py-8 overflow-y-auto">
-          {/* TAB CONTENT: LEAVE MANAGEMENT */}
+      {activePortal === "leaves" && (() => {
+        // Compute statistics
+        const totalApprovedDays = myEmployees.reduce((acc, emp) => {
+          const balance = emp.leaveBalance || { sickLeaveUsed: 0, casualLeaveUsed: 0, govFestHolidaysUsed: 0 };
+          return acc + (balance.sickLeaveUsed || 0) + (balance.casualLeaveUsed || 0) + (balance.govFestHolidaysUsed || 0);
+        }, 0);
+
+        const averageRemainingBalance = myEmployees.length > 0 
+          ? Math.round(myEmployees.reduce((acc, emp) => {
+              const balance = emp.leaveBalance || { sickLeaveUsed: 0, casualLeaveUsed: 0, govFestHolidaysUsed: 0 };
+              const used = (balance.sickLeaveUsed || 0) + (balance.casualLeaveUsed || 0) + (balance.govFestHolidaysUsed || 0);
+              return acc + Math.max(0, 28 - used);
+            }, 0) / myEmployees.length)
+          : 28;
+
+        const filteredLedgerEmployees = myEmployees.filter(emp => {
+          const s = leaveLedgerSearch.toLowerCase();
+          return !s || emp.name.toLowerCase().includes(s) || emp.role.toLowerCase().includes(s) || emp.team.toLowerCase().includes(s);
+        });
+
+        const [yearStr, monthStr] = calendarMonth.split("-");
+        const year = parseInt(yearStr);
+        const monthIndex = parseInt(monthStr) - 1;
+        const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+        const firstDayIndex = new Date(year, monthIndex, 1).getDay();
+
+        const getMonthName = (monthValue: string) => {
+          const [y, m] = monthValue.split("-");
+          const dateObj = new Date(parseInt(y), parseInt(m) - 1, 1);
+          return dateObj.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+        };
+
+        const handlePrevMonth = () => {
+          const [yStr, mStr] = calendarMonth.split("-");
+          let y = parseInt(yStr);
+          let m = parseInt(mStr) - 1;
+          if (m === 0) {
+            m = 12;
+            y -= 1;
+          }
+          setCalendarMonth(`${y}-${String(m).padStart(2, "0")}`);
+          setSelectedCalendarDay(null);
+        };
+
+        const handleNextMonth = () => {
+          const [yStr, mStr] = calendarMonth.split("-");
+          let y = parseInt(yStr);
+          let m = parseInt(mStr) + 1;
+          if (m === 13) {
+            m = 1;
+            y += 1;
+          }
+          setCalendarMonth(`${y}-${String(m).padStart(2, "0")}`);
+          setSelectedCalendarDay(null);
+        };
+
+        const weekdays = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+        const getWeekdayName = (dayNum: number) => {
+          const d = new Date(year, monthIndex, dayNum);
+          return weekdays[d.getDay()];
+        };
+
+        const isWithinRange = (dateKey: string, startStr: string, endStr: string) => {
+          const dateNum = parseInt(dateKey.replace(/-/g, ""));
+          const startNum = parseInt(startStr.replace(/-/g, ""));
+          const endNum = parseInt(endStr.replace(/-/g, ""));
+          return dateNum >= startNum && dateNum <= endNum;
+        };
+
+        const getLeaveOnDay = (empId: string, dateKey: string) => {
+          const emp = employees.find(e => e.id === empId);
+          if (!emp || !emp.leaveRequests) return null;
+          const approved = emp.leaveRequests.filter(lr => lr.status === "Approved");
+          return approved.find(lr => isWithinRange(dateKey, lr.start, lr.end)) || null;
+        };
+
+        const overlapDays = (() => {
+          const overlaps: Record<number, boolean> = {};
+          for (let d = 1; d <= daysInMonth; d++) {
+            const dateKey = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+            const count = allApprovedLeaves.filter(({ request }) => {
+              return isWithinRange(dateKey, request.start, request.end);
+            }).length;
+            overlaps[d] = count > 1;
+          }
+          return overlaps;
+        })();
+
+        return (
+          <main className="flex-1 w-full px-6 lg:px-10 xl:px-12 py-8 overflow-y-auto">
+            {/* TAB CONTENT: LEAVE MANAGEMENT */}
             <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900 tracking-tight font-display">Leave Balance Engine</h2>
-                  <p className="text-sm text-slate-500 mt-1">Manage and track employee leave capacities.</p>
+              
+              {/* Header block with glowing gradient */}
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50 border border-slate-200/60 rounded-3xl p-6 relative overflow-hidden shadow-3xs">
+                <div className="absolute right-0 top-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+                <div className="relative z-10 space-y-1">
+                  <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest font-mono bg-indigo-50 border border-indigo-100/60 px-2.5 py-1 rounded-full">
+                    Operations Portal
+                  </span>
+                  <h2 className="text-xl font-black text-slate-900 tracking-tight font-display pt-1">
+                    Team Leaves & Roster Operations
+                  </h2>
+                  <p className="text-xs text-slate-500 max-w-xl leading-relaxed">
+                    Centrally log, review, and audit leave parameters for your R&D squad. Every teammate starts with an annual allocation of <strong className="text-indigo-600 font-bold">28 days</strong>, grouped by standard compliance classes.
+                  </p>
+                </div>
+                
+                <div className="flex gap-2">
+                  <div className="bg-white border border-slate-200 rounded-2xl px-4 py-3 text-center shadow-3xs">
+                    <span className="block text-[8px] font-bold uppercase tracking-widest text-slate-400 font-mono">Company Cap</span>
+                    <span className="block text-lg font-black text-slate-800 font-mono">28 Days</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 bg-rose-50 rounded-lg text-rose-600">
-                      <AlertCircle className="h-5 w-5" />
-                    </div>
-                    <h3 className="font-semibold text-slate-800">Sick Leave</h3>
+              {/* 1. Analytics Deck */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                
+                {/* Stat 1 */}
+                <div className="bg-white border border-slate-200/60 rounded-2xl p-4.5 shadow-3xs hover:border-slate-300 transition-all duration-300">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Active Squad</span>
+                    <span className="p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-500">
+                      <Users className="w-3.5 h-3.5" />
+                    </span>
                   </div>
-                  <p className="text-2xl font-bold text-slate-900 mt-2">7 <span className="text-sm font-medium text-slate-500">days/yr</span></p>
-                  <p className="text-xs text-slate-500 mt-1">For medical emergencies</p>
+                  <div className="mt-3.5 flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-slate-800 font-mono">{myEmployees.length}</span>
+                    <span className="text-[10px] text-slate-400 font-bold font-mono">Staff</span>
+                  </div>
                 </div>
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 bg-amber-50 rounded-lg text-amber-600">
-                      <Sparkles className="h-5 w-5" />
-                    </div>
-                    <h3 className="font-semibold text-slate-800">Casual Leave</h3>
+
+                {/* Stat 2 */}
+                <div className="bg-white border border-slate-200/60 rounded-2xl p-4.5 shadow-3xs hover:border-slate-300 transition-all duration-300">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Leaves Approved</span>
+                    <span className="p-1.5 bg-emerald-50 border border-emerald-100 rounded-lg text-emerald-600">
+                      <Check className="w-3.5 h-3.5" />
+                    </span>
                   </div>
-                  <p className="text-2xl font-bold text-slate-900 mt-2">7 <span className="text-sm font-medium text-slate-500">days/yr</span></p>
-                  <p className="text-xs text-slate-500 mt-1">For personal matters</p>
+                  <div className="mt-3.5 flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-emerald-600 font-mono">{totalApprovedDays}</span>
+                    <span className="text-[10px] text-slate-400 font-bold font-mono">Days</span>
+                  </div>
                 </div>
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
-                      <Calendar className="h-5 w-5" />
-                    </div>
-                    <h3 className="font-semibold text-slate-800">Gov & Fest</h3>
+
+                {/* Stat 3 */}
+                <div className="bg-white border border-slate-200/60 rounded-2xl p-4.5 shadow-3xs hover:border-slate-300 transition-all duration-300">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Pending Audits</span>
+                    <span className={`p-1.5 rounded-lg border text-xs ${allPendingRequests.length > 0 ? "bg-amber-50 border-amber-200 text-amber-600 animate-pulse" : "bg-slate-50 border-slate-200 text-slate-400"}`}>
+                      <Activity className="w-3.5 h-3.5" />
+                    </span>
                   </div>
-                  <p className="text-2xl font-bold text-slate-900 mt-2">14 <span className="text-sm font-medium text-slate-500">days/yr</span></p>
-                  <p className="text-xs text-slate-500 mt-1">Public & cultural holidays</p>
+                  <div className="mt-3.5 flex items-baseline gap-1">
+                    <span className={`text-2xl font-black font-mono ${allPendingRequests.length > 0 ? "text-amber-600" : "text-slate-800"}`}>{allPendingRequests.length}</span>
+                    <span className="text-[10px] text-slate-400 font-bold font-mono">Pending</span>
+                  </div>
+                </div>
+
+                {/* Stat 4 */}
+                <div className="bg-white border border-slate-200/60 rounded-2xl p-4.5 shadow-3xs hover:border-slate-300 transition-all duration-300">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Avg Balance</span>
+                    <span className="p-1.5 bg-indigo-50 border border-indigo-100 rounded-lg text-indigo-600">
+                      <Calendar className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+                  <div className="mt-3.5 flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-indigo-600 font-mono">{averageRemainingBalance}</span>
+                    <span className="text-[10px] text-slate-400 font-bold font-mono">Days Left</span>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Leave Policy Classes Rules strip */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-slate-50/50 border border-slate-200/50 p-4 rounded-2xl flex gap-3.5 items-start">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-mono font-bold">CL</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Casual Leave (CL)</span>
+                    <p className="text-[11px] text-slate-400 leading-tight mt-0.5">Allowance: <strong className="text-slate-600">7 Days / Year</strong>. Ideal for quick personal errands and non-medical affairs.</p>
+                  </div>
+                </div>
+                <div className="bg-slate-50/50 border border-slate-200/50 p-4 rounded-2xl flex gap-3.5 items-start">
+                  <div className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-mono font-bold">SL</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Sick Leave (SL)</span>
+                    <p className="text-[11px] text-slate-400 leading-tight mt-0.5">Allowance: <strong className="text-slate-600">7 Days / Year</strong>. Validated against registered medical audits and emergencies.</p>
+                  </div>
+                </div>
+                <div className="bg-slate-50/50 border border-slate-200/50 p-4 rounded-2xl flex gap-3.5 items-start">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-mono font-bold">GF</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Gov & Festival (GF)</span>
+                    <p className="text-[11px] text-slate-400 leading-tight mt-0.5">Allowance: <strong className="text-slate-600">14 Days / Year</strong>. Allocated for scheduled cultural breaks and statutory breaks.</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
-                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                  <h3 className="text-sm font-bold text-slate-800">Employee Leave Balances</h3>
-                  <div className="flex gap-2">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-600">
-                      <span>Total Leave Balance:</span>
-                      <span className="text-blue-600">28 days</span>
+              {/* --- TEAM LEAVE CALENDAR & OVERLAPS VIEW --- */}
+              <div id="team-leave-calendar-panel" className="bg-white border border-slate-200/65 rounded-3xl shadow-3xs overflow-hidden">
+                {/* Header */}
+                <div className="p-5 border-b border-slate-100 bg-slate-50/40 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest font-mono flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-indigo-500" /> Team Leave & Overlap Calendar
+                    </h3>
+                    <p className="text-[10px] text-slate-400">Visually track team absence schedules and identify coverage bottlenecks at a glance</p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    {/* View Switcher */}
+                    <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200/40">
+                      <button
+                        type="button"
+                        onClick={() => setCalendarViewMode("timeline")}
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold font-mono uppercase transition-all ${
+                          calendarViewMode === "timeline"
+                            ? "bg-white text-slate-900 shadow-3xs border border-slate-200/20"
+                            : "text-slate-500 hover:text-slate-900"
+                        }`}
+                      >
+                        Timeline (Overlaps)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCalendarViewMode("grid")}
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold font-mono uppercase transition-all ${
+                          calendarViewMode === "grid"
+                            ? "bg-white text-slate-900 shadow-3xs border border-slate-200/20"
+                            : "text-slate-500 hover:text-slate-900"
+                        }`}
+                      >
+                        Calendar Grid
+                      </button>
+                    </div>
+
+                    {/* Month Navigator */}
+                    <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2 py-1 shadow-3xs">
+                      <button
+                        type="button"
+                        onClick={handlePrevMonth}
+                        className="p-1 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors cursor-pointer"
+                        title="Previous Month"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <span className="text-xs font-black text-slate-700 min-w-[100px] text-center select-none font-mono">
+                        {getMonthName(calendarMonth)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleNextMonth}
+                        className="p-1 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors cursor-pointer"
+                        title="Next Month"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 </div>
+
+                {/* Body depending on calendarViewMode */}
+                {calendarViewMode === "timeline" ? (
+                  /* Timeline Row Layout */
+                  <div className="p-5 space-y-4">
+                    <div className="border border-slate-150 rounded-2xl overflow-hidden bg-slate-50/10">
+                      <div className="overflow-x-auto">
+                        <div className="min-w-[850px]">
+                          {/* Timeline Header Row */}
+                          <div className="flex border-b border-slate-150 bg-slate-50/50 font-mono text-[9px] font-bold tracking-widest text-slate-400">
+                            {/* Sticky Teammate header */}
+                            <div className="w-48 sticky left-0 bg-slate-50/90 border-r border-slate-200 shrink-0 px-4 py-3 z-10 flex items-center justify-between">
+                              <span>Teammate Profile</span>
+                            </div>
+                            
+                            {/* Days header list */}
+                            <div className="flex flex-1">
+                              {Array.from({ length: daysInMonth }).map((_, i) => {
+                                const d = i + 1;
+                                const isOverlap = overlapDays[d];
+                                const isWeekend = [0, 6].includes(new Date(year, monthIndex, d).getDay());
+                                return (
+                                  <div
+                                    key={d}
+                                    className={`w-9 py-2 border-r border-slate-100/70 flex flex-col items-center justify-center shrink-0 relative ${
+                                      isOverlap ? "bg-rose-50/70 text-rose-600 font-black border-r border-rose-200" : ""
+                                    } ${isWeekend && !isOverlap ? "bg-slate-50/30 text-slate-400" : ""}`}
+                                    title={isOverlap ? `Overlap on day ${d}: Multiple approved leaves` : ""}
+                                  >
+                                    <span className="text-[8px] uppercase tracking-tighter opacity-80">{getWeekdayName(d)}</span>
+                                    <span className={`text-[10px] font-mono leading-tight mt-0.5 ${isOverlap ? "text-rose-600 font-extrabold" : "text-slate-600"}`}>
+                                      {d}
+                                    </span>
+                                    {isOverlap && (
+                                      <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-rose-500 rounded-full" />
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Timeline Data Rows */}
+                          <div className="divide-y divide-slate-100">
+                            {myEmployees.map(emp => (
+                              <div key={emp.id} className="flex hover:bg-slate-50/30 transition-all">
+                                {/* Sticky Profile column */}
+                                <div className="w-48 sticky left-0 bg-white border-r border-slate-200 shrink-0 px-4 py-2.5 z-10 flex items-center gap-2.5 shadow-[2px_0_5px_rgba(0,0,0,0.01)]">
+                                  <div className="w-7 h-7 rounded-full border border-slate-200 overflow-hidden shrink-0">
+                                    <img src={get3DAvatarUrl(emp.name)} alt="" className="w-full h-full object-cover" />
+                                  </div>
+                                  <div className="overflow-hidden">
+                                    <div className="font-extrabold text-[11px] text-slate-700 truncate" title={emp.name}>{emp.name}</div>
+                                    <div className="text-[9px] text-slate-400 font-mono font-medium truncate" title={emp.role}>{emp.role}</div>
+                                  </div>
+                                </div>
+
+                                {/* Days cells */}
+                                <div className="flex flex-1">
+                                  {Array.from({ length: daysInMonth }).map((_, i) => {
+                                    const d = i + 1;
+                                    const isOverlap = overlapDays[d];
+                                    const dateKey = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                                    const isWeekend = [0, 6].includes(new Date(year, monthIndex, d).getDay());
+                                    const leave = getLeaveOnDay(emp.id, dateKey);
+
+                                    let cellContent = null;
+                                    if (leave) {
+                                      const isStart = dateKey === leave.start;
+                                      const isEnd = dateKey === leave.end;
+                                      const isSingle = isStart && isEnd;
+
+                                      let pillBg = "bg-indigo-500";
+                                      let pillBorder = "border-indigo-600/10";
+                                      if (leave.type === "Sick") {
+                                        pillBg = "bg-rose-500";
+                                        pillBorder = "border-rose-600/10";
+                                      } else if (leave.type === "Casual") {
+                                        pillBg = "bg-amber-500";
+                                        pillBorder = "border-amber-600/10";
+                                      }
+
+                                      if (isSingle) {
+                                        cellContent = (
+                                          <div
+                                            onClick={() => {
+                                              setSelectedCalendarDay(dateKey);
+                                              showToast(`Inspecting day ${d}: ${emp.name}'s ${leave.type} Leave`, "success");
+                                            }}
+                                            className={`mx-1 w-7 h-5 rounded-full flex items-center justify-center text-[8px] font-black font-mono text-white cursor-pointer shadow-3xs hover:scale-105 active:scale-95 transition-transform border ${pillBg} ${pillBorder}`}
+                                            title={`${emp.name}: ${leave.type} Leave (${leave.start} to ${leave.end})\nNotes: ${leave.notes}`}
+                                          >
+                                            {leave.type[0]}
+                                          </div>
+                                        );
+                                      } else if (isStart) {
+                                        cellContent = (
+                                          <div
+                                            onClick={() => {
+                                              setSelectedCalendarDay(dateKey);
+                                              showToast(`Inspecting day ${d}: ${emp.name}'s ${leave.type} Leave`, "success");
+                                            }}
+                                            className={`ml-1 mr-0 w-8 h-5 rounded-l-full flex items-center justify-center text-[8px] font-black font-mono text-white cursor-pointer hover:opacity-90 transition-opacity border-y border-l ${pillBg} ${pillBorder}`}
+                                            title={`${emp.name}: ${leave.type} Leave (${leave.start} to ${leave.end})\nNotes: ${leave.notes}`}
+                                          >
+                                            {leave.type[0]}
+                                          </div>
+                                        );
+                                      } else if (isEnd) {
+                                        cellContent = (
+                                          <div
+                                            onClick={() => {
+                                              setSelectedCalendarDay(dateKey);
+                                              showToast(`Inspecting day ${d}: ${emp.name}'s ${leave.type} Leave`, "success");
+                                            }}
+                                            className={`mr-1 ml-0 w-8 h-5 rounded-r-full flex items-center justify-center text-[8px] font-black font-mono text-white cursor-pointer hover:opacity-90 transition-opacity border-y border-r ${pillBg} ${pillBorder}`}
+                                            title={`${emp.name}: ${leave.type} Leave (${leave.start} to ${leave.end})\nNotes: ${leave.notes}`}
+                                          >
+                                            {leave.type[0]}
+                                          </div>
+                                        );
+                                      } else {
+                                        cellContent = (
+                                          <div
+                                            onClick={() => {
+                                              setSelectedCalendarDay(dateKey);
+                                              showToast(`Inspecting day ${d}: ${emp.name}'s ${leave.type} Leave`, "success");
+                                            }}
+                                            className={`w-9 h-5 flex items-center justify-center text-[8px] font-black font-mono text-white/95 cursor-pointer hover:opacity-90 transition-opacity border-y ${pillBg} ${pillBorder}`}
+                                            title={`${emp.name}: ${leave.type} Leave (${leave.start} to ${leave.end})\nNotes: ${leave.notes}`}
+                                          />
+                                        );
+                                      }
+                                    }
+
+                                    return (
+                                      <div
+                                        key={d}
+                                        className={`w-9 h-10 border-r border-slate-100 flex items-center justify-center shrink-0 relative ${
+                                          isOverlap ? "bg-rose-50/15" : ""
+                                        } ${isWeekend && !leave ? "bg-slate-50/20" : ""}`}
+                                      >
+                                        {cellContent}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-150 text-[11px] text-slate-500 font-semibold font-mono">
+                      <div className="flex flex-wrap items-center gap-4">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-3 h-3 rounded bg-amber-500" />
+                          <span>Casual (CL)</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-3 h-3 rounded bg-rose-500" />
+                          <span>Sick (SL)</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-3 h-3 rounded bg-indigo-500" />
+                          <span>Gov & Festival (GF)</span>
+                        </div>
+                      </div>
+                      <span className="flex items-center gap-1 text-slate-400">
+                        <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" /> Vertical bands and indicators alert managers about overlap days.
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  /* Standard Month Calendar Grid View with day selection details */
+                  <div className="p-5 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Left 2 Cols: The standard Calendar Grid */}
+                    <div className="lg:col-span-2 space-y-3">
+                      {/* Grid Header days of week */}
+                      <div className="grid grid-cols-7 text-center font-mono text-[9px] font-black tracking-widest text-slate-400 border-b border-slate-150 pb-2">
+                        <span>Sun</span>
+                        <span>Mon</span>
+                        <span>Tue</span>
+                        <span>Wed</span>
+                        <span>Thu</span>
+                        <span>Fri</span>
+                        <span>Sat</span>
+                      </div>
+
+                      {/* Grid cells */}
+                      <div className="grid grid-cols-7 gap-2">
+                        {/* 1. Offset empty cells for the first day of month */}
+                        {Array.from({ length: firstDayIndex }).map((_, idx) => (
+                          <div key={`empty-${idx}`} className="h-20 bg-slate-50/30 rounded-xl border border-dashed border-slate-200/50" />
+                        ))}
+
+                        {/* 2. Days of month */}
+                        {Array.from({ length: daysInMonth }).map((_, idx) => {
+                          const d = idx + 1;
+                          const dateKey = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                          const isSelected = selectedCalendarDay === dateKey;
+
+                          // Approved leaves on this day
+                          const leaves = allApprovedLeaves.filter(({ request }) => {
+                            return isWithinRange(dateKey, request.start, request.end);
+                          });
+
+                          const isOverlap = leaves.length > 1;
+
+                          return (
+                            <div
+                              key={d}
+                              onClick={() => setSelectedCalendarDay(dateKey)}
+                              className={`h-22 p-2 bg-white border rounded-2xl flex flex-col justify-between cursor-pointer transition-all hover:border-slate-400 hover:shadow-2xs relative ${
+                                isSelected
+                                  ? "border-slate-900 ring-2 ring-slate-900/10"
+                                  : isOverlap
+                                    ? "border-rose-200 bg-rose-50/10"
+                                    : "border-slate-200"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className={`font-mono text-xs font-black ${
+                                  isSelected 
+                                    ? "text-slate-900" 
+                                    : isOverlap 
+                                      ? "text-rose-600" 
+                                      : "text-slate-500"
+                                }`}>
+                                  {d}
+                                </span>
+
+                                {isOverlap && (
+                                  <span className="text-[7px] font-bold uppercase tracking-wide bg-rose-100 border border-rose-200 text-rose-700 px-1.5 py-0.5 rounded-full flex items-center gap-0.5 animate-pulse">
+                                    <AlertTriangle className="w-2.5 h-2.5" /> Overlap
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Tiny visual tags inside grid cells */}
+                              <div className="space-y-1 overflow-hidden mt-1.5 flex-1 max-h-12 flex flex-col justify-end">
+                                {leaves.slice(0, 2).map(({ employee, request }) => {
+                                  let typeColor = "bg-indigo-500";
+                                  if (request.type === "Sick") typeColor = "bg-rose-500";
+                                  else if (request.type === "Casual") typeColor = "bg-amber-500";
+
+                                  return (
+                                    <div
+                                      key={`${employee.id}-${request.id}`}
+                                      className="flex items-center gap-1 bg-slate-50 border border-slate-150 rounded px-1.5 py-0.5 text-[8px] font-bold text-slate-600 truncate"
+                                    >
+                                      <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${typeColor}`} />
+                                      <span className="truncate">{employee.name.split(" ")[0]}</span>
+                                    </div>
+                                  );
+                                })}
+
+                                {leaves.length > 2 && (
+                                  <div className="text-[7px] font-mono font-bold text-slate-400 text-right">
+                                    +{leaves.length - 2} more...
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Right 1 Col: Day Inspector Panel */}
+                    <div className="bg-slate-50/50 border border-slate-200/60 p-4.5 rounded-2xl flex flex-col justify-between space-y-4">
+                      {selectedCalendarDay ? (() => {
+                        const [y, m, d] = selectedCalendarDay.split("-");
+                        const dNum = parseInt(d);
+                        const weekdayStr = new Date(parseInt(y), parseInt(m) - 1, dNum).toLocaleDateString("en-US", { weekday: "long" });
+                        const fullDateFormatted = `${weekdayStr}, ${getMonthName(selectedCalendarDay).split(" ")[0]} ${dNum}, ${y}`;
+                        
+                        const leavesOnThisDay = allApprovedLeaves.filter(({ request }) => {
+                          return isWithinRange(selectedCalendarDay, request.start, request.end);
+                        });
+
+                        const isOverlap = leavesOnThisDay.length > 1;
+
+                        return (
+                          <div className="space-y-4 h-full flex flex-col">
+                            <div>
+                              <span className="text-[8px] font-mono font-bold uppercase tracking-wider text-slate-400">Selected Calendar Audit</span>
+                              <h4 className="font-black text-slate-800 text-[13px] tracking-tight pt-0.5">{fullDateFormatted}</h4>
+                            </div>
+
+                            {isOverlap && (
+                              <div className="bg-rose-50 border border-rose-200 rounded-2xl p-3 flex gap-2.5 items-start">
+                                <div className="p-1 bg-rose-100 rounded-lg text-rose-600 shrink-0 mt-0.5 animate-pulse">
+                                  <AlertTriangle className="w-3.5 h-3.5" />
+                                </div>
+                                <div className="space-y-1">
+                                  <span className="block text-[10px] font-black text-rose-800 uppercase tracking-widest font-mono leading-none">Roster Conflict Alert</span>
+                                  <p className="text-[10px] text-rose-700 leading-tight">
+                                    There are <strong className="font-bold">{leavesOnThisDay.length} team members</strong> away simultaneously. Ensure proper backup coverage.
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="flex-1 overflow-y-auto space-y-3.5 max-h-[350px] pr-1">
+                              {leavesOnThisDay.map(({ employee, request }) => {
+                                let badgeColor = "bg-indigo-50 border-indigo-100 text-indigo-700";
+                                if (request.type === "Sick") badgeColor = "bg-rose-50 border-rose-100 text-rose-700";
+                                else if (request.type === "Casual") badgeColor = "bg-amber-50 border-amber-100 text-amber-700";
+
+                                return (
+                                  <div key={request.id} className="bg-white border border-slate-200/60 p-3 rounded-xl shadow-3xs space-y-2.5 hover:border-slate-300 transition-colors">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-6 h-6 rounded-full border border-slate-200 overflow-hidden shrink-0">
+                                          <img src={get3DAvatarUrl(employee.name)} alt="" className="w-full h-full object-cover" />
+                                        </div>
+                                        <div>
+                                          <div className="font-extrabold text-[11px] text-slate-800 leading-none">{employee.name}</div>
+                                          <div className="text-[8px] text-slate-400 font-mono mt-0.5">{employee.role}</div>
+                                        </div>
+                                      </div>
+                                      <span className={`text-[8px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider font-mono ${badgeColor}`}>
+                                        {request.type}
+                                      </span>
+                                    </div>
+
+                                    <div className="text-[10px] text-slate-500 leading-normal bg-slate-50/50 border border-slate-150 p-2 rounded-lg italic">
+                                      "{request.notes || "Standard annual leave breakout."}"
+                                    </div>
+
+                                    <div className="flex justify-between items-center text-[9px] text-slate-400 font-mono">
+                                      <span>Span: {request.start} to {request.end}</span>
+                                      <span className="font-bold text-slate-600">{request.days} days used</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+
+                              {leavesOnThisDay.length === 0 && (
+                                <div className="flex flex-col items-center justify-center text-center py-12 px-4 bg-white/60 border border-dashed border-slate-200 rounded-xl">
+                                  <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-2">
+                                    <Check className="w-4 h-4 stroke-[2.5]" />
+                                  </div>
+                                  <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest font-mono">Full Teammate Presence</span>
+                                  <p className="text-[9px] text-slate-400 max-w-xs mt-1 leading-tight">Every squad member is on deck today. No scheduled timesheet absences.</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })() : (
+                        <div className="h-full flex flex-col items-center justify-center text-center py-10 px-4">
+                          <div className="w-10 h-10 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-center text-indigo-500 mb-3">
+                            <Calendar className="w-5 h-5" />
+                          </div>
+                          <span className="block text-[11px] font-black text-slate-500 uppercase tracking-widest font-mono">Select Active Calendar Day</span>
+                          <p className="text-[10px] text-slate-400 max-w-xs mt-1.5 leading-relaxed">
+                            Pick any colored day inside the calendar grid to audit individual teammate leave reasons, coverages, and active overlap statistics.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 2. Operations Split Area */}
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                
+                {/* Column Left: Register Form (2 Cols) */}
+                <div className="lg:col-span-2 bg-white border border-slate-200/60 p-5 rounded-3xl shadow-3xs space-y-4">
+                  <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                    <div className="p-1.5 bg-slate-100 rounded-lg text-slate-750">
+                      <Plus className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest font-mono">Log Teammate Leave</h3>
+                      <p className="text-[10px] text-slate-400">Add or register timesheet breaks directly</p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!behalfEmpId) {
+                      showToast("Please select an employee first", "error");
+                      return;
+                    }
+                    if (!behalfStart || !behalfEnd) {
+                      showToast("Please enter both starting and ending dates", "error");
+                      return;
+                    }
+                    const success = await handleAddTeammateLeaveOnBehalf(
+                      behalfEmpId,
+                      behalfType,
+                      behalfStart,
+                      behalfEnd,
+                      behalfNotes,
+                      behalfStatus
+                    );
+                    if (success) {
+                      setBehalfStart("");
+                      setBehalfEnd("");
+                      setBehalfNotes("");
+                    }
+                  }} className="space-y-4">
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1.5">1. Target Teammate</label>
+                      <select
+                        value={behalfEmpId}
+                        onChange={(e) => setBehalfEmpId(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 focus:border-slate-800 rounded-xl text-xs outline-none font-semibold text-slate-700 cursor-pointer"
+                      >
+                        <option value="">-- Choose Teammate --</option>
+                        {myEmployees.map(emp => (
+                          <option key={emp.id} value={emp.id}>{emp.name} ({emp.role})</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1.5">2. Start Date</label>
+                        <input
+                          type="date"
+                          value={behalfStart}
+                          onChange={(e) => setBehalfStart(e.target.value)}
+                          className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 focus:border-slate-800 rounded-xl text-xs outline-none font-semibold text-slate-700"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1.5">3. End Date</label>
+                        <input
+                          type="date"
+                          value={behalfEnd}
+                          onChange={(e) => setBehalfEnd(e.target.value)}
+                          className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 focus:border-slate-800 rounded-xl text-xs outline-none font-semibold text-slate-700"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1.5">4. Category</label>
+                        <select
+                          value={behalfType}
+                          onChange={(e) => setBehalfType(e.target.value as any)}
+                          className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 focus:border-slate-850 rounded-xl text-xs outline-none font-semibold text-slate-700 cursor-pointer"
+                        >
+                          <option value="Casual">Casual (CL)</option>
+                          <option value="Sick">Sick (SL)</option>
+                          <option value="Gov/Fest">Gov/Festival (GF)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1.5">5. Audit Status</label>
+                        <select
+                          value={behalfStatus}
+                          onChange={(e) => setBehalfStatus(e.target.value as any)}
+                          className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 focus:border-slate-850 rounded-xl text-xs outline-none font-semibold text-slate-700 cursor-pointer"
+                        >
+                          <option value="Approved">Approved (Immediate)</option>
+                          <option value="Pending">Pending Audit</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1.5">6. Coverage Remarks / Purpose</label>
+                      <textarea
+                        rows={2}
+                        placeholder="Purpose or medical verification notes..."
+                        value={behalfNotes}
+                        onChange={(e) => setBehalfNotes(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 focus:border-slate-800 rounded-xl text-xs outline-none resize-none text-slate-700 text-[11px]"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer shadow-sm flex items-center justify-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Log Leave Record
+                    </button>
+                  </form>
+                </div>
+
+                {/* Column Right: Pending Approvals Hub (3 Cols) */}
+                <div className="lg:col-span-3 bg-white border border-slate-200/60 p-5 rounded-3xl shadow-3xs space-y-4">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-amber-50 rounded-lg text-amber-600">
+                        <Activity className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest font-mono">Pending Approvals Queue</h3>
+                        <p className="text-[10px] text-slate-400">Incoming teammate requests waiting for review</p>
+                      </div>
+                    </div>
+                    <span className="text-[9px] font-mono font-bold bg-amber-105 border border-amber-200 text-amber-800 px-2 py-0.5 rounded-full">
+                      {allPendingRequests.length} Active
+                    </span>
+                  </div>
+
+                  <div className="space-y-3.5 max-h-[380px] overflow-y-auto pr-1">
+                    {allPendingRequests.map(({ employee, request }) => (
+                      <div key={request.id} className="bg-slate-50/50 border border-slate-200/60 rounded-2xl p-4.5 space-y-3 shadow-3xs hover:bg-slate-50 transition-colors">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full border border-slate-200 overflow-hidden shrink-0">
+                              <img src={get3DAvatarUrl(employee.name)} alt="" className="w-full h-full object-cover" />
+                            </div>
+                            <div>
+                              <div className="font-extrabold text-slate-800 text-[11px]">{employee.name}</div>
+                              <div className="text-[9px] text-slate-400 font-medium font-mono">{employee.role}</div>
+                            </div>
+                          </div>
+                          <span className="text-[9px] font-black uppercase tracking-wider font-mono text-indigo-650 bg-indigo-50 border border-indigo-100/60 px-2 py-0.5 rounded">
+                            {request.type} ({request.days} Days)
+                          </span>
+                        </div>
+
+                        <div className="bg-white border border-slate-150 p-2.5 rounded-xl text-[11px] text-slate-600 leading-relaxed italic">
+                          "{request.notes || "No special description provided."}"
+                        </div>
+
+                        <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-[10px]">
+                          <span className="text-slate-400 font-bold font-mono">
+                            Span: {request.start} to {request.end}
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => handleUpdateTeammateLeaveStatus(employee.id, request.id, "Approved")}
+                              className="px-2.5 py-1 bg-emerald-650 hover:bg-emerald-600 text-white font-bold rounded-lg cursor-pointer transition-colors shadow-3xs text-[10px]"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleUpdateTeammateLeaveStatus(employee.id, request.id, "Rejected")}
+                              className="px-2.5 py-1 bg-rose-650 hover:bg-rose-600 text-white font-bold rounded-lg cursor-pointer transition-colors shadow-3xs text-[10px]"
+                            >
+                              Reject
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTeammateLeaveRequest(employee.id, request.id)}
+                              className="p-1.5 bg-white hover:bg-rose-50 border border-slate-200 rounded-lg text-slate-450 hover:text-rose-600 cursor-pointer transition-colors shadow-3xs"
+                              title="Delete request record"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {allPendingRequests.length === 0 && (
+                      <div className="flex flex-col items-center justify-center text-center py-12 px-4 bg-slate-50/50 border border-dashed border-slate-200 rounded-2xl">
+                        <div className="w-9 h-9 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-2">
+                          <Check className="w-5 h-5 stroke-[2.5]" />
+                        </div>
+                        <span className="block text-[11px] font-black text-slate-500 uppercase tracking-widest font-mono">Queue Cleared</span>
+                        <p className="text-[10px] text-slate-400 max-w-xs mt-1 leading-tight">All teammate leave requests are fully audited. Excellent team scheduling management.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+
+              {/* 3. Master Ledger Table */}
+              <div className="bg-white border border-slate-200/60 rounded-3xl shadow-3xs overflow-hidden">
+                <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3.5 bg-slate-50/30">
+                  <div>
+                    <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest font-mono flex items-center gap-1.5">
+                      <Shield className="w-3.5 h-3.5 text-indigo-500" /> Team Leave Balances Ledger
+                    </h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Summary ledger of annual balances (Cap: 28 Days)</p>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                    <div className="relative flex-1 sm:flex-initial">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        placeholder="Search teammate..."
+                        value={leaveLedgerSearch}
+                        onChange={(e) => setLeaveLedgerSearch(e.target.value)}
+                        className="pl-8.5 pr-3 py-1.5 bg-white border border-slate-200 focus:border-indigo-500 rounded-xl text-xs outline-none w-full sm:w-56 font-semibold text-slate-700 shadow-3xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs text-slate-500">
-                    <thead className="bg-slate-50/70 uppercase text-slate-400 font-mono text-[9px] tracking-wider border-b border-slate-100">
+                    <thead className="bg-slate-50/80 uppercase text-slate-400 font-mono text-[9px] tracking-widest border-b border-slate-150">
                       <tr>
-                        <th className="px-6 py-4">Employee</th>
-                        <th className="px-6 py-4">Department</th>
-                        <th className="px-6 py-4 text-center">Sick (7)</th>
-                        <th className="px-6 py-4 text-center">Casual (7)</th>
-                        <th className="px-6 py-4 text-center">Gov/Fest (14)</th>
-                        <th className="px-6 py-4 text-center">Total Remaining</th>
-                        <th className="px-6 py-4 text-right">Actions</th>
+                        <th className="px-6 py-4">Teammate Profile</th>
+                        <th className="px-6 py-4 text-center">Sick Used (7)</th>
+                        <th className="px-6 py-4 text-center">Casual Used (7)</th>
+                        <th className="px-6 py-4 text-center">Gov/Fest Used (14)</th>
+                        <th className="px-6 py-4 text-center">Total Used</th>
+                        <th className="px-6 py-4 text-center">Remaining Balance</th>
+                        <th className="px-6 py-4 text-right">Operations</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100/80">
-                      {employees.map(emp => {
+                    <tbody className="divide-y divide-slate-100/60">
+                      {filteredLedgerEmployees.map(emp => {
                         const leave = emp.leaveBalance || { sickLeaveUsed: 0, casualLeaveUsed: 0, govFestHolidaysUsed: 0 };
-                        const sickRemain = 7 - leave.sickLeaveUsed;
-                        const casRemain = 7 - leave.casualLeaveUsed;
-                        const govRemain = 14 - leave.govFestHolidaysUsed;
-                        const totalRemain = sickRemain + casRemain + govRemain;
+                        const sickUsed = leave.sickLeaveUsed || 0;
+                        const casUsed = leave.casualLeaveUsed || 0;
+                        const govUsed = leave.govFestHolidaysUsed || 0;
+                        
+                        const totalUsed = sickUsed + casUsed + govUsed;
+                        const totalRemain = Math.max(0, 28 - totalUsed);
+
+                        const isLowBalance = totalRemain <= 5;
+
                         return (
-                          <tr key={emp.id} className="hover:bg-slate-50/40 transition-colors">
-                            <td className="px-6 py-4">
+                          <tr key={emp.id} className="hover:bg-slate-50/40 transition-all duration-300">
+                            <td className="px-6 py-4.5">
                               <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0">
+                                <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0">
                                   <img src={get3DAvatarUrl(emp.name)} alt={emp.name} className="w-full h-full object-cover" />
                                 </div>
                                 <div>
-                                  <div className="font-bold text-slate-800">{emp.name}</div>
-                                  <div className="text-[10px] text-slate-400">{emp.role}</div>
+                                  <div className="font-bold text-slate-800 text-[12px]">{emp.name}</div>
+                                  <div className="text-[9px] text-slate-400 font-medium font-mono">Hub: {emp.team || "Nexus"}</div>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4">
-                              <span className="text-xs font-semibold text-slate-700">{emp.department}</span>
+                            
+                            <td className="px-6 py-4.5 text-center font-mono font-bold text-slate-600">
+                              <span className={sickUsed >= 5 ? "text-rose-600" : "text-slate-600"}>{sickUsed} / 7</span>
                             </td>
-                            <td className="px-6 py-4 text-center">
-                              <span className={`font-mono font-bold ${sickRemain <= 2 ? 'text-rose-600' : 'text-slate-600'}`}>{sickRemain}</span>
+
+                            <td className="px-6 py-4.5 text-center font-mono font-bold text-slate-600">
+                              <span className={casUsed >= 5 ? "text-amber-600" : "text-slate-600"}>{casUsed} / 7</span>
                             </td>
-                            <td className="px-6 py-4 text-center">
-                              <span className={`font-mono font-bold ${casRemain <= 2 ? 'text-amber-600' : 'text-slate-600'}`}>{casRemain}</span>
+
+                            <td className="px-6 py-4.5 text-center font-mono font-bold text-slate-600">
+                              <span className={govUsed >= 10 ? "text-indigo-600" : "text-slate-600"}>{govUsed} / 14</span>
                             </td>
-                            <td className="px-6 py-4 text-center">
-                              <span className={`font-mono font-bold ${govRemain <= 4 ? 'text-blue-600' : 'text-slate-600'}`}>{govRemain}</span>
+
+                            <td className="px-6 py-4.5 text-center font-mono font-extrabold text-slate-700 bg-slate-50/30">
+                              {totalUsed} Days
                             </td>
-                            <td className="px-6 py-4 text-center">
-                              <div className="flex items-center justify-center gap-2">
-                                <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-                                  <div 
-                                    className={`h-full rounded-full ${totalRemain < 10 ? 'bg-rose-500' : totalRemain < 20 ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                                    style={{ width: `${(totalRemain / 28) * 100}%` }}
-                                  />
+
+                            <td className="px-6 py-4.5 text-center">
+                              <div className="flex items-center justify-center gap-3">
+                                <div className="flex gap-1 w-20 justify-between select-none">
+                                  {Array.from({ length: 6 }).map((_, i) => {
+                                    const segmentValue = (i / 6) * 28;
+                                    const isFilled = totalRemain > segmentValue;
+                                    return (
+                                      <div
+                                        key={i}
+                                        className={`h-2 flex-1 rounded-xs transition-all duration-300 ${
+                                          isFilled
+                                            ? totalRemain <= 5
+                                              ? "bg-rose-500 shadow-xs"
+                                              : totalRemain <= 12
+                                                ? "bg-amber-500 shadow-xs"
+                                                : "bg-indigo-500 shadow-xs"
+                                            : "bg-slate-100 border border-slate-200/40"
+                                        }`}
+                                      />
+                                    );
+                                  })}
                                 </div>
-                                <span className="font-mono font-bold text-slate-700 w-6">{totalRemain}</span>
+                                <span className={`font-mono font-bold w-12 text-left text-xs ${isLowBalance ? "text-rose-600 animate-pulse font-black" : "text-slate-800"}`}>
+                                  {totalRemain} d left
+                                </span>
                               </div>
                             </td>
-                            <td className="px-6 py-4 text-right">
-                              <button 
+
+                            <td className="px-6 py-4.5 text-right">
+                              <button
                                 onClick={() => {
-                                  console.log("Edit", emp);
-                                  alert("Manage leaves coming soon!");
+                                  setBehalfEmpId(emp.id);
+                                  showToast(`Selected ${emp.name} for leave logging. Form updated above.`, "success");
                                 }}
-                                className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors"
+                                className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-900 hover:text-white border border-slate-200 hover:border-slate-900 rounded-xl text-[10px] font-mono font-extrabold uppercase transition-all duration-300 cursor-pointer"
                               >
-                                Manage Leaves
+                                Log Break
                               </button>
                             </td>
                           </tr>
                         );
                       })}
+
+                      {filteredLedgerEmployees.length === 0 && (
+                        <tr>
+                          <td colSpan={7} className="text-center py-12 text-slate-400 italic text-xs bg-slate-50/20">
+                            No matching teammates found.
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
               </div>
+
             </div>
-        </main>
-      )}
+          </main>
+        );
+      })()}
 
       {activePortal === "employees" && (
         <EmployeeDossier
