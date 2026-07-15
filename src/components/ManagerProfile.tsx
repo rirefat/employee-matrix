@@ -211,7 +211,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
 
   return (
     <main className="flex-1 w-full px-6 lg:px-10 xl:px-12 py-8 overflow-y-auto bg-slate-50/20">
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="w-full space-y-8">
         
         {/* Profile Card Header */}
         <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-3xs flex flex-col sm:flex-row items-center gap-6">
