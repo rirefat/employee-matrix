@@ -22,3 +22,40 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+@utility sleek-scrollbar {
+  &::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: rgba(241, 245, 249, 0.4);
+    border-radius: 9999px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(203, 213, 225, 0.8);
+    border-radius: 9999px;
+    transition: all 0.2s ease;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 1);
+  }
+}
+
+.sleek-scrollbar::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.sleek-scrollbar::-webkit-scrollbar-track {
+  background: rgba(241, 245, 249, 0.4);
+  border-radius: 9999px;
+}
+.sleek-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(203, 213, 225, 0.8);
+  border-radius: 9999px;
+  transition: all 0.2s ease;
+}
+.sleek-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 1);
+}
+

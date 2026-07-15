@@ -107,6 +107,51 @@ export function EmployeeDossier({
   const [isHeaderDropdownOpen, setIsHeaderDropdownOpen] = useState(false);
   const [headerDropdownSearch, setHeaderDropdownSearch] = useState("");
 
+  // Leave Hover Tooltip State & Handlers
+  const [hoveredLeave, setHoveredLeave] = useState<{
+    x: number;
+    y: number;
+    employeeName: string;
+    employeeRole: string;
+    employeeTeam: string;
+    leaveType: string;
+    start: string;
+    end: string;
+    days: number;
+    notes: string;
+    status: string;
+  } | null>(null);
+
+  const handleLeaveHover = (
+    e: React.MouseEvent,
+    emp: any,
+    leave: { type: string; start: string; end: string; days: number; notes: string; status: string }
+  ) => {
+    setHoveredLeave({
+      x: e.clientX,
+      y: e.clientY,
+      employeeName: emp.name,
+      employeeRole: emp.role,
+      employeeTeam: emp.team,
+      leaveType: leave.type,
+      start: leave.start,
+      end: leave.end,
+      days: leave.days,
+      notes: leave.notes || "No notes provided.",
+      status: leave.status,
+    });
+  };
+
+  const handleLeaveMove = (e: React.MouseEvent) => {
+    if (hoveredLeave) {
+      setHoveredLeave(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null);
+    }
+  };
+
+  const handleLeaveLeave = () => {
+    setHoveredLeave(null);
+  };
+
   // States for manager notes chronological timeline
   const [managerNoteAuthor, setManagerNoteAuthor] = useState("");
   const [managerNoteText, setManagerNoteText] = useState("");
@@ -572,24 +617,22 @@ export function EmployeeDossier({
       }
 
       let finalStatus: "Present" | "Absent" | "Leave" | "Weekend" | "Future" = "Present";
+      const dateObj = new Date(year, month - 1, d);
+      const localLeave = leaveRequests.find(lr => {
+        const s = new Date(lr.start);
+        const e = new Date(lr.end);
+        return dateObj >= s && dateObj <= e;
+      });
+
       if (isFuture) {
         finalStatus = "Future";
       } else if (isWeekend) {
         finalStatus = "Weekend";
       } else {
-        // Integrate with leaveRequests from local state if there's any matching date
-        const dateObj = new Date(year, month - 1, d);
-        const localLeave = leaveRequests.find(lr => {
-          const s = new Date(lr.start);
-          const e = new Date(lr.end);
-          return dateObj >= s && dateObj <= e;
-        });
-
         if (localLeave) {
           if (localLeave.status === "Approved") {
             finalStatus = "Leave";
           } else {
-            // Keep status but maybe we can keep it as Present/Leave depending on seed
             finalStatus = statusMap[d] || "Present";
           }
         } else {
@@ -602,7 +645,8 @@ export function EmployeeDossier({
         isWeekend,
         status: finalStatus,
         dateString: dateStr,
-        isFuture
+        isFuture,
+        leave: localLeave
       });
     }
 
@@ -1892,7 +1936,22 @@ export function EmployeeDossier({
                                   key={`day-${cell.dayNumber}`}
                                   id={`heatmap-cell-day-${cell.dayNumber}`}
                                   className={cellClass}
-                                  title={`${parsedMonth.label.split(" ")[0]} ${cell.dayNumber}, ${parsedMonth.year}: ${statusText}`}
+                                  title={cell.leave ? undefined : `${parsedMonth.label.split(" ")[0]} ${cell.dayNumber}, ${parsedMonth.year}: ${statusText}`}
+                                  onMouseEnter={(e) => {
+                                    if (cell.leave) {
+                                      handleLeaveHover(e, activeDirectoryEmployee, cell.leave);
+                                    }
+                                  }}
+                                  onMouseMove={(e) => {
+                                    if (cell.leave) {
+                                      handleLeaveMove(e);
+                                    }
+                                  }}
+                                  onMouseLeave={() => {
+                                    if (cell.leave) {
+                                      handleLeaveLeave();
+                                    }
+                                  }}
                                 >
                                   <span>{cell.dayNumber}</span>
                                   
@@ -3143,6 +3202,74 @@ export function EmployeeDossier({
         </div>
 
       </div>
+
+      {/* Leave Hover Tooltip */}
+      {hoveredLeave && (
+        <div
+          style={{
+            position: "fixed",
+            left: `${Math.min(hoveredLeave.x + 15, window.innerWidth - 300)}px`,
+            top: `${Math.min(hoveredLeave.y + 15, window.innerHeight - 240)}px`,
+            pointerEvents: "none",
+            zIndex: 9999,
+          }}
+          className="w-72 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-[0_12px_36px_rgba(15,23,42,0.15)] p-4 flex flex-col gap-3 transition-all duration-150 animate-in fade-in zoom-in-95 duration-200"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full border border-slate-200 overflow-hidden shrink-0 shadow-sm">
+              <img src={get3DAvatarUrl(hoveredLeave.employeeName)} alt="" className="w-full h-full object-cover" />
+            </div>
+            <div className="overflow-hidden">
+              <div className="font-extrabold text-[11px] text-slate-800 tracking-tight leading-none mb-1">
+                {hoveredLeave.employeeName}
+              </div>
+              <div className="text-[9px] text-slate-400 font-medium tracking-tight leading-none truncate">
+                {hoveredLeave.employeeRole} • <span className="font-bold text-slate-500">{hoveredLeave.employeeTeam}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="h-[1px] bg-slate-100" />
+
+          <div className="flex items-center justify-between">
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-wider ${
+              hoveredLeave.leaveType === "Sick" ? "bg-rose-50 text-rose-650 border-rose-100" :
+              hoveredLeave.leaveType === "Casual" ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+              "bg-violet-50 text-violet-650 border-violet-100"
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${
+                hoveredLeave.leaveType === "Sick" ? "bg-rose-500" :
+                hoveredLeave.leaveType === "Casual" ? "bg-emerald-500" :
+                "bg-violet-500"
+              }`} />
+              {hoveredLeave.leaveType} Leave
+            </span>
+            <span className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ${
+              hoveredLeave.status === "Approved" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-amber-50 text-amber-600 border-amber-100"
+            }`}>
+              {hoveredLeave.status}
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-1 text-[10px] text-slate-500 bg-slate-50 p-2 rounded-xl border border-slate-100">
+            <div className="flex items-center gap-1">
+              <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
+              <span className="font-bold text-slate-700">Roster Period:</span>
+            </div>
+            <div className="font-mono text-[9px] pl-4 text-slate-600">
+              {hoveredLeave.start} to {hoveredLeave.end}
+            </div>
+            <div className="pl-4 text-[9px] font-bold text-slate-800">
+              Duration: <span className="text-indigo-600 font-black">{hoveredLeave.days} {hoveredLeave.days === 1 ? "day" : "days"}</span>
+            </div>
+          </div>
+
+          <div className="text-[10px] text-slate-600 bg-indigo-50/20 p-2 rounded-xl border border-indigo-100/30 relative">
+            <div className="text-[8px] font-black text-indigo-500 uppercase tracking-widest mb-0.5">Notes</div>
+            <p className="italic font-medium text-slate-700">"{hoveredLeave.notes}"</p>
+          </div>
+        </div>
+      )}
 
     </div>
   );

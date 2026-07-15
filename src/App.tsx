@@ -220,6 +220,51 @@ export default function App() {
   // App Alerts
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
+  // Leave Hover Tooltip State & Handlers
+  const [hoveredLeave, setHoveredLeave] = useState<{
+    x: number;
+    y: number;
+    employeeName: string;
+    employeeRole: string;
+    employeeTeam: string;
+    leaveType: string;
+    start: string;
+    end: string;
+    days: number;
+    notes: string;
+    status: string;
+  } | null>(null);
+
+  const handleLeaveHover = (
+    e: React.MouseEvent,
+    emp: Employee,
+    leave: { type: string; start: string; end: string; days: number; notes: string; status: string }
+  ) => {
+    setHoveredLeave({
+      x: e.clientX,
+      y: e.clientY,
+      employeeName: emp.name,
+      employeeRole: emp.role,
+      employeeTeam: emp.team,
+      leaveType: leave.type,
+      start: leave.start,
+      end: leave.end,
+      days: leave.days,
+      notes: leave.notes || "No notes provided.",
+      status: leave.status,
+    });
+  };
+
+  const handleLeaveMove = (e: React.MouseEvent) => {
+    if (hoveredLeave) {
+      setHoveredLeave(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null);
+    }
+  };
+
+  const handleLeaveLeave = () => {
+    setHoveredLeave(null);
+  };
+
   // Modals state
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
   const [modalTab, setModalTab] = useState<"corporate" | "personal" | "professional" | "banking">("corporate");
@@ -3176,6 +3221,26 @@ export default function App() {
           setSelectedCalendarDay(null);
         };
 
+        const todayObj = new Date();
+        const todayYYYYMM = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, "0")}`;
+        const isTodayMonth = calendarMonth === todayYYYYMM;
+        const todayDay = todayObj.getDate();
+
+        const handleJumpToToday = () => {
+          setCalendarMonth(todayYYYYMM);
+          setSelectedCalendarDay(`${todayYYYYMM}-${String(todayDay).padStart(2, "0")}`);
+          setTimeout(() => {
+            const timelineEl = document.getElementById(`timeline-day-col-${todayDay}`);
+            if (timelineEl) {
+              timelineEl.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+            }
+            const gridEl = document.getElementById(`grid-day-cell-${todayDay}`);
+            if (gridEl) {
+              gridEl.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+            }
+          }, 120);
+        };
+
         const weekdays = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
         const getWeekdayName = (dayNum: number) => {
           const d = new Date(year, monthIndex, dayNum);
@@ -3329,64 +3394,75 @@ export default function App() {
               </div>
 
               {/* --- TEAM LEAVE CALENDAR & OVERLAPS VIEW --- */}
-              <div id="team-leave-calendar-panel" className="bg-white border border-slate-200/65 rounded-3xl shadow-3xs overflow-hidden">
+              <div id="team-leave-calendar-panel" className="bg-white border border-slate-100 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.015)] overflow-hidden transition-all duration-300 hover:shadow-[0_12px_40px_rgb(0,0,0,0.03)]">
                 {/* Header */}
-                <div className="p-5 border-b border-slate-100 bg-slate-50/40 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div className="space-y-1">
-                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest font-mono flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-indigo-500" /> Team Leave & Overlap Calendar
-                    </h3>
-                    <p className="text-[10px] text-slate-400">Visually track team absence schedules and identify coverage bottlenecks at a glance</p>
+                <div className="p-6 border-b border-slate-100/80 bg-slate-50/20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-5">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-indigo-50/60 rounded-2xl text-indigo-600 border border-indigo-100/40 shadow-4xs">
+                      <Calendar className="w-5 h-5" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider font-mono">
+                          Team Leave & Overlap Calendar
+                        </h3>
+                        <span className="px-2 py-0.5 text-[8px] font-black uppercase tracking-widest font-mono text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-full animate-pulse">
+                          Live Tracker
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-medium">Coordinate absence streams, track coverage overlaps, and avoid capacity bottlenecks</p>
+                    </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    {/* View Switcher */}
-                    <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200/40">
+                  <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-start sm:justify-end shrink-0">
+                    {/* View Switcher Pill Container */}
+                    <div className="flex items-center bg-slate-100/60 p-0.5 rounded-full border border-slate-200/30 h-8 shrink-0">
                       <button
                         type="button"
                         onClick={() => setCalendarViewMode("timeline")}
-                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold font-mono uppercase transition-all ${
+                        className={`h-full px-3.5 rounded-full text-[10px] font-black tracking-wider uppercase transition-all duration-200 whitespace-nowrap flex items-center justify-center gap-1.5 cursor-pointer ${
                           calendarViewMode === "timeline"
-                            ? "bg-white text-slate-900 shadow-3xs border border-slate-200/20"
-                            : "text-slate-500 hover:text-slate-900"
+                            ? "bg-white text-slate-900 shadow-4xs border border-slate-200/10 font-black"
+                            : "text-slate-500 hover:text-slate-800 font-bold"
                         }`}
                       >
-                        Timeline (Overlaps)
+                        <Layers className={`w-3 h-3 transition-transform ${calendarViewMode === "timeline" ? "text-indigo-600 rotate-180" : "text-slate-400"}`} />
+                        Timeline
                       </button>
                       <button
                         type="button"
                         onClick={() => setCalendarViewMode("grid")}
-                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold font-mono uppercase transition-all ${
+                        className={`h-full px-3.5 rounded-full text-[10px] font-black tracking-wider uppercase transition-all duration-200 whitespace-nowrap flex items-center justify-center gap-1.5 cursor-pointer ${
                           calendarViewMode === "grid"
-                            ? "bg-white text-slate-900 shadow-3xs border border-slate-200/20"
-                            : "text-slate-500 hover:text-slate-900"
+                            ? "bg-white text-slate-900 shadow-4xs border border-slate-200/10 font-black"
+                            : "text-slate-500 hover:text-slate-800 font-bold"
                         }`}
                       >
-                        Calendar Grid
+                        <Calendar className={`w-3 h-3 ${calendarViewMode === "grid" ? "text-indigo-600" : "text-slate-400"}`} />
+                        Grid
                       </button>
                     </div>
 
-                    {/* Month Navigator */}
-                    <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2 py-1 shadow-3xs">
+                    {/* Integrated Date Navigation Group */}
+                    <div className="flex items-center gap-2 shrink-0">
                       <button
                         type="button"
-                        onClick={handlePrevMonth}
-                        className="p-1 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors cursor-pointer"
-                        title="Previous Month"
+                        onClick={handleJumpToToday}
+                        className="group flex items-center gap-1.5 h-8 px-3.5 bg-white hover:bg-slate-50 text-slate-700 hover:text-indigo-600 font-black font-mono text-[10px] uppercase tracking-wider rounded-full border border-slate-200/60 hover:border-indigo-250 transition-all shadow-4xs hover:shadow-3xs cursor-pointer active:scale-95 shrink-0"
+                        title="Jump to Today"
                       >
-                        <ChevronLeft className="w-4 h-4" />
+                        <Compass className="w-3.5 h-3.5 stroke-[2.5] text-slate-400 group-hover:text-indigo-500 group-hover:rotate-45 transition-all duration-300" />
+                        Today
                       </button>
-                      <span className="text-xs font-black text-slate-700 min-w-[100px] text-center select-none font-mono">
-                        {getMonthName(calendarMonth)}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleNextMonth}
-                        className="p-1 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors cursor-pointer"
-                        title="Next Month"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
+
+                      <MonthPicker
+                        value={calendarMonth}
+                        onChange={(newMonth) => {
+                          setCalendarMonth(newMonth);
+                          setSelectedCalendarDay(null);
+                        }}
+                        align="right"
+                      />
                     </div>
                   </div>
                 </div>
@@ -3394,15 +3470,15 @@ export default function App() {
                 {/* Body depending on calendarViewMode */}
                 {calendarViewMode === "timeline" ? (
                   /* Timeline Row Layout */
-                  <div className="p-5 space-y-4">
-                    <div className="border border-slate-150 rounded-2xl overflow-hidden bg-slate-50/10">
-                      <div className="overflow-x-auto">
+                  <div className="p-6 space-y-4">
+                    <div className="border border-slate-100 rounded-2xl overflow-hidden bg-slate-50/5 shadow-[inset_0_1px_4px_rgba(0,0,0,0.01)]">
+                      <div className="overflow-x-auto sleek-scrollbar">
                         <div className="min-w-[850px]">
                           {/* Timeline Header Row */}
-                          <div className="flex border-b border-slate-150 bg-slate-50/50 font-mono text-[9px] font-bold tracking-widest text-slate-400">
+                          <div className="flex border-b border-slate-100 bg-slate-50/30 font-mono text-[9px] font-bold tracking-wider text-slate-400">
                             {/* Sticky Teammate header */}
-                            <div className="w-48 sticky left-0 bg-slate-50/90 border-r border-slate-200 shrink-0 px-4 py-3 z-10 flex items-center justify-between">
-                              <span>Teammate Profile</span>
+                            <div className="w-48 sticky left-0 bg-slate-50/90 backdrop-blur-md border-r border-slate-100 shrink-0 px-4 py-3.5 z-10 flex items-center justify-between text-[10px] font-black text-slate-600">
+                              <span>TEAM MEMBER</span>
                             </div>
                             
                             {/* Days header list */}
@@ -3411,20 +3487,24 @@ export default function App() {
                                 const d = i + 1;
                                 const isOverlap = overlapDays[d];
                                 const isWeekend = [0, 6].includes(new Date(year, monthIndex, d).getDay());
+                                const isTodayCell = isTodayMonth && d === todayDay;
                                 return (
                                   <div
                                     key={d}
-                                    className={`w-9 py-2 border-r border-slate-100/70 flex flex-col items-center justify-center shrink-0 relative ${
-                                      isOverlap ? "bg-rose-50/70 text-rose-600 font-black border-r border-rose-200" : ""
-                                    } ${isWeekend && !isOverlap ? "bg-slate-50/30 text-slate-400" : ""}`}
+                                    id={`timeline-day-col-${d}`}
+                                    className={`w-9 py-2.5 border-r border-slate-100/60 flex flex-col items-center justify-center shrink-0 relative transition-all ${
+                                      isTodayCell ? "bg-indigo-50 border-x border-indigo-200/50 text-indigo-700 font-extrabold shadow-4xs" : ""
+                                    } ${
+                                      isOverlap ? "bg-rose-500/[0.04] border-r border-rose-200/50" : ""
+                                    } ${isWeekend && !isOverlap ? "bg-slate-50/20 text-slate-400" : "text-slate-500"}`}
                                     title={isOverlap ? `Overlap on day ${d}: Multiple approved leaves` : ""}
                                   >
-                                    <span className="text-[8px] uppercase tracking-tighter opacity-80">{getWeekdayName(d)}</span>
-                                    <span className={`text-[10px] font-mono leading-tight mt-0.5 ${isOverlap ? "text-rose-600 font-extrabold" : "text-slate-600"}`}>
+                                    <span className={`text-[7px] uppercase tracking-wider opacity-60 font-black ${isTodayCell ? "text-indigo-650" : ""}`}>{getWeekdayName(d)}</span>
+                                    <span className={`text-[10px] font-mono leading-tight mt-0.5 font-bold ${isOverlap ? "text-rose-500 font-black" : isTodayCell ? "text-indigo-700 font-black scale-110" : "text-slate-700"}`}>
                                       {d}
                                     </span>
                                     {isOverlap && (
-                                      <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-rose-500 rounded-full" />
+                                      <span className="absolute top-1.5 right-1.5 w-1 h-1 bg-rose-400 rounded-full animate-ping" />
                                     )}
                                   </div>
                                 );
@@ -3435,15 +3515,15 @@ export default function App() {
                           {/* Timeline Data Rows */}
                           <div className="divide-y divide-slate-100">
                             {myEmployees.map(emp => (
-                              <div key={emp.id} className="flex hover:bg-slate-50/30 transition-all">
+                              <div key={emp.id} className="flex hover:bg-slate-50/30 transition-all duration-200">
                                 {/* Sticky Profile column */}
-                                <div className="w-48 sticky left-0 bg-white border-r border-slate-200 shrink-0 px-4 py-2.5 z-10 flex items-center gap-2.5 shadow-[2px_0_5px_rgba(0,0,0,0.01)]">
-                                  <div className="w-7 h-7 rounded-full border border-slate-200 overflow-hidden shrink-0">
+                                <div className="w-48 sticky left-0 bg-white/95 backdrop-blur-md border-r border-slate-100 shrink-0 px-4 py-3 z-10 flex items-center gap-2.5 shadow-[4px_0_12px_rgba(0,0,0,0.02)]">
+                                  <div className="w-8 h-8 rounded-full border border-slate-150 overflow-hidden shrink-0 shadow-3xs ring-2 ring-slate-100">
                                     <img src={get3DAvatarUrl(emp.name)} alt="" className="w-full h-full object-cover" />
                                   </div>
-                                  <div className="overflow-hidden">
-                                    <div className="font-extrabold text-[11px] text-slate-700 truncate" title={emp.name}>{emp.name}</div>
-                                    <div className="text-[9px] text-slate-400 font-mono font-medium truncate" title={emp.role}>{emp.role}</div>
+                                  <div className="overflow-hidden space-y-0.5">
+                                    <div className="font-extrabold text-[11px] text-slate-800 tracking-tight truncate" title={emp.name}>{emp.name}</div>
+                                    <div className="text-[9px] text-slate-400 font-medium tracking-tight truncate" title={emp.role}>{emp.role}</div>
                                   </div>
                                 </div>
 
@@ -3462,74 +3542,61 @@ export default function App() {
                                       const isEnd = dateKey === leave.end;
                                       const isSingle = isStart && isEnd;
 
-                                      let pillBg = "bg-indigo-500";
-                                      let pillBorder = "border-indigo-600/10";
+                                      let baseClasses = "h-6 flex items-center justify-center text-[9px] font-black font-mono transition-all cursor-pointer select-none";
+                                      let pillStyle = "";
+                                      
                                       if (leave.type === "Sick") {
-                                        pillBg = "bg-rose-500";
-                                        pillBorder = "border-rose-600/10";
+                                        pillStyle = "bg-rose-50/95 text-rose-600 border-y border-rose-200/80 hover:bg-rose-100/85";
+                                        if (isSingle) {
+                                          pillStyle += " rounded-full mx-1 border shadow-4xs border-rose-300/80";
+                                        } else if (isStart) {
+                                          pillStyle += " rounded-l-full ml-1.5 border-l border-y border-rose-300/80";
+                                        } else if (isEnd) {
+                                          pillStyle += " rounded-r-full mr-1.5 border-r border-y border-rose-300/80";
+                                        }
                                       } else if (leave.type === "Casual") {
-                                        pillBg = "bg-amber-500";
-                                        pillBorder = "border-amber-600/10";
+                                        pillStyle = "bg-emerald-50/95 text-emerald-600 border-y border-emerald-200/80 hover:bg-emerald-100/85";
+                                        if (isSingle) {
+                                          pillStyle += " rounded-full mx-1 border shadow-4xs border-emerald-300/80";
+                                        } else if (isStart) {
+                                          pillStyle += " rounded-l-full ml-1.5 border-l border-y border-emerald-300/80";
+                                        } else if (isEnd) {
+                                          pillStyle += " rounded-r-full mr-1.5 border-r border-y border-emerald-300/80";
+                                        }
+                                      } else {
+                                        pillStyle = "bg-violet-50/95 text-violet-650 border-y border-violet-200/80 hover:bg-violet-100/85";
+                                        if (isSingle) {
+                                          pillStyle += " rounded-full mx-1 border shadow-4xs border-violet-300/80";
+                                        } else if (isStart) {
+                                          pillStyle += " rounded-l-full ml-1.5 border-l border-y border-violet-300/80";
+                                        } else if (isEnd) {
+                                          pillStyle += " rounded-r-full mr-1.5 border-r border-y border-violet-300/80";
+                                        }
                                       }
 
-                                      if (isSingle) {
-                                        cellContent = (
-                                          <div
-                                            onClick={() => {
-                                              setSelectedCalendarDay(dateKey);
-                                              showToast(`Inspecting day ${d}: ${emp.name}'s ${leave.type} Leave`, "success");
-                                            }}
-                                            className={`mx-1 w-7 h-5 rounded-full flex items-center justify-center text-[8px] font-black font-mono text-white cursor-pointer shadow-3xs hover:scale-105 active:scale-95 transition-transform border ${pillBg} ${pillBorder}`}
-                                            title={`${emp.name}: ${leave.type} Leave (${leave.start} to ${leave.end})\nNotes: ${leave.notes}`}
-                                          >
-                                            {leave.type[0]}
-                                          </div>
-                                        );
-                                      } else if (isStart) {
-                                        cellContent = (
-                                          <div
-                                            onClick={() => {
-                                              setSelectedCalendarDay(dateKey);
-                                              showToast(`Inspecting day ${d}: ${emp.name}'s ${leave.type} Leave`, "success");
-                                            }}
-                                            className={`ml-1 mr-0 w-8 h-5 rounded-l-full flex items-center justify-center text-[8px] font-black font-mono text-white cursor-pointer hover:opacity-90 transition-opacity border-y border-l ${pillBg} ${pillBorder}`}
-                                            title={`${emp.name}: ${leave.type} Leave (${leave.start} to ${leave.end})\nNotes: ${leave.notes}`}
-                                          >
-                                            {leave.type[0]}
-                                          </div>
-                                        );
-                                      } else if (isEnd) {
-                                        cellContent = (
-                                          <div
-                                            onClick={() => {
-                                              setSelectedCalendarDay(dateKey);
-                                              showToast(`Inspecting day ${d}: ${emp.name}'s ${leave.type} Leave`, "success");
-                                            }}
-                                            className={`mr-1 ml-0 w-8 h-5 rounded-r-full flex items-center justify-center text-[8px] font-black font-mono text-white cursor-pointer hover:opacity-90 transition-opacity border-y border-r ${pillBg} ${pillBorder}`}
-                                            title={`${emp.name}: ${leave.type} Leave (${leave.start} to ${leave.end})\nNotes: ${leave.notes}`}
-                                          >
-                                            {leave.type[0]}
-                                          </div>
-                                        );
-                                      } else {
-                                        cellContent = (
-                                          <div
-                                            onClick={() => {
-                                              setSelectedCalendarDay(dateKey);
-                                              showToast(`Inspecting day ${d}: ${emp.name}'s ${leave.type} Leave`, "success");
-                                            }}
-                                            className={`w-9 h-5 flex items-center justify-center text-[8px] font-black font-mono text-white/95 cursor-pointer hover:opacity-90 transition-opacity border-y ${pillBg} ${pillBorder}`}
-                                            title={`${emp.name}: ${leave.type} Leave (${leave.start} to ${leave.end})\nNotes: ${leave.notes}`}
-                                          />
-                                        );
-                                      }
+                                      const displayChar = (isSingle || isStart) ? leave.type[0] : "";
+
+                                      cellContent = (
+                                        <div
+                                          onClick={() => {
+                                            setSelectedCalendarDay(dateKey);
+                                            showToast(`Inspecting day ${d}: ${emp.name}'s ${leave.type} Leave`, "success");
+                                          }}
+                                          onMouseEnter={(e) => handleLeaveHover(e, emp, leave)}
+                                          onMouseMove={handleLeaveMove}
+                                          onMouseLeave={handleLeaveLeave}
+                                          className={`${baseClasses} ${pillStyle} w-full`}
+                                        >
+                                          {displayChar}
+                                        </div>
+                                      );
                                     }
 
                                     return (
                                       <div
                                         key={d}
-                                        className={`w-9 h-10 border-r border-slate-100 flex items-center justify-center shrink-0 relative ${
-                                          isOverlap ? "bg-rose-50/15" : ""
+                                        className={`w-9 h-11 border-r border-slate-100/70 flex items-center justify-center shrink-0 relative ${
+                                          isOverlap ? "bg-rose-500/[0.015]" : ""
                                         } ${isWeekend && !leave ? "bg-slate-50/20" : ""}`}
                                       >
                                         {cellContent}
@@ -3544,33 +3611,33 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-150 text-[11px] text-slate-500 font-semibold font-mono">
+                    <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50/50 p-4 rounded-2xl border border-slate-100 text-[11px] text-slate-500 font-semibold">
                       <div className="flex flex-wrap items-center gap-4">
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-3 h-3 rounded bg-amber-500" />
-                          <span>Casual (CL)</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 border border-emerald-500/10 shadow-3xs" />
+                          <span className="font-mono text-slate-600 text-[10px]">Casual Leave (CL)</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-3 h-3 rounded bg-rose-500" />
-                          <span>Sick (SL)</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full bg-rose-400 border border-rose-500/10 shadow-3xs" />
+                          <span className="font-mono text-slate-600 text-[10px]">Sick Leave (SL)</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-3 h-3 rounded bg-indigo-500" />
-                          <span>Gov & Festival (GF)</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full bg-violet-400 border border-violet-500/10 shadow-3xs" />
+                          <span className="font-mono text-slate-600 text-[10px]">Gov & Festival (GF)</span>
                         </div>
                       </div>
-                      <span className="flex items-center gap-1 text-slate-400">
-                        <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" /> Vertical bands and indicators alert managers about overlap days.
+                      <span className="flex items-center gap-1.5 text-slate-400 text-[10px] font-mono">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-450 animate-pulse" /> Vertical bands and indicators alert managers about overlap days.
                       </span>
                     </div>
                   </div>
                 ) : (
                   /* Standard Month Calendar Grid View with day selection details */
-                  <div className="p-5 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Left 2 Cols: The standard Calendar Grid */}
-                    <div className="lg:col-span-2 space-y-3">
+                    <div className="lg:col-span-2 space-y-4">
                       {/* Grid Header days of week */}
-                      <div className="grid grid-cols-7 text-center font-mono text-[9px] font-black tracking-widest text-slate-400 border-b border-slate-150 pb-2">
+                      <div className="grid grid-cols-7 text-center font-mono text-[9px] font-black tracking-widest text-slate-400 border-b border-slate-100 pb-3">
                         <span>Sun</span>
                         <span>Mon</span>
                         <span>Tue</span>
@@ -3584,7 +3651,7 @@ export default function App() {
                       <div className="grid grid-cols-7 gap-2">
                         {/* 1. Offset empty cells for the first day of month */}
                         {Array.from({ length: firstDayIndex }).map((_, idx) => (
-                          <div key={`empty-${idx}`} className="h-20 bg-slate-50/30 rounded-xl border border-dashed border-slate-200/50" />
+                          <div key={`empty-${idx}`} className="h-20 bg-slate-50/20 rounded-2xl border border-dashed border-slate-200/40" />
                         ))}
 
                         {/* 2. Days of month */}
@@ -3599,33 +3666,45 @@ export default function App() {
                           });
 
                           const isOverlap = leaves.length > 1;
+                          const isTodayCell = isTodayMonth && d === todayDay;
 
                           return (
                             <div
                               key={d}
+                              id={`grid-day-cell-${d}`}
                               onClick={() => setSelectedCalendarDay(dateKey)}
-                              className={`h-22 p-2 bg-white border rounded-2xl flex flex-col justify-between cursor-pointer transition-all hover:border-slate-400 hover:shadow-2xs relative ${
+                              className={`h-22 p-2.5 border rounded-2xl flex flex-col justify-between cursor-pointer transition-all duration-300 relative ${
                                 isSelected
-                                  ? "border-slate-900 ring-2 ring-slate-900/10"
-                                  : isOverlap
-                                    ? "border-rose-200 bg-rose-50/10"
-                                    : "border-slate-200"
+                                  ? "border-slate-800 ring-4 ring-slate-800/5 bg-slate-50/20 shadow-3xs"
+                                  : isTodayCell
+                                    ? "border-indigo-300 bg-indigo-50/10 hover:border-indigo-400 hover:bg-indigo-50/20 shadow-4xs"
+                                    : isOverlap
+                                      ? "border-rose-150 bg-rose-50/20 hover:border-rose-300 hover:bg-rose-50/30"
+                                      : "border-slate-100 hover:border-slate-300 hover:shadow-3xs bg-white"
                               }`}
                             >
                               <div className="flex items-center justify-between">
-                                <span className={`font-mono text-xs font-black ${
+                                <span className={`font-mono text-[11px] font-bold ${
                                   isSelected 
                                     ? "text-slate-900" 
-                                    : isOverlap 
-                                      ? "text-rose-600" 
-                                      : "text-slate-500"
+                                    : isTodayCell
+                                      ? "text-indigo-650 font-black scale-110"
+                                      : isOverlap 
+                                        ? "text-rose-600 font-extrabold" 
+                                        : "text-slate-500"
                                 }`}>
                                   {d}
                                 </span>
 
-                                {isOverlap && (
-                                  <span className="text-[7px] font-bold uppercase tracking-wide bg-rose-100 border border-rose-200 text-rose-700 px-1.5 py-0.5 rounded-full flex items-center gap-0.5 animate-pulse">
-                                    <AlertTriangle className="w-2.5 h-2.5" /> Overlap
+                                {isTodayCell && (
+                                  <span className="text-[7px] font-black uppercase tracking-widest bg-indigo-50 border border-indigo-150 text-indigo-700 px-1.5 py-0.5 rounded-full flex items-center gap-0.5 animate-pulse">
+                                    Today
+                                  </span>
+                                )}
+
+                                {isOverlap && !isTodayCell && (
+                                  <span className="text-[7px] font-extrabold uppercase tracking-widest bg-rose-50 border border-rose-100/80 text-rose-600 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                                    <AlertTriangle className="w-2.5 h-2.5 stroke-[2.5]" /> Overlap
                                   </span>
                                 )}
                               </div>
@@ -3633,24 +3712,39 @@ export default function App() {
                               {/* Tiny visual tags inside grid cells */}
                               <div className="space-y-1 overflow-hidden mt-1.5 flex-1 max-h-12 flex flex-col justify-end">
                                 {leaves.slice(0, 2).map(({ employee, request }) => {
-                                  let typeColor = "bg-indigo-500";
-                                  if (request.type === "Sick") typeColor = "bg-rose-500";
-                                  else if (request.type === "Casual") typeColor = "bg-amber-500";
+                                  let typeColor = "bg-violet-400";
+                                  let typeBg = "bg-violet-50/80 border-violet-100";
+                                  let typeText = "text-violet-650";
+                                  if (request.type === "Sick") {
+                                    typeColor = "bg-rose-400";
+                                    typeBg = "bg-rose-50/80 border-rose-100";
+                                    typeText = "text-rose-650";
+                                  } else if (request.type === "Casual") {
+                                    typeColor = "bg-emerald-400";
+                                    typeBg = "bg-emerald-50/80 border-emerald-100";
+                                    typeText = "text-emerald-650";
+                                  }
 
                                   return (
                                     <div
                                       key={`${employee.id}-${request.id}`}
-                                      className="flex items-center gap-1 bg-slate-50 border border-slate-150 rounded px-1.5 py-0.5 text-[8px] font-bold text-slate-600 truncate"
+                                      onMouseEnter={(e) => {
+                                        e.stopPropagation();
+                                        handleLeaveHover(e, employee, request);
+                                      }}
+                                      onMouseMove={handleLeaveMove}
+                                      onMouseLeave={handleLeaveLeave}
+                                      className={`flex items-center gap-1 border rounded-lg px-1.5 py-0.5 text-[8px] font-bold ${typeBg} ${typeText} truncate shadow-4xs hover:scale-[1.03] transition-transform`}
                                     >
-                                      <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${typeColor}`} />
+                                      <div className={`w-1 h-1 rounded-full shrink-0 ${typeColor}`} />
                                       <span className="truncate">{employee.name.split(" ")[0]}</span>
                                     </div>
                                   );
                                 })}
 
                                 {leaves.length > 2 && (
-                                  <div className="text-[7px] font-mono font-bold text-slate-400 text-right">
-                                    +{leaves.length - 2} more...
+                                  <div className="text-[7px] font-mono font-bold text-slate-400 text-right pr-0.5">
+                                    +{leaves.length - 2} more
                                   </div>
                                 )}
                               </div>
@@ -3661,7 +3755,7 @@ export default function App() {
                     </div>
 
                     {/* Right 1 Col: Day Inspector Panel */}
-                    <div className="bg-slate-50/50 border border-slate-200/60 p-4.5 rounded-2xl flex flex-col justify-between space-y-4">
+                    <div className="bg-slate-50/40 border border-slate-100 p-5 rounded-3xl flex flex-col justify-between space-y-4">
                       {selectedCalendarDay ? (() => {
                         const [y, m, d] = selectedCalendarDay.split("-");
                         const dNum = parseInt(d);
@@ -3682,14 +3776,14 @@ export default function App() {
                             </div>
 
                             {isOverlap && (
-                              <div className="bg-rose-50 border border-rose-200 rounded-2xl p-3 flex gap-2.5 items-start">
-                                <div className="p-1 bg-rose-100 rounded-lg text-rose-600 shrink-0 mt-0.5 animate-pulse">
-                                  <AlertTriangle className="w-3.5 h-3.5" />
+                              <div className="bg-rose-50/80 border border-rose-150 rounded-2xl p-3.5 flex gap-2.5 items-start">
+                                <div className="p-1.5 bg-rose-100 text-rose-600 rounded-xl shrink-0 mt-0.5 shadow-4xs">
+                                  <AlertTriangle className="w-3.5 h-3.5 stroke-[2.5]" />
                                 </div>
-                                <div className="space-y-1">
-                                  <span className="block text-[10px] font-black text-rose-800 uppercase tracking-widest font-mono leading-none">Roster Conflict Alert</span>
-                                  <p className="text-[10px] text-rose-700 leading-tight">
-                                    There are <strong className="font-bold">{leavesOnThisDay.length} team members</strong> away simultaneously. Ensure proper backup coverage.
+                                <div className="space-y-0.5">
+                                  <span className="block text-[10px] font-black text-rose-800 uppercase tracking-wider font-mono leading-none">Roster Conflict Alert</span>
+                                  <p className="text-[10px] text-rose-700 leading-normal font-medium">
+                                    There are <strong className="font-extrabold">{leavesOnThisDay.length} team members</strong> away simultaneously. Ensure proper backup coverage.
                                   </p>
                                 </div>
                               </div>
@@ -3697,46 +3791,56 @@ export default function App() {
 
                             <div className="flex-1 overflow-y-auto space-y-3.5 max-h-[350px] pr-1">
                               {leavesOnThisDay.map(({ employee, request }) => {
-                                let badgeColor = "bg-indigo-50 border-indigo-100 text-indigo-700";
-                                if (request.type === "Sick") badgeColor = "bg-rose-50 border-rose-100 text-rose-700";
-                                else if (request.type === "Casual") badgeColor = "bg-amber-50 border-amber-100 text-amber-700";
+                                let badgeColor = "bg-violet-50/80 border-violet-100 text-violet-750";
+                                let dotColor = "bg-violet-400";
+                                if (request.type === "Sick") {
+                                  badgeColor = "bg-rose-50/80 border-rose-100 text-rose-750";
+                                  dotColor = "bg-rose-400";
+                                } else if (request.type === "Casual") {
+                                  badgeColor = "bg-emerald-50/80 border-emerald-100 text-emerald-750";
+                                  dotColor = "bg-emerald-400";
+                                }
 
                                 return (
-                                  <div key={request.id} className="bg-white border border-slate-200/60 p-3 rounded-xl shadow-3xs space-y-2.5 hover:border-slate-300 transition-colors">
+                                  <div key={request.id} className="bg-white border border-slate-100 p-3.5 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.01)] space-y-3 hover:border-slate-200 transition-colors duration-300">
                                     <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-2">
-                                        <div className="w-6 h-6 rounded-full border border-slate-200 overflow-hidden shrink-0">
+                                      <div className="flex items-center gap-2.5">
+                                        <div className="w-7 h-7 rounded-full border border-slate-150 overflow-hidden shrink-0 ring-2 ring-slate-50">
                                           <img src={get3DAvatarUrl(employee.name)} alt="" className="w-full h-full object-cover" />
                                         </div>
                                         <div>
-                                          <div className="font-extrabold text-[11px] text-slate-800 leading-none">{employee.name}</div>
-                                          <div className="text-[8px] text-slate-400 font-mono mt-0.5">{employee.role}</div>
+                                          <div className="font-bold text-[11px] text-slate-800 leading-none">{employee.name}</div>
+                                          <div className="text-[8px] text-slate-400 font-semibold font-mono mt-0.5 uppercase tracking-wide">{employee.role}</div>
                                         </div>
                                       </div>
-                                      <span className={`text-[8px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider font-mono ${badgeColor}`}>
+                                      <span className={`text-[8px] font-black px-2 py-0.5 rounded-lg border uppercase tracking-widest font-mono flex items-center gap-1 ${badgeColor}`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
                                         {request.type}
                                       </span>
                                     </div>
 
-                                    <div className="text-[10px] text-slate-500 leading-normal bg-slate-50/50 border border-slate-150 p-2 rounded-lg italic">
+                                    <div className="text-[10px] text-slate-500 leading-relaxed bg-slate-50/50 border border-slate-100 p-2.5 rounded-xl italic">
                                       "{request.notes || "Standard annual leave breakout."}"
                                     </div>
 
-                                    <div className="flex justify-between items-center text-[9px] text-slate-400 font-mono">
-                                      <span>Span: {request.start} to {request.end}</span>
-                                      <span className="font-bold text-slate-600">{request.days} days used</span>
+                                    <div className="flex justify-between items-center text-[9px] text-slate-400 font-mono font-medium pt-0.5">
+                                      <span className="flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                                        {request.start} to {request.end}
+                                      </span>
+                                      <span className="font-black text-slate-600 bg-slate-100/80 px-1.5 py-0.5 rounded-md">{request.days} {request.days === 1 ? "day" : "days"} used</span>
                                     </div>
                                   </div>
                                 );
                               })}
 
                               {leavesOnThisDay.length === 0 && (
-                                <div className="flex flex-col items-center justify-center text-center py-12 px-4 bg-white/60 border border-dashed border-slate-200 rounded-xl">
-                                  <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-2">
+                                <div className="flex flex-col items-center justify-center text-center py-12 px-4 bg-white border border-slate-100 rounded-2xl shadow-4xs">
+                                  <div className="w-9 h-9 bg-emerald-50 text-emerald-500 border border-emerald-100 rounded-full flex items-center justify-center mb-2.5">
                                     <Check className="w-4 h-4 stroke-[2.5]" />
                                   </div>
-                                  <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest font-mono">Full Teammate Presence</span>
-                                  <p className="text-[9px] text-slate-400 max-w-xs mt-1 leading-tight">Every squad member is on deck today. No scheduled timesheet absences.</p>
+                                  <span className="block text-[10px] font-black text-slate-600 uppercase tracking-widest font-mono">Full Teammate Presence</span>
+                                  <p className="text-[9px] text-slate-450 max-w-[180px] mt-1 leading-normal">Every squad member is on deck today. No scheduled timesheet absences.</p>
                                 </div>
                               )}
                             </div>
@@ -3744,11 +3848,11 @@ export default function App() {
                         );
                       })() : (
                         <div className="h-full flex flex-col items-center justify-center text-center py-10 px-4">
-                          <div className="w-10 h-10 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-center text-indigo-500 mb-3">
+                          <div className="w-11 h-11 bg-indigo-50/60 border border-indigo-100/60 rounded-2xl flex items-center justify-center text-indigo-500 mb-3 shadow-4xs">
                             <Calendar className="w-5 h-5" />
                           </div>
-                          <span className="block text-[11px] font-black text-slate-500 uppercase tracking-widest font-mono">Select Active Calendar Day</span>
-                          <p className="text-[10px] text-slate-400 max-w-xs mt-1.5 leading-relaxed">
+                          <span className="block text-[11px] font-black text-slate-600 uppercase tracking-widest font-mono">Select Active Calendar Day</span>
+                          <p className="text-[10px] text-slate-400 max-w-xs mt-1.5 leading-relaxed font-medium">
                             Pick any colored day inside the calendar grid to audit individual teammate leave reasons, coverages, and active overlap statistics.
                           </p>
                         </div>
@@ -3962,42 +4066,66 @@ export default function App() {
 
               {/* 3. Master Ledger Table */}
               <div className="bg-white border border-slate-200/60 rounded-3xl shadow-3xs overflow-hidden">
-                <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3.5 bg-slate-50/30">
+                <div className="p-6 border-b border-slate-100/60 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white">
                   <div>
-                    <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest font-mono flex items-center gap-1.5">
-                      <Shield className="w-3.5 h-3.5 text-indigo-500" /> Team Leave Balances Ledger
-                    </h3>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Summary ledger of annual balances (Cap: 28 Days)</p>
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-indigo-50 border border-indigo-100">
+                        <Shield className="w-3.5 h-3.5 text-indigo-600" />
+                      </span>
+                      <h3 className="text-xs font-black text-slate-850 uppercase tracking-widest font-mono">
+                        Team Leave Balances Ledger
+                      </h3>
+                    </div>
+                    
+                    {/* Visual Category Legend */}
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono mt-2">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-rose-500 ring-2 ring-rose-100/50 inline-block" />
+                        Sick Leave Focus
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-amber-500 ring-2 ring-amber-100/50 inline-block" />
+                        Casual Leave Focus
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-indigo-500 ring-2 ring-indigo-100/50 inline-block" />
+                        Gov / Fest Focus
+                      </span>
+                      <span className="hidden sm:inline text-slate-200">|</span>
+                      <span className="text-slate-500 font-semibold normal-case">
+                        Annual Limit Cap: <span className="text-slate-800 font-black font-mono">28 Days</span>
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2.5 w-full sm:w-auto">
-                    <div className="relative flex-1 sm:flex-initial">
-                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0">
+                    <div className="relative w-full md:w-60 group">
+                      <Search className="w-3.5 h-3.5 text-slate-400 group-focus-within:text-indigo-500 absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors pointer-events-none" />
                       <input
                         type="text"
                         placeholder="Search teammate..."
                         value={leaveLedgerSearch}
                         onChange={(e) => setLeaveLedgerSearch(e.target.value)}
-                        className="pl-8.5 pr-3 py-1.5 bg-white border border-slate-200 focus:border-indigo-500 rounded-xl text-xs outline-none w-full sm:w-56 font-semibold text-slate-700 shadow-3xs"
+                        className="pl-9 pr-4 h-8.5 bg-slate-50/50 hover:bg-slate-50 focus:bg-white border border-slate-200/80 focus:border-indigo-400 focus:ring-3 focus:ring-indigo-100/40 rounded-full text-xs outline-none w-full font-bold text-slate-750 transition-all placeholder-slate-400/80 shadow-4xs"
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto sleek-scrollbar">
                   <table className="w-full text-left text-xs text-slate-500">
-                    <thead className="bg-slate-50/80 uppercase text-slate-400 font-mono text-[9px] tracking-widest border-b border-slate-150">
+                    <thead className="bg-slate-50/25 uppercase text-slate-450 font-bold font-mono text-[8.5px] tracking-widest border-b border-slate-100/80">
                       <tr>
                         <th className="px-6 py-4">Teammate Profile</th>
-                        <th className="px-6 py-4 text-center">Sick Used (7)</th>
-                        <th className="px-6 py-4 text-center">Casual Used (7)</th>
-                        <th className="px-6 py-4 text-center">Gov/Fest Used (14)</th>
+                        <th className="px-6 py-4 text-center">Sick Used <span className="opacity-60">(7)</span></th>
+                        <th className="px-6 py-4 text-center">Casual Used <span className="opacity-60">(7)</span></th>
+                        <th className="px-6 py-4 text-center">Gov/Fest <span className="opacity-60">(14)</span></th>
                         <th className="px-6 py-4 text-center">Total Used</th>
                         <th className="px-6 py-4 text-center">Remaining Balance</th>
-                        <th className="px-6 py-4 text-right">Operations</th>
+                        <th className="px-6 py-4 text-right">Live Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100/60">
+                    <tbody className="divide-y divide-slate-100/50">
                       {filteredLedgerEmployees.map(emp => {
                         const leave = emp.leaveBalance || { sickLeaveUsed: 0, casualLeaveUsed: 0, govFestHolidaysUsed: 0 };
                         const sickUsed = leave.sickLeaveUsed || 0;
@@ -4009,75 +4137,178 @@ export default function App() {
 
                         const isLowBalance = totalRemain <= 5;
 
+                        // Calculate primary leave category used
+                        let primaryCategory: "Sick" | "Casual" | "Gov/Fest" | "None" = "None";
+                        if (sickUsed > 0 || casUsed > 0 || govUsed > 0) {
+                          const maxVal = Math.max(sickUsed, casUsed, govUsed);
+                          if (maxVal === sickUsed) {
+                            primaryCategory = "Sick";
+                          } else if (maxVal === casUsed) {
+                            primaryCategory = "Casual";
+                          } else {
+                            primaryCategory = "Gov/Fest";
+                          }
+                        }
+
+                        let rowBgClass = "hover:bg-slate-50/40";
+                        if (primaryCategory === "Sick") {
+                          rowBgClass = "bg-rose-50/[0.02] hover:bg-rose-50/[0.05]";
+                        } else if (primaryCategory === "Casual") {
+                          rowBgClass = "bg-amber-50/[0.02] hover:bg-amber-50/[0.05]";
+                        } else if (primaryCategory === "Gov/Fest") {
+                          rowBgClass = "bg-indigo-50/[0.02] hover:bg-indigo-50/[0.05]";
+                        }
+
                         return (
-                          <tr key={emp.id} className="hover:bg-slate-50/40 transition-all duration-300">
-                            <td className="px-6 py-4.5">
+                          <tr key={emp.id} className={`${rowBgClass} transition-all duration-200`}>
+                            <td className="px-6 py-4 relative">
+                              {/* Premium Left Floating Indicator */}
+                              {primaryCategory === "Sick" && (
+                                <div className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full bg-rose-500" />
+                              )}
+                              {primaryCategory === "Casual" && (
+                                <div className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full bg-amber-500" />
+                              )}
+                              {primaryCategory === "Gov/Fest" && (
+                                <div className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full bg-indigo-500" />
+                              )}
+
                               <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0">
+                                <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-150 overflow-hidden shrink-0 shadow-4xs transition-transform hover:scale-105 duration-350">
                                   <img src={get3DAvatarUrl(emp.name)} alt={emp.name} className="w-full h-full object-cover" />
                                 </div>
                                 <div>
-                                  <div className="font-bold text-slate-800 text-[12px]">{emp.name}</div>
-                                  <div className="text-[9px] text-slate-400 font-medium font-mono">Hub: {emp.team || "Nexus"}</div>
+                                  <div className="font-bold text-slate-800 text-[12.5px] tracking-tight">{emp.name}</div>
+                                  <div className="text-[9px] text-slate-400 font-bold font-mono uppercase tracking-wider flex items-center gap-1 mt-0.5">
+                                    <span className="w-1 h-1 rounded-full bg-slate-300" />
+                                    Hub: {emp.team || "Nexus"}
+                                  </div>
                                 </div>
                               </div>
                             </td>
                             
-                            <td className="px-6 py-4.5 text-center font-mono font-bold text-slate-600">
-                              <span className={sickUsed >= 5 ? "text-rose-600" : "text-slate-600"}>{sickUsed} / 7</span>
+                            <td className="px-6 py-4 text-center">
+                              <div className="inline-flex items-center justify-center">
+                                <span className={`font-mono text-xs font-black px-2.5 py-1 rounded-full ${
+                                  sickUsed >= 5 
+                                    ? "bg-rose-50 text-rose-600 border border-rose-100 shadow-4xs" 
+                                    : sickUsed > 0
+                                      ? "bg-slate-50 text-slate-700 border border-slate-200/50"
+                                      : "bg-slate-50/40 text-slate-400 border border-slate-200/20 font-semibold"
+                                }`}>
+                                  {sickUsed} <span className="text-[9px] opacity-50 font-bold font-sans">/ 7</span>
+                                </span>
+                              </div>
                             </td>
 
-                            <td className="px-6 py-4.5 text-center font-mono font-bold text-slate-600">
-                              <span className={casUsed >= 5 ? "text-amber-600" : "text-slate-600"}>{casUsed} / 7</span>
+                            <td className="px-6 py-4 text-center">
+                              <div className="inline-flex items-center justify-center">
+                                <span className={`font-mono text-xs font-black px-2.5 py-1 rounded-full ${
+                                  casUsed >= 5 
+                                    ? "bg-amber-50 text-amber-600 border border-amber-100 shadow-4xs" 
+                                    : casUsed > 0
+                                      ? "bg-slate-50 text-slate-700 border border-slate-200/50"
+                                      : "bg-slate-50/40 text-slate-400 border border-slate-200/20 font-semibold"
+                                }`}>
+                                  {casUsed} <span className="text-[9px] opacity-50 font-bold font-sans">/ 7</span>
+                                </span>
+                              </div>
                             </td>
 
-                            <td className="px-6 py-4.5 text-center font-mono font-bold text-slate-600">
-                              <span className={govUsed >= 10 ? "text-indigo-600" : "text-slate-600"}>{govUsed} / 14</span>
+                            <td className="px-6 py-4 text-center">
+                              <div className="inline-flex items-center justify-center">
+                                <span className={`font-mono text-xs font-black px-2.5 py-1 rounded-full ${
+                                  govUsed >= 10 
+                                    ? "bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-4xs" 
+                                    : govUsed > 0
+                                      ? "bg-slate-50 text-slate-700 border border-slate-200/50"
+                                      : "bg-slate-50/40 text-slate-400 border border-slate-200/20 font-semibold"
+                                }`}>
+                                  {govUsed} <span className="text-[9px] opacity-50 font-bold font-sans">/ 14</span>
+                                </span>
+                              </div>
                             </td>
 
-                            <td className="px-6 py-4.5 text-center font-mono font-extrabold text-slate-700 bg-slate-50/30">
-                              {totalUsed} Days
+                            <td className="px-6 py-4 text-center">
+                              <div className="inline-flex items-center justify-center">
+                                <span className="font-mono text-xs font-black text-slate-800 bg-slate-100/50 border border-slate-200/30 px-3 py-1 rounded-full shadow-4xs">
+                                  {totalUsed} <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider ml-0.5 font-sans">days</span>
+                                </span>
+                              </div>
                             </td>
 
-                            <td className="px-6 py-4.5 text-center">
+                            <td className="px-6 py-4">
                               <div className="flex items-center justify-center gap-3">
-                                <div className="flex gap-1 w-20 justify-between select-none">
-                                  {Array.from({ length: 6 }).map((_, i) => {
-                                    const segmentValue = (i / 6) * 28;
-                                    const isFilled = totalRemain > segmentValue;
-                                    return (
-                                      <div
-                                        key={i}
-                                        className={`h-2 flex-1 rounded-xs transition-all duration-300 ${
-                                          isFilled
-                                            ? totalRemain <= 5
-                                              ? "bg-rose-500 shadow-xs"
-                                              : totalRemain <= 12
-                                                ? "bg-amber-500 shadow-xs"
-                                                : "bg-indigo-500 shadow-xs"
-                                            : "bg-slate-100 border border-slate-200/40"
-                                        }`}
-                                      />
-                                    );
-                                  })}
+                                <div className="hidden sm:block w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden relative border border-slate-200/20 shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)] shrink-0">
+                                  <div 
+                                    className={`absolute left-0 top-0 bottom-0 rounded-full transition-all duration-500 ease-out ${
+                                      totalRemain <= 5
+                                        ? "bg-gradient-to-r from-rose-500 to-rose-600 shadow-4xs"
+                                        : totalRemain <= 12
+                                          ? "bg-gradient-to-r from-amber-400 to-amber-500 shadow-4xs"
+                                          : "bg-gradient-to-r from-indigo-500 to-indigo-600 shadow-4xs"
+                                    }`}
+                                    style={{ width: `${(totalRemain / 28) * 100}%` }}
+                                  />
                                 </div>
-                                <span className={`font-mono font-bold w-12 text-left text-xs ${isLowBalance ? "text-rose-600 animate-pulse font-black" : "text-slate-800"}`}>
+                                <span className={`font-mono text-[11px] font-black tracking-tight w-16 text-left shrink-0 ${
+                                  isLowBalance ? "text-rose-600 animate-pulse font-black" : "text-slate-700"
+                                }`}>
                                   {totalRemain} d left
                                 </span>
                               </div>
                             </td>
 
-                            <td className="px-6 py-4.5 text-right">
-                              <button
-                                onClick={() => {
-                                  setBehalfEmpId(emp.id);
-                                  showToast(`Selected ${emp.name} for leave logging. Form updated above.`, "success");
-                                }}
-                                className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-900 hover:text-white border border-slate-200 hover:border-slate-900 rounded-xl text-[10px] font-mono font-extrabold uppercase transition-all duration-300 cursor-pointer"
-                              >
-                                Log Break
-                              </button>
-                            </td>
+                             <td className="px-6 py-4 text-right">
+                               <div className="flex flex-col items-end gap-1 select-none">
+                                 {(() => {
+                                   const todayStr = new Date().toISOString().split('T')[0] || "2026-07-14";
+                                   const activeLeave = (emp.leaveRequests || []).find(req => 
+                                     req.status.toLowerCase() === "approved" &&
+                                     todayStr >= req.start &&
+                                     todayStr <= req.end
+                                   );
+                                   const upcomingLeaves = (emp.leaveRequests || [])
+                                     .filter(req => req.start > todayStr && req.status.toLowerCase() !== "rejected")
+                                     .sort((a, b) => a.start.localeCompare(b.start));
+                                   const nextLeave = upcomingLeaves[0];
+
+                                   return (
+                                     <>
+                                       {activeLeave ? (
+                                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200/50 text-amber-700 text-[9.5px] font-black font-mono tracking-wider uppercase shadow-4xs">
+                                           <span className="relative flex h-1.5 w-1.5">
+                                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500"></span>
+                                           </span>
+                                           On Break ({activeLeave.type})
+                                         </span>
+                                       ) : (
+                                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50/80 border border-emerald-200/40 text-emerald-700 text-[9.5px] font-black font-mono tracking-wider uppercase shadow-4xs">
+                                           <span className="relative flex h-1.5 w-1.5">
+                                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                                           </span>
+                                           Active Today
+                                         </span>
+                                       )}
+                                       
+                                       {nextLeave ? (
+                                         <div className="text-[8.5px] text-slate-450 font-bold font-mono tracking-wider uppercase flex items-center gap-1 mt-0.5">
+                                           <Calendar className="w-2.5 h-2.5 text-indigo-400" />
+                                           <span>Next: {nextLeave.start} ({nextLeave.days}d)</span>
+                                         </div>
+                                       ) : (
+                                         <div className="text-[8.5px] text-slate-350 font-bold font-mono tracking-wider uppercase flex items-center gap-1 mt-0.5">
+                                           <Activity className="w-2.5 h-2.5 text-slate-300" />
+                                           <span>Fully Available</span>
+                                         </div>
+                                       )}
+                                     </>
+                                   );
+                                 })()}
+                               </div>
+                             </td>
                           </tr>
                         );
                       })}
@@ -4724,7 +4955,14 @@ export default function App() {
                     <TrendingUp className="h-4 w-4 text-indigo-600 animate-pulse" />
                     Log Activity: {selectedPerfEmployee?.name}
                   </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">Logging metrics for period: <span className="font-semibold text-indigo-600 font-mono">{selectedMonth}</span></p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-slate-500 font-medium">Log metrics for:</span>
+                    <MonthPicker
+                      value={selectedMonth}
+                      onChange={handleMonthChangeInPerfLog}
+                      align="left"
+                    />
+                  </div>
                 </div>
                 <button 
                   type="button"
@@ -4884,7 +5122,14 @@ export default function App() {
                     <SlidersHorizontal className="h-4 w-4 text-slate-700" />
                     Set Monthly Targets
                   </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">Apply expectations for <span className="font-semibold text-slate-700 font-mono">{selectedMonth}</span></p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-slate-500 font-medium">Expectations for:</span>
+                    <MonthPicker
+                      value={selectedMonth}
+                      onChange={setSelectedMonth}
+                      align="left"
+                    />
+                  </div>
                 </div>
                 <button 
                   type="button"
@@ -4929,6 +5174,74 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Leave Hover Tooltip */}
+      {hoveredLeave && (
+        <div
+          style={{
+            position: "fixed",
+            left: `${Math.min(hoveredLeave.x + 15, window.innerWidth - 300)}px`,
+            top: `${Math.min(hoveredLeave.y + 15, window.innerHeight - 240)}px`,
+            pointerEvents: "none",
+            zIndex: 9999,
+          }}
+          className="w-72 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-[0_12px_36px_rgba(15,23,42,0.15)] p-4 flex flex-col gap-3 transition-all duration-150 animate-in fade-in zoom-in-95 duration-200"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full border border-slate-200 overflow-hidden shrink-0 shadow-sm">
+              <img src={get3DAvatarUrl(hoveredLeave.employeeName)} alt="" className="w-full h-full object-cover" />
+            </div>
+            <div className="overflow-hidden">
+              <div className="font-extrabold text-[11px] text-slate-800 tracking-tight leading-none mb-1">
+                {hoveredLeave.employeeName}
+              </div>
+              <div className="text-[9px] text-slate-400 font-medium tracking-tight leading-none truncate">
+                {hoveredLeave.employeeRole} • <span className="font-bold text-slate-500">{hoveredLeave.employeeTeam}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="h-[1px] bg-slate-100" />
+
+          <div className="flex items-center justify-between">
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-wider ${
+              hoveredLeave.leaveType === "Sick" ? "bg-rose-50 text-rose-600 border-rose-100" :
+              hoveredLeave.leaveType === "Casual" ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+              "bg-violet-50 text-violet-650 border-violet-100"
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${
+                hoveredLeave.leaveType === "Sick" ? "bg-rose-500" :
+                hoveredLeave.leaveType === "Casual" ? "bg-emerald-500" :
+                "bg-violet-500"
+              }`} />
+              {hoveredLeave.leaveType} Leave
+            </span>
+            <span className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ${
+              hoveredLeave.status === "Approved" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-amber-50 text-amber-600 border-amber-100"
+            }`}>
+              {hoveredLeave.status}
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-1 text-[10px] text-slate-500 bg-slate-50 p-2 rounded-xl border border-slate-100">
+            <div className="flex items-center gap-1">
+              <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
+              <span className="font-bold text-slate-700">Roster Period:</span>
+            </div>
+            <div className="font-mono text-[9px] pl-4 text-slate-600">
+              {hoveredLeave.start} to {hoveredLeave.end}
+            </div>
+            <div className="pl-4 text-[9px] font-bold text-slate-800">
+              Duration: <span className="text-indigo-600 font-black">{hoveredLeave.days} {hoveredLeave.days === 1 ? "day" : "days"}</span>
+            </div>
+          </div>
+
+          <div className="text-[10px] text-slate-600 bg-indigo-50/20 p-2 rounded-xl border border-indigo-100/30 relative">
+            <div className="text-[8px] font-black text-indigo-500 uppercase tracking-widest mb-0.5">Notes</div>
+            <p className="italic font-medium text-slate-700">"{hoveredLeave.notes}"</p>
+          </div>
+        </div>
+      )}
 
       </div>
     </div>
