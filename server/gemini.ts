@@ -257,3 +257,61 @@ export async function generateCoPilotResponse(
   }
 }
 
+export async function generateLeaveSuggestNotes(
+  employeeName: string,
+  leaveType: string,
+  days: number
+): Promise<string> {
+  const prompt = `
+    You are an AI HR assistant.
+    An employee or manager is registering a leave request with the following parameters:
+    - Employee Name: ${employeeName || "The employee"}
+    - Leave Category: ${leaveType} (e.g., Casual, Sick, Gov/Fest, etc.)
+    - Duration: ${days} days
+    
+    Please suggest a professional, concise, and realistic description / remarks notes for this leave.
+    Include a polite mention of coverage or medical/personal reason, and how urgent matters can be addressed if appropriate (especially for longer leaves).
+    Keep it extremely brief and professional (1-2 sentences max). Do not include any placeholder brackets (like "[Name]") or quotes. Just output the plain text of the suggestion.
+  `;
+
+  // Fallback template-based mock if AI is offline
+  const getMockSuggestion = (): string => {
+    const name = employeeName || "I";
+    if (leaveType.toLowerCase().includes("sick")) {
+      if (days <= 1) {
+        return `Feeling unwell today and need a day off to recover. I will monitor emails occasionally if urgent.`;
+      } else {
+        return `Taking medical leave for recovery under professional medical advice. Daily check-ins will be handled by the team.`;
+      }
+    } else if (leaveType.toLowerCase().includes("casual")) {
+      if (days <= 2) {
+        return `Taking short personal leave for urgent family commitments. Core deliverables are aligned and up to date.`;
+      } else {
+        return `Planned annual casual leave for personal reasons. Point of contacts are briefed, and I will resume on my return date.`;
+      }
+    } else {
+      return `Observing official holiday/festival break as per the team calendar. Normal operations will resume immediately after the break.`;
+    }
+  };
+
+  if (!ai) {
+    return getMockSuggestion();
+  }
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        systemInstruction: "You are a professional corporate helper. You generate brief, realistic, clean remarks for HR leave records. Output ONLY the remarks string. No intro, no quotes.",
+        temperature: 0.7,
+      }
+    });
+    return (response.text || getMockSuggestion()).trim().replace(/^["']|["']$/g, "");
+  } catch (error) {
+    console.error("Gemini leave suggestion error, falling back to mock:", error);
+    return getMockSuggestion();
+  }
+}
+
+

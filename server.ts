@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import dotenv from "dotenv";
 import { dbService } from "./server/db";
-import { generateMonthlyPerformanceReport, generateCoPilotResponse } from "./server/gemini";
+import { generateMonthlyPerformanceReport, generateCoPilotResponse, generateLeaveSuggestNotes } from "./server/gemini";
 
 // Load environment variables
 dotenv.config();
@@ -245,6 +245,19 @@ app.post("/api/copilot/ask", async (req, res) => {
     res.status(500).json({ error: err.message || "Failed to generate co-pilot advice" });
   }
 });
+
+// --- SUGGEST LEAVE NOTES ---
+app.post("/api/leave/suggest-notes", async (req, res) => {
+  try {
+    const { employeeName, leaveType, days } = req.body;
+    const suggestion = await generateLeaveSuggestNotes(employeeName || "The employee", leaveType || "Casual", days || 1);
+    res.json({ suggestion });
+  } catch (err: any) {
+    console.error("Suggest leave notes error:", err);
+    res.status(500).json({ error: err.message || "Failed to suggest leave remarks" });
+  }
+});
+
 
 
 // --- LEAVE REQUESTS API ---
