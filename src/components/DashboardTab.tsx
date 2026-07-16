@@ -262,15 +262,15 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
     if (active && payload && payload.length) {
       return (
         <div className="bg-slate-950/90 border border-slate-800/80 backdrop-blur-md text-white rounded-xl p-3 shadow-xl text-left font-sans">
-          <p className="text-[9px] font-mono font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">{label}</p>
+          <p className="text-[10px] font-mono font-extrabold uppercase tracking-wider text-slate-500 mb-1.5">{label}</p>
           <div className="space-y-1">
             {payload.map((item: any, i: number) => (
               <div key={i} className="flex items-center gap-3 justify-between min-w-[120px]">
                 <div className="flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: item.color || item.fill }} />
-                  <span className="text-[10px] font-medium text-slate-300">{item.name}</span>
+                  <span className="text-[11px] font-medium text-slate-300">{item.name}</span>
                 </div>
-                <span className="text-[10px] font-mono font-bold text-white">
+                <span className="text-[11px] font-mono font-bold text-white">
                   {typeof item.value === 'number' && item.name.includes('Value') ? `$${item.value}k` : item.value}
                 </span>
               </div>
@@ -314,7 +314,7 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
         >
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-blue-500 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="flex items-center justify-between">
-            <span className="text-[9px] font-mono font-extrabold text-slate-400 uppercase tracking-widest">Team Size</span>
+            <span className="text-[10px] font-mono font-extrabold text-slate-500 uppercase tracking-widest">Team Size</span>
             <span className="p-1.5 bg-slate-50 border border-slate-100/80 text-blue-500 rounded-xl transition-all duration-300 group-hover:bg-blue-50 group-hover:text-blue-600">
               <Users className="h-4 w-4" />
             </span>
@@ -322,7 +322,7 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
           <p className="text-xl font-bold font-display text-slate-900 mt-2 tracking-tight">
             {summaryMetrics.totalEmployees}
           </p>
-          <span className="text-[10px] text-slate-400 block mt-1 font-medium font-sans">Active profiles in matrix</span>
+          <span className="text-[11px] text-slate-500 block mt-1 font-medium font-sans">Active profiles in matrix</span>
         </motion.div>
 
         {/* Metric 2 */}
@@ -332,7 +332,7 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
         >
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-emerald-400 to-teal-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="flex items-center justify-between">
-            <span className="text-[9px] font-mono font-extrabold text-slate-400 uppercase tracking-widest">Attendance</span>
+            <span className="text-[10px] font-mono font-extrabold text-slate-500 uppercase tracking-widest">Attendance</span>
             <span className="p-1.5 bg-slate-50 border border-slate-100/80 text-emerald-500 rounded-xl transition-all duration-300 group-hover:bg-emerald-50 group-hover:text-emerald-600">
               <CalendarCheck className="h-4 w-4" />
             </span>
@@ -340,7 +340,7 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
           <p className="text-xl font-bold font-display text-slate-900 mt-2 tracking-tight">
             {summaryMetrics.avgAttendance}%
           </p>
-          <span className="text-[10px] text-slate-400 block mt-1 font-medium font-sans">Workplace presence rate</span>
+          <span className="text-[11px] text-slate-500 block mt-1 font-medium font-sans">Workplace presence rate</span>
         </motion.div>
 
         {/* Metric 3 */}
@@ -350,7 +350,7 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
         >
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-indigo-500 to-violet-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="flex items-center justify-between">
-            <span className="text-[9px] font-mono font-extrabold text-slate-400 uppercase tracking-widest">Meetings Run</span>
+            <span className="text-[10px] font-mono font-extrabold text-slate-500 uppercase tracking-widest">Meetings Run</span>
             <span className="p-1.5 bg-slate-50 border border-slate-100/80 text-indigo-500 rounded-xl transition-all duration-300 group-hover:bg-indigo-50 group-hover:text-indigo-600">
               <Video className="h-4 w-4" />
             </span>
@@ -358,7 +358,7 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
           <p className="text-xl font-bold font-display text-slate-900 mt-2 tracking-tight">
             {summaryMetrics.totalMeetings}
           </p>
-          <span className="text-[10px] text-slate-400 block mt-1 font-medium font-sans">Syncs & reviews conducted</span>
+          <span className="text-[11px] text-slate-500 block mt-1 font-medium font-sans">Syncs & reviews conducted</span>
         </motion.div>
 
         {/* Metric 4 */}
@@ -368,7 +368,7 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
         >
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-violet-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="flex items-center justify-between">
-            <span className="text-[9px] font-mono font-extrabold text-slate-400 uppercase tracking-widest">Shipped Items</span>
+            <span className="text-[10px] font-mono font-extrabold text-slate-500 uppercase tracking-widest">Shipped Items</span>
             <span className="p-1.5 bg-slate-50 border border-slate-100/80 text-violet-500 rounded-xl transition-all duration-300 group-hover:bg-violet-50 group-hover:text-violet-600">
               <Briefcase className="h-4 w-4" />
             </span>
@@ -376,7 +376,7 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
           <p className="text-xl font-bold font-display text-slate-900 mt-2 tracking-tight">
             {summaryMetrics.totalProjectsAmount}
           </p>
-          <span className="text-[10px] text-slate-400 block mt-1 font-medium font-sans">Standalone accomplishments</span>
+          <span className="text-[11px] text-slate-500 block mt-1 font-medium font-sans">Standalone accomplishments</span>
         </motion.div>
 
         {/* Metric 5 */}
@@ -386,7 +386,7 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
         >
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-indigo-500 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="flex items-center justify-between">
-            <span className="text-[9px] font-mono font-extrabold text-slate-400 uppercase tracking-widest">Pipeline Impact</span>
+            <span className="text-[10px] font-mono font-extrabold text-slate-500 uppercase tracking-widest">Pipeline Impact</span>
             <span className="p-1.5 bg-slate-50 border border-slate-100/80 text-emerald-600 rounded-xl transition-all duration-300 group-hover:bg-emerald-50 group-hover:text-emerald-700">
               <DollarSign className="h-4 w-4" />
             </span>
@@ -394,14 +394,14 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
           <p className="text-3xl font-bold font-display text-emerald-600 mt-2 tracking-tight">
             ${(summaryMetrics.totalProjectsValue / 1000).toFixed(0)}k
           </p>
-          <span className="text-[10px] text-slate-400 block mt-1 font-medium font-sans">Sized portfolio valuation</span>
+          <span className="text-[11px] text-slate-500 block mt-1 font-medium font-sans">Sized portfolio valuation</span>
         </motion.div>
       </motion.div>
 
       {records.length === 0 ? (
         <motion.div
           variants={itemVariants}
-          className="bg-white/60 backdrop-blur-md border border-slate-200/60 rounded-2xl p-12 text-center text-slate-400 italic font-medium shadow-xs"
+          className="bg-white/60 backdrop-blur-md border border-slate-200/60 rounded-2xl p-12 text-center text-slate-500 italic font-medium shadow-xs"
         >
           Please record monthly metrics first to populate the interactive trend grids.
         </motion.div>
@@ -420,9 +420,9 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
                     <span className="h-2 w-2 rounded-full bg-indigo-500 shrink-0" />
                     Department Distribution
                   </h4>
-                  <p className="text-[10px] text-slate-400 font-mono font-medium mt-0.5">Project Sizing Volume ($k)</p>
+                  <p className="text-[11px] text-slate-500 font-mono font-medium mt-0.5">Project Sizing Volume ($k)</p>
                 </div>
-                <span className="text-[9px] font-mono font-extrabold uppercase tracking-widest text-slate-400 px-2.5 py-1 bg-slate-50 border border-slate-100 rounded-lg">
+                <span className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-slate-500 px-2.5 py-1 bg-slate-50 border border-slate-100 rounded-lg">
                   Division View
                 </span>
               </div>
@@ -468,9 +468,9 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
                     <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />
                     Timeline Dynamics
                   </h4>
-                  <p className="text-[10px] text-slate-400 font-mono font-medium mt-0.5">Projects Delivered vs Meetings Run</p>
+                  <p className="text-[11px] text-slate-500 font-mono font-medium mt-0.5">Projects Delivered vs Meetings Run</p>
                 </div>
-                <span className="text-[9px] font-mono font-extrabold uppercase tracking-widest text-slate-400 px-2.5 py-1 bg-slate-50 border border-slate-100 rounded-lg">
+                <span className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-slate-500 px-2.5 py-1 bg-slate-50 border border-slate-100 rounded-lg">
                   MoM View
                 </span>
               </div>
@@ -550,7 +550,7 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
                     <Award className="h-4 w-4 text-amber-500 shrink-0" />
                     Key Team Contributors
                   </h4>
-                  <p className="text-[10px] text-slate-400 font-mono font-medium mt-0.5">Cumulative production efficiency leaderboards</p>
+                  <p className="text-[11px] text-slate-500 font-mono font-medium mt-0.5">Cumulative production efficiency leaderboards</p>
                 </div>
               </div>
               
@@ -562,34 +562,34 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
                   >
                     <div className="flex items-center gap-3">
                       {/* Futurist Rank badge */}
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-mono font-extrabold text-[10px] border ${
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-mono font-extrabold text-[11px] border ${
                         index === 0 
                           ? 'bg-amber-50 border-amber-200 text-amber-700 shadow-sm shadow-amber-500/5' 
                           : index === 1 
                           ? 'bg-slate-50 border-slate-200 text-slate-600' 
-                          : 'bg-transparent border-slate-100 text-slate-400'
+                          : 'bg-transparent border-slate-100 text-slate-500'
                       }`}>
                         #{index + 1}
                       </div>
 
                       <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-slate-100 to-slate-200 border border-slate-300/40 flex items-center justify-center text-[10px] font-extrabold text-slate-600">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-slate-100 to-slate-200 border border-slate-300/40 flex items-center justify-center text-[11px] font-extrabold text-slate-600">
                           {getInitials(perf.name)}
                         </div>
                         <div>
                           <h5 className="text-xs font-bold text-slate-900 font-display leading-tight">{perf.name}</h5>
-                          <p className="text-[9px] text-slate-400 font-mono font-semibold mt-0.5">{perf.department}</p>
+                          <p className="text-[10px] text-slate-500 font-mono font-semibold mt-0.5">{perf.department}</p>
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-5">
                       <div className="text-right">
-                        <span className="text-[8px] uppercase tracking-widest text-slate-400 font-mono font-extrabold block">Shipped</span>
+                        <span className="text-[9px] uppercase tracking-widest text-slate-500 font-mono font-extrabold block">Shipped</span>
                         <span className="text-xs font-mono font-bold text-slate-800">{perf.totalProjects} items</span>
                       </div>
                       <div className="text-right min-w-[70px]">
-                        <span className="text-[8px] uppercase tracking-widest text-slate-400 font-mono font-extrabold block">Value Weight</span>
+                        <span className="text-[9px] uppercase tracking-widest text-slate-500 font-mono font-extrabold block">Value Weight</span>
                         <span className="text-xs font-mono font-extrabold text-emerald-600">
                           ${(perf.totalValue / 1000).toFixed(0)}k
                         </span>
@@ -610,7 +610,7 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
                   <Activity className="h-4 w-4 text-emerald-500 shrink-0" />
                   Presence Matrix
                 </h4>
-                <p className="text-[10px] text-slate-400 font-mono font-medium mt-0.5">Average attendance by division unit</p>
+                <p className="text-[11px] text-slate-500 font-mono font-medium mt-0.5">Average attendance by division unit</p>
               </div>
               
               <div className="space-y-4">
@@ -618,7 +618,7 @@ export function DashboardTab({ employees, records }: DashboardTabProps) {
                   <div key={index} className="space-y-1.5">
                     <div className="flex justify-between items-center text-xs">
                       <span className="font-bold font-display text-slate-800 text-[11px]">{d.name}</span>
-                      <span className="font-mono text-[10px] font-extrabold text-slate-500 bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded-md">
+                      <span className="font-mono text-[11px] font-extrabold text-slate-500 bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded-md">
                         {d["Avg Attendance (%)"]}%
                       </span>
                     </div>

@@ -112,10 +112,10 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
           </div>
 
           <div className="min-w-0">
-            <h4 className="text-xs font-semibold text-slate-800 truncate group-hover:text-blue-600 transition-colors">
+            <h4 className="text-xs font-bold text-slate-950 truncate group-hover:text-blue-700 transition-colors">
               {employee.name}
             </h4>
-            <p className="text-[10px] text-slate-400 truncate mt-0.5 font-medium">
+            <p className="text-[11px] text-slate-500 truncate mt-0.5 font-bold">
               {employee.role}
             </p>
           </div>
@@ -124,7 +124,7 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
         {/* Right Aligned Target Score Pill */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {performanceRecord ? (
-            <span className={`text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-md ${
+            <span className={`text-[11px] font-bold font-mono px-1.5 py-0.5 rounded-md ${
               combinedScore >= 95
                 ? "bg-emerald-50 text-emerald-700 border border-emerald-200/30"
                 : combinedScore >= 70
@@ -134,7 +134,7 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
               {combinedScore}%
             </span>
           ) : (
-            <span className="text-[9px] font-semibold font-mono px-1.5 py-0.5 rounded-md bg-slate-100/80 text-slate-400 border border-slate-200/10">
+            <span className="text-[10px] font-black font-mono px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200/50">
               Pending
             </span>
           )}
@@ -143,22 +143,22 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
 
       {/* Ultra-sleek single-line micro-metrics */}
       {performanceRecord && (
-        <div className="relative z-10 mt-2.5 pt-2 border-t border-slate-100/80 flex flex-col gap-1 text-[9px] font-mono text-slate-400">
+        <div className="relative z-10 mt-2.5 pt-2 border-t border-slate-100/80 flex flex-col gap-1 text-[10px] font-mono text-slate-500 font-medium">
           <div className="flex items-center justify-between">
-            <span>Attd: <strong className={attendance !== null && attendance < targetAttendanceMin ? "text-rose-600 font-extrabold" : "text-slate-600 font-semibold"}>{attendance}%</strong> <span className="text-slate-300 font-normal">/ {targetAttendanceMin}%</span></span>
+            <span>Attd: <strong className={attendance !== null && attendance < targetAttendanceMin ? "text-rose-600 font-extrabold" : "text-slate-750 font-black"}>{attendance}%</strong> <span className="text-slate-500 font-normal">/ {targetAttendanceMin}%</span></span>
             
             <div className="flex items-center gap-1">
               {underperformingMetrics.length > 0 ? (
-                <span className="flex items-center gap-0.5 text-rose-500 font-bold text-[8px] uppercase tracking-wider animate-pulse">
-                  <AlertCircle className="h-2 w-2" />
+                <span className="flex items-center gap-0.5 text-rose-600 font-black text-[9px] uppercase tracking-wider animate-pulse">
+                  <AlertCircle className="h-2 w-2 stroke-[2.5]" />
                   Under Target
                 </span>
               ) : hasReport ? (
-                <span className="text-emerald-600 font-bold text-[8px] uppercase tracking-wider">
+                <span className="text-emerald-700 font-black text-[9px] uppercase tracking-wider">
                   AI Verified
                 </span>
               ) : (
-                <span className="text-slate-400 font-semibold text-[8px] uppercase tracking-wider">
+                <span className="text-slate-600 font-black text-[9px] uppercase tracking-wider">
                   Logged
                 </span>
               )}
@@ -166,9 +166,9 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
           </div>
           
           <div className="flex items-center gap-1.5 mt-0.5">
-            <span>Target: <strong className="text-slate-600 font-semibold">${targetProjectValueMin.toLocaleString()}</strong></span>
-            <span className="text-slate-200">•</span>
-            <span>Achieved: <strong className={value !== null && value < targetProjectValueMin ? "text-rose-600 font-extrabold" : "text-emerald-600 font-extrabold"}>{value !== null ? `$${value.toLocaleString()}` : "—"}</strong></span>
+            <span>Target: <strong className="text-slate-700 font-bold">${targetProjectValueMin.toLocaleString()}</strong></span>
+            <span className="text-slate-300">•</span>
+            <span>Achieved: <strong className={value !== null && value < targetProjectValueMin ? "text-rose-600 font-extrabold" : "text-emerald-700 font-extrabold"}>{value !== null ? `$${value.toLocaleString()}` : "—"}</strong></span>
           </div>
         </div>
       )}
@@ -177,7 +177,7 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
       {employee.leaveBalance && (
         <div className="relative z-10 mt-2.5 pt-2 border-t border-slate-100/80">
           <div className="flex flex-col gap-1.5">
-            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Leave Capacity</span>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Leave Capacity</span>
             <div className="grid grid-cols-3 gap-2">
               {[
                 { label: "Sick", used: employee.leaveBalance.sickLeaveUsed, total: 7, colorClass: "bg-rose-500" },
@@ -185,9 +185,9 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
                 { label: "Gov/Fest", used: employee.leaveBalance.govFestHolidaysUsed, total: 14, colorClass: "bg-blue-500" }
               ].map(leave => (
                 <div key={leave.label} className="flex flex-col gap-0.5">
-                  <div className="flex justify-between items-center text-[8px] font-mono">
+                  <div className="flex justify-between items-center text-[9px] font-mono">
                     <span className="text-slate-500 font-semibold">{leave.label}</span>
-                    <span className="text-slate-700 font-bold">{leave.used}<span className="text-slate-400 font-normal">/{leave.total}</span></span>
+                    <span className="text-slate-700 font-bold">{leave.used}<span className="text-slate-500 font-normal">/{leave.total}</span></span>
                   </div>
                   <div className="h-1 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
                     <div 

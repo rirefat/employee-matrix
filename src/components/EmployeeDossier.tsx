@@ -52,7 +52,8 @@ import {
   Copy,
   ArrowUpRight,
   TrendingDown,
-  TerminalSquare
+  TerminalSquare,
+  Link as LinkIcon
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Employee, PerformanceRecord } from "../types";
@@ -1015,7 +1016,7 @@ export function EmployeeDossier({
         <div className="w-16 h-16 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-700 mb-6 shadow-sm animate-pulse">
           <Bot className="h-8 w-8" />
         </div>
-        <h3 className="text-sm font-extrabold tracking-tight text-slate-900 font-display">No Active Talent Record</h3>
+        <h3 className="text-xs font-extrabold tracking-tight text-slate-900 font-display">No Active Talent Record</h3>
         <p className="text-xs text-slate-500 mt-2 max-w-xs text-center leading-relaxed">
           Select or enroll an employee profile from the central directory to view their Software IT Farm talent dossiers.
         </p>
@@ -1062,7 +1063,7 @@ export function EmployeeDossier({
                   </div>
                   <span className="truncate text-slate-800 font-bold font-display">{activeDirectoryEmployee.name}</span>
                 </div>
-                <ChevronDown className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-300 ${isHeaderDropdownOpen ? "rotate-180" : ""}`} />
+                <ChevronDown className={`h-3.5 w-3.5 text-slate-500 transition-transform duration-300 ${isHeaderDropdownOpen ? "rotate-180" : ""}`} />
               </button>
 
               {isHeaderDropdownOpen && (
@@ -1070,41 +1071,57 @@ export function EmployeeDossier({
                   <div className="fixed inset-0 z-30" onClick={() => setIsHeaderDropdownOpen(false)} />
                   <div className="absolute left-0 mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-xl z-40 py-2 flex flex-col max-h-[250px] overflow-hidden">
                     <div className="px-3 pb-2 pt-1 border-b border-slate-100 relative">
-                      <Search className="absolute left-6 top-3.5 h-3 w-3 text-slate-400" />
+                      <Search className="absolute left-6 top-3.5 h-3 w-3 text-slate-500" />
                       <input
                         type="text"
                         placeholder="Search employee..."
                         value={headerDropdownSearch}
                         onChange={(e) => setHeaderDropdownSearch(e.target.value)}
-                        className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-slate-800 focus:ring-1 focus:ring-slate-800/10 rounded-xl transition-all outline-none font-medium text-slate-800 placeholder:text-slate-400"
+                        className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-slate-800 focus:ring-1 focus:ring-slate-800/10 rounded-xl transition-all outline-none font-medium text-slate-800 placeholder:text-slate-500"
                       />
                     </div>
                     <div className="overflow-y-auto flex-1 py-1 no-scrollbar">
                       {myEmployees
                         .filter(emp => !headerDropdownSearch || emp.name.toLowerCase().includes(headerDropdownSearch.toLowerCase()))
                         .map(emp => (
-                          <button
-                            type="button"
+                          <div
                             key={emp.id}
-                            onClick={() => {
-                              setSelectedDirectoryEmpId(emp.id);
-                              setIsHeaderDropdownOpen(false);
-                              setHeaderDropdownSearch("");
-                            }}
-                            className={`w-full px-4 py-2 flex items-center gap-3 text-left hover:bg-slate-50 transition-colors ${
+                            className={`w-full px-4 py-2 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors ${
                               activeDirectoryEmployee.id === emp.id ? "bg-slate-50 text-blue-600 font-bold border-l-4 border-blue-500" : "text-slate-600"
                             }`}
                           >
-                            <img
-                              src={get3DAvatarUrl(emp.name)}
-                              alt=""
-                              className="w-6 h-6 rounded-full object-cover bg-slate-100 border border-slate-200"
-                            />
-                            <div className="min-w-0">
-                              <div className="text-xs font-semibold truncate text-slate-800 font-display">{emp.name}</div>
-                              <div className="text-[10px] text-slate-400 truncate font-mono">{emp.role}</div>
-                            </div>
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedDirectoryEmpId(emp.id);
+                                setIsHeaderDropdownOpen(false);
+                                setHeaderDropdownSearch("");
+                              }}
+                              className="flex items-center gap-3 text-left flex-1 min-w-0 cursor-pointer"
+                            >
+                              <img
+                                src={get3DAvatarUrl(emp.name)}
+                                alt=""
+                                className="w-6 h-6 rounded-full object-cover bg-slate-100 border border-slate-200 shrink-0"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="text-xs font-semibold truncate text-slate-800 font-display">{emp.name}</div>
+                                <div className="text-[11px] text-slate-500 truncate font-mono">{emp.role}</div>
+                              </div>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const link = `${window.location.origin}${window.location.pathname}?portal=performance&tab=profile&employeeId=${emp.id}`;
+                                copyToClipboard(link, "Performance Profile Link");
+                              }}
+                              className="p-1.5 hover:bg-slate-200 rounded text-slate-500 hover:text-indigo-600 transition-colors cursor-pointer shrink-0"
+                              title="Copy Profile Link"
+                            >
+                              <LinkIcon className="h-3 w-3" />
+                            </button>
+                          </div>
                         ))}
                     </div>
                   </div>
@@ -1137,7 +1154,7 @@ export function EmployeeDossier({
             <div className="absolute bottom-3 right-3 w-1.5 h-1.5 border-b border-r border-slate-300 pointer-events-none" />
 
             {/* Elegant glass active status pill */}
-            <div className="absolute top-4 left-4 flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-bold bg-slate-50/90 border border-slate-200 text-emerald-700 font-mono uppercase tracking-wider shadow-2xs relative z-10">
+            <div className="absolute top-4 left-4 flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-slate-50/90 border border-slate-200 text-emerald-700 font-mono uppercase tracking-wider shadow-2xs relative z-10">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
               Active R&D Sync
             </div>
@@ -1201,7 +1218,7 @@ export function EmployeeDossier({
             <div className="space-y-4 w-full flex flex-col items-center relative z-10">
               
               {/* Certified Flag */}
-              <span className="inline-flex items-center gap-1 bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200/80 px-2.5 py-0.5 rounded-full text-[8px] font-extrabold text-slate-500 tracking-widest uppercase font-mono shadow-3xs select-none">
+              <span className="inline-flex items-center gap-1 bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200/80 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold text-slate-500 tracking-widest uppercase font-mono shadow-3xs select-none">
                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
                 Active Personnel
               </span>
@@ -1210,7 +1227,7 @@ export function EmployeeDossier({
                 <h3 className="text-xl font-black text-slate-900 tracking-tight font-display group-hover:text-indigo-600 transition-colors duration-300">
                   {activeDirectoryEmployee.name}
                 </h3>
-                <span className="text-[11px] font-mono font-medium text-slate-400 block select-all">
+                <span className="text-[11px] font-mono font-bold text-slate-500 block select-all">
                   {activeDirectoryEmployee.email}
                 </span>
               </div>
@@ -1220,7 +1237,7 @@ export function EmployeeDossier({
                 
                 {/* ID Badge */}
                 <div className="bg-slate-50/60 backdrop-blur-md border border-slate-200/60 rounded-xl p-2.5 flex flex-col items-center justify-center text-center shadow-3xs group/cell hover:bg-white hover:border-slate-300 transition-all duration-300 cursor-default">
-                  <span className="text-[8px] font-bold uppercase tracking-wider text-slate-400 font-mono mb-0.5">Dossier ID</span>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono mb-0.5">Dossier ID</span>
                   <span className="text-[11px] font-black text-slate-800 font-mono">
                     #{activeDirectoryEmployee.id}
                   </span>
@@ -1228,8 +1245,8 @@ export function EmployeeDossier({
 
                 {/* Role Capsule */}
                 <div className="bg-slate-50/60 backdrop-blur-md border border-slate-200/60 rounded-xl p-2.5 flex flex-col items-center justify-center text-center shadow-3xs group/cell hover:bg-white hover:border-slate-300 transition-all duration-300 cursor-default">
-                  <span className="text-[8px] font-bold uppercase tracking-wider text-slate-400 font-mono mb-0.5">Designation</span>
-                  <span className="text-[11px] font-bold text-indigo-700 font-mono truncate max-w-full">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono mb-0.5">Designation</span>
+                  <span className="text-[11px] font-black text-indigo-700 font-mono truncate max-w-full">
                     {activeDirectoryEmployee.role}
                   </span>
                 </div>
@@ -1239,20 +1256,20 @@ export function EmployeeDossier({
               {/* Bento Attributes Strip */}
               <div className="w-full bg-slate-50/40 border border-slate-200/50 rounded-2xl p-3 grid grid-cols-3 gap-1 divide-x divide-slate-200/60 text-center shadow-3xs mt-2 select-none">
                 <div>
-                  <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest font-mono">Hub</span>
-                  <span className="block text-[10px] font-extrabold text-slate-700 font-display truncate mt-0.5">
+                  <span className="block text-[10px] font-black text-slate-500 uppercase tracking-widest font-mono">Hub</span>
+                  <span className="block text-[11px] font-black text-slate-800 font-display truncate mt-0.5">
                     {activeDirectoryEmployee.team || "Nexus"}
                   </span>
                 </div>
                 <div>
-                  <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest font-mono">Depart.</span>
-                  <span className="block text-[10px] font-extrabold text-slate-700 font-display truncate mt-0.5">
+                  <span className="block text-[10px] font-black text-slate-500 uppercase tracking-widest font-mono">Depart.</span>
+                  <span className="block text-[11px] font-black text-slate-800 font-display truncate mt-0.5">
                     {activeDirectoryEmployee.department || "Core R&D"}
                   </span>
                 </div>
                 <div>
-                  <span className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest font-mono">Blood Gp</span>
-                  <span className="block text-[10px] font-extrabold text-indigo-600 font-mono mt-0.5">
+                  <span className="block text-[10px] font-black text-slate-500 uppercase tracking-widest font-mono">Blood Gp</span>
+                  <span className="block text-[11px] font-black text-indigo-700 font-mono mt-0.5">
                     {activeDirectoryEmployee.bloodGroup || "O+"}
                   </span>
                 </div>
@@ -1265,7 +1282,7 @@ export function EmployeeDossier({
 
             {/* Segmented Cyberpunk/Modern Progress Tracker */}
             <div className="w-full space-y-2 text-left relative mt-2">
-              <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">
+              <div className="flex justify-between items-center text-[11px] font-black text-slate-500 uppercase tracking-widest font-mono">
                 <span className="flex items-center gap-1.5 text-slate-500">
                   <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
                   Dossier Integrity
@@ -1294,7 +1311,7 @@ export function EmployeeDossier({
             <div className="flex items-center justify-center gap-2.5 w-full border-t border-slate-100 pt-4 mt-6">
               <button
                 onClick={() => handleOpenEditEmployee(activeDirectoryEmployee)}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 hover:text-slate-900 text-slate-700 transition-all cursor-pointer border border-slate-200 hover:border-slate-300 text-[10px] font-bold shadow-2xs active:scale-98"
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 hover:text-slate-900 text-slate-700 transition-all cursor-pointer border border-slate-200 hover:border-slate-300 text-[11px] font-bold shadow-2xs active:scale-98"
                 title="Edit Developer Information"
               >
                 <Edit3 className="w-3 h-3" /> Edit
@@ -1308,10 +1325,20 @@ export function EmployeeDossier({
                   });
                   setIsIncrementModalOpen(true);
                 }}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-800 transition-all cursor-pointer border border-indigo-150 text-[10px] font-bold shadow-2xs active:scale-98"
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-800 transition-all cursor-pointer border border-indigo-150 text-[11px] font-bold shadow-2xs active:scale-98"
                 title="Log Annual Hike"
               >
                 <TrendingUp className="w-3 h-3" /> Hike
+              </button>
+              <button
+                onClick={() => {
+                  const link = `${window.location.origin}${window.location.pathname}?portal=performance&tab=profile&employeeId=${activeDirectoryEmployee.id}`;
+                  copyToClipboard(link, "Performance Profile Link");
+                }}
+                className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-indigo-600 transition-all cursor-pointer border border-slate-200 active:scale-95 flex items-center justify-center shrink-0"
+                title="Copy Performance Profile Link"
+              >
+                <LinkIcon className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => handleDeleteEmployeeClick(activeDirectoryEmployee)}
@@ -1348,7 +1375,7 @@ export function EmployeeDossier({
                   }`}
                 >
                   <span className="flex items-center gap-2.5 font-medium">
-                    <span className={isSelected ? "text-white" : tab.highlight ? "text-indigo-600 font-bold" : "text-slate-400"}>
+                    <span className={isSelected ? "text-white" : tab.highlight ? "text-indigo-600 font-bold" : "text-slate-500"}>
                       {tab.icon}
                     </span>
                     <span className={tab.highlight && !isSelected ? "text-indigo-600 font-extrabold" : ""}>
@@ -1373,8 +1400,11 @@ export function EmployeeDossier({
         </div>
 
         {/* RIGHT COLUMN: Tab Panel Display Panel - High End Visual Polish */}
-        <div className="lg:col-span-8 bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between min-h-[700px] relative overflow-hidden group">
+        <div className="lg:col-span-8 bg-white backdrop-blur-md border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between min-h-[700px] relative overflow-hidden group">
           
+          {/* Background dot grid pattern with fade-out mask */}
+          <div className="absolute inset-0 bg-grid-pattern pointer-events-none" style={{ maskImage: "radial-gradient(ellipse at center, black 30%, transparent 80%)", WebkitMaskImage: "radial-gradient(ellipse at center, black 30%, transparent 80%)" }} />
+
           {/* Decorative radial gradients under glass */}
           <div className="absolute -bottom-40 -right-40 w-80 h-80 rounded-full bg-gradient-to-tr from-indigo-500/5 to-purple-500/5 blur-3xl pointer-events-none" />
           <div className="absolute -top-40 -left-40 w-80 h-80 rounded-full bg-gradient-to-br from-blue-500/4 to-teal-500/4 blur-3xl pointer-events-none" />
@@ -1389,7 +1419,7 @@ export function EmployeeDossier({
             
             {/* Header Title with quick edit triggers */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6 relative z-10">
-              <h2 className="text-[10px] font-extrabold text-slate-400 tracking-widest uppercase font-mono flex items-center gap-2">
+              <h2 className="text-[11px] font-extrabold text-slate-500 tracking-widest uppercase font-mono flex items-center gap-2">
                 {activeTab === "profile" && <User className="w-4 h-4 text-slate-500" />}
                 {activeTab === "skills" && <Code2 className="w-4 h-4 text-slate-500" />}
                 {activeTab === "projects" && <CheckSquare className="w-4 h-4 text-slate-500" />}
@@ -1427,31 +1457,31 @@ export function EmployeeDossier({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-8 bg-white/90 border border-slate-200/60 rounded-2xl p-6 relative overflow-hidden shadow-2xs">
                       <div className="absolute top-0 right-0 p-1 bg-gradient-to-bl from-blue-500/10 to-transparent w-24 h-24 rounded-bl-full pointer-events-none" />
                       <div>
-                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Engineering Name</span>
+                        <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono">Engineering Name</span>
                         <span className="block text-xs font-bold text-slate-900 mt-1 font-display">{activeDirectoryEmployee.name}</span>
                       </div>
                       <div>
-                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Corporate Email</span>
+                        <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono">Corporate Email</span>
                         <span className="block text-xs font-bold text-slate-800 mt-1 font-mono">{activeDirectoryEmployee.email}</span>
                       </div>
                       <div>
-                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Employee UID</span>
+                        <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono">Employee UID</span>
                         <span className="block text-xs font-bold text-slate-700 mt-1 font-mono">{activeDirectoryEmployee.id}</span>
                       </div>
                       <div>
-                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Contact Phone</span>
+                        <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono">Contact Phone</span>
                         <span className="block text-xs font-bold text-slate-800 mt-1 font-mono">{activeDirectoryEmployee.phone || "+880178320274"}</span>
                       </div>
                       <div>
-                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Slack Direct Address</span>
+                        <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono">Slack Direct Address</span>
                         <span className="block text-xs font-semibold text-slate-900 mt-1 font-mono">U05{activeDirectoryEmployee.id.toUpperCase()}L9K</span>
                       </div>
                       <div>
-                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Company Join Date</span>
+                        <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono">Company Join Date</span>
                         <span className="block text-xs font-bold text-slate-800 mt-1 font-mono">{activeDirectoryEmployee.joiningDate || "12-Jan-2025"}</span>
                       </div>
                       <div className="sm:col-span-2 pt-2 border-t border-slate-200">
-                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1">R&D Core Focus Summary</span>
+                        <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono mb-1">R&D Core Focus Summary</span>
                         <p className="text-xs text-slate-600 italic leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200/60">
                           "{activeDirectoryEmployee.notes || "Core software development contributor active in microservices architecture cycles."}"
                         </p>
@@ -1464,8 +1494,8 @@ export function EmployeeDossier({
                         <Activity className="w-24 h-24 stroke-[1px]" />
                       </div>
                       <div className="relative z-10">
-                        <span className="text-[9px] font-mono tracking-widest uppercase text-slate-300 font-bold">Managerial Workspace</span>
-                        <h3 className="text-sm font-extrabold tracking-tight font-display mt-0.5">Quick Actions & Integration Triggers</h3>
+                        <span className="text-[10px] font-mono tracking-widest uppercase text-slate-300 font-bold">Managerial Workspace</span>
+                        <h3 className="text-xs font-extrabold tracking-tight font-display mt-0.5">Quick Actions & Integration Triggers</h3>
                         <p className="text-[11px] text-slate-300 leading-relaxed mt-1">
                           Seamlessly trigger workspace links, compile reports, or coordinate with the active developer through integrated actions.
                         </p>
@@ -1480,7 +1510,7 @@ export function EmployeeDossier({
                           className="p-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl flex flex-col items-center justify-center gap-2 text-center transition-all group cursor-pointer"
                         >
                           <Mail className="w-4.5 h-4.5 text-indigo-300 group-hover:scale-110 transition-transform" />
-                          <span className="text-[10px] font-bold text-white tracking-tight">Direct Email</span>
+                          <span className="text-[11px] font-bold text-white tracking-tight">Direct Email</span>
                         </button>
 
                         <button
@@ -1492,7 +1522,7 @@ export function EmployeeDossier({
                           className="p-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl flex flex-col items-center justify-center gap-2 text-center transition-all group cursor-pointer"
                         >
                           <Bot className="w-4.5 h-4.5 text-blue-300 group-hover:scale-110 transition-transform" />
-                          <span className="text-[10px] font-bold text-white tracking-tight">AI Assessment</span>
+                          <span className="text-[11px] font-bold text-white tracking-tight">AI Assessment</span>
                         </button>
 
                         <button
@@ -1548,7 +1578,7 @@ export function EmployeeDossier({
                           className="p-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl flex flex-col items-center justify-center gap-2 text-center transition-all group cursor-pointer"
                         >
                           <FileText className="w-4.5 h-4.5 text-rose-300 group-hover:scale-110 transition-transform" />
-                          <span className="text-[10px] font-bold text-white tracking-tight">Print Dossier</span>
+                          <span className="text-[11px] font-bold text-white tracking-tight">Print Dossier</span>
                         </button>
 
                         <button
@@ -1559,7 +1589,7 @@ export function EmployeeDossier({
                           className="p-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl flex flex-col items-center justify-center gap-2 text-center transition-all group cursor-pointer"
                         >
                           <Calendar className="w-4.5 h-4.5 text-emerald-300 group-hover:scale-110 transition-transform" />
-                          <span className="text-[10px] font-bold text-white tracking-tight">Leave Balance</span>
+                          <span className="text-[11px] font-bold text-white tracking-tight">Leave Balance</span>
                         </button>
                       </div>
                     </div>
@@ -1571,9 +1601,9 @@ export function EmployeeDossier({
                           <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider font-mono flex items-center gap-1.5">
                             <Shield className="w-3.5 h-3.5 text-blue-600" /> HR Executive Ledger & Compliance
                           </h4>
-                          <p className="text-[10px] text-slate-500">Confidential employee details for HR, administrative, and payroll records.</p>
+                          <p className="text-[11px] text-slate-500">Confidential employee details for HR, administrative, and payroll records.</p>
                         </div>
-                        <span className="text-[9px] font-bold text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-full font-mono">
+                        <span className="text-[10px] font-bold text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-full font-mono">
                           Verified Profile
                         </span>
                       </div>
@@ -1587,17 +1617,17 @@ export function EmployeeDossier({
                           </h5>
                           <div className="text-xs text-slate-600 space-y-2.5 font-sans">
                             <div className="flex justify-between items-center">
-                              <span className="text-slate-400 font-medium">Date of Birth:</span>
+                              <span className="text-slate-500 font-semibold">Date of Birth:</span>
                               <span className="text-slate-800 font-semibold">{activeDirectoryEmployee.dob || "—"}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-slate-400 font-medium">Gender:</span>
+                              <span className="text-slate-500 font-semibold">Gender:</span>
                               <span className="text-slate-800 font-semibold">{activeDirectoryEmployee.gender || "—"}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-slate-400 font-medium">Blood Group:</span>
+                              <span className="text-slate-500 font-semibold">Blood Group:</span>
                               {activeDirectoryEmployee.bloodGroup ? (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200/40">
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200/40">
                                   {activeDirectoryEmployee.bloodGroup}
                                 </span>
                               ) : (
@@ -1605,29 +1635,29 @@ export function EmployeeDossier({
                               )}
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-slate-400 font-medium">Marital Status:</span>
+                              <span className="text-slate-500 font-semibold">Marital Status:</span>
                               <span className="text-slate-800 font-semibold">{activeDirectoryEmployee.maritalStatus || "—"}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-slate-400 font-medium">Nationality:</span>
+                              <span className="text-slate-500 font-semibold">Nationality:</span>
                               <span className="text-slate-800 font-semibold">{activeDirectoryEmployee.nationality || "—"}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-slate-400 font-medium">Personal Email:</span>
+                              <span className="text-slate-500 font-semibold">Personal Email:</span>
                               {activeDirectoryEmployee.personalEmail ? (
                                 <button
                                   onClick={() => copyToClipboard(activeDirectoryEmployee.personalEmail || "", "Personal Email")}
                                   className="text-slate-850 hover:text-blue-600 font-semibold flex items-center gap-1 transition-colors cursor-pointer group text-right"
                                 >
                                   <span className="font-mono text-xs truncate max-w-[150px]">{activeDirectoryEmployee.personalEmail}</span>
-                                  <Copy className="w-2.5 h-2.5 text-slate-400 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  <Copy className="w-2.5 h-2.5 text-slate-500 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </button>
                               ) : (
                                 <span className="text-slate-800 font-semibold">—</span>
                               )}
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-slate-400 font-medium">Emergency Contact:</span>
+                              <span className="text-slate-500 font-semibold">Emergency Contact:</span>
                               <span className="text-slate-805 font-semibold font-mono">{activeDirectoryEmployee.emergencyContact || "—"}</span>
                             </div>
                           </div>
@@ -1640,9 +1670,9 @@ export function EmployeeDossier({
                           </h5>
                           <div className="text-xs text-slate-600 space-y-2.5 font-sans">
                             <div className="flex justify-between items-center">
-                              <span className="text-slate-400 font-medium">Employment Type:</span>
+                              <span className="text-slate-505 font-semibold">Employment Type:</span>
                               {activeDirectoryEmployee.employmentType ? (
-                                <span className="inline-flex items-center text-[10px] font-bold text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200/40">
+                                <span className="inline-flex items-center text-[11px] font-bold text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200/40">
                                   {activeDirectoryEmployee.employmentType}
                                 </span>
                               ) : (
@@ -1650,21 +1680,21 @@ export function EmployeeDossier({
                               )}
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-slate-400 font-medium">Probation Period:</span>
+                              <span className="text-slate-500 font-semibold">Probation Period:</span>
                               <span className="text-slate-800 font-semibold">{activeDirectoryEmployee.probationPeriod || "—"}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-slate-400 font-medium">Highest Qualification:</span>
+                              <span className="text-slate-500 font-semibold">Highest Qualification:</span>
                               <span className="text-slate-800 font-semibold">{activeDirectoryEmployee.highestQualification || "—"}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-slate-400 font-medium">Experience Years:</span>
+                              <span className="text-slate-500 font-semibold">Experience Years:</span>
                               <span className="text-slate-800 font-semibold">
                                 {activeDirectoryEmployee.experienceYears !== undefined ? `${activeDirectoryEmployee.experienceYears} Years` : "—"}
                               </span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-slate-400 font-medium">Work Location Hub:</span>
+                              <span className="text-slate-500 font-semibold">Work Location Hub:</span>
                               <span className="text-slate-800 font-semibold">{activeDirectoryEmployee.workLocation || "—"}</span>
                             </div>
                           </div>
@@ -1678,15 +1708,15 @@ export function EmployeeDossier({
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-sans">
                             <div className="bg-slate-50 p-3 rounded-lg border border-slate-200/60 flex flex-col justify-between">
                               <div>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Current Address</span>
-                                <p className="text-slate-700 mt-1.5 leading-relaxed font-medium">
+                                <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest font-mono">Current Address</span>
+                                <p className="text-slate-700 mt-1.5 leading-relaxed font-semibold">
                                   {activeDirectoryEmployee.currentAddress || "Not Provided"}
                                 </p>
                               </div>
                               {activeDirectoryEmployee.currentAddress && (
                                 <button
                                   onClick={() => copyToClipboard(activeDirectoryEmployee.currentAddress || "", "Current Address")}
-                                  className="mt-3 text-[10px] font-bold text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-1 cursor-pointer self-start"
+                                  className="mt-3 text-[11px] font-bold text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-1 cursor-pointer self-start"
                                 >
                                   <Copy className="w-3 h-3" /> Copy Address
                                 </button>
@@ -1695,15 +1725,15 @@ export function EmployeeDossier({
 
                             <div className="bg-slate-50 p-3 rounded-lg border border-slate-200/60 flex flex-col justify-between">
                               <div>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Permanent Address</span>
-                                <p className="text-slate-700 mt-1.5 leading-relaxed font-medium">
+                                <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest font-mono">Permanent Address</span>
+                                <p className="text-slate-700 mt-1.5 leading-relaxed font-semibold">
                                   {activeDirectoryEmployee.permanentAddress || "Not Provided"}
                                 </p>
                               </div>
                               {activeDirectoryEmployee.permanentAddress && (
                                 <button
                                   onClick={() => copyToClipboard(activeDirectoryEmployee.permanentAddress || "", "Permanent Address")}
-                                  className="mt-3 text-[10px] font-bold text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-1 cursor-pointer self-start"
+                                  className="mt-3 text-[11px] font-bold text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-1 cursor-pointer self-start"
                                 >
                                   <Copy className="w-3 h-3" /> Copy Address
                                 </button>
@@ -1719,28 +1749,28 @@ export function EmployeeDossier({
                           </h5>
                           <div className="text-xs text-slate-600 space-y-2.5 font-sans">
                             <div className="flex justify-between items-center">
-                              <span className="text-slate-400 font-medium">National ID / NID:</span>
+                              <span className="text-slate-500 font-semibold">National ID / NID:</span>
                               {activeDirectoryEmployee.nationalId ? (
                                 <button
                                   onClick={() => copyToClipboard(activeDirectoryEmployee.nationalId || "", "National ID")}
                                   className="text-slate-800 hover:text-blue-600 font-semibold flex items-center gap-1 transition-colors cursor-pointer group"
                                 >
                                   <span className="font-mono font-bold">{activeDirectoryEmployee.nationalId}</span>
-                                  <Copy className="w-2.5 h-2.5 text-slate-400 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  <Copy className="w-2.5 h-2.5 text-slate-500 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </button>
                               ) : (
                                 <span className="text-slate-800 font-semibold">—</span>
                               )}
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-slate-400 font-medium">Tax ID / TIN / SSN:</span>
+                              <span className="text-slate-500 font-semibold">Tax ID / TIN / SSN:</span>
                               {activeDirectoryEmployee.taxId ? (
                                 <button
                                   onClick={() => copyToClipboard(activeDirectoryEmployee.taxId || "", "Tax ID")}
                                   className="text-slate-800 hover:text-blue-600 font-semibold flex items-center gap-1 transition-colors cursor-pointer group"
                                 >
                                   <span className="font-mono font-bold">{activeDirectoryEmployee.taxId}</span>
-                                  <Copy className="w-2.5 h-2.5 text-slate-400 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  <Copy className="w-2.5 h-2.5 text-slate-500 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </button>
                               ) : (
                                 <span className="text-slate-800 font-semibold">—</span>
@@ -1756,32 +1786,32 @@ export function EmployeeDossier({
                           </h5>
                           <div className="text-xs text-slate-600 space-y-2.5 font-sans">
                             <div className="flex justify-between items-center">
-                              <span className="text-slate-400 font-medium">Bank Name:</span>
+                              <span className="text-slate-500 font-semibold">Bank Name:</span>
                               <span className="text-slate-850 font-bold">{activeDirectoryEmployee.bankName || "—"}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-slate-400 font-medium">Account Number:</span>
+                              <span className="text-slate-500 font-semibold">Account Number:</span>
                               {activeDirectoryEmployee.bankAccountNumber ? (
                                 <button
                                   onClick={() => copyToClipboard(activeDirectoryEmployee.bankAccountNumber || "", "Bank Account Number")}
                                   className="text-slate-850 hover:text-blue-600 font-semibold flex items-center gap-1 transition-colors cursor-pointer group"
                                 >
                                   <span className="font-mono font-bold">{activeDirectoryEmployee.bankAccountNumber}</span>
-                                  <Copy className="w-2.5 h-2.5 text-slate-400 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  <Copy className="w-2.5 h-2.5 text-slate-500 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </button>
                               ) : (
                                 <span className="text-slate-800 font-semibold">—</span>
                               )}
                             </div>
                             <div className="flex justify-between items-center">
-                              <span className="text-slate-400 font-medium">IFSC / Routing Code:</span>
+                              <span className="text-slate-500 font-semibold">IFSC / Routing Code:</span>
                               {activeDirectoryEmployee.bankIfscCode ? (
                                 <button
                                   onClick={() => copyToClipboard(activeDirectoryEmployee.bankIfscCode || "", "Routing Code")}
                                   className="text-slate-850 hover:text-blue-600 font-semibold flex items-center gap-1 transition-colors cursor-pointer group"
                                 >
                                   <span className="font-mono font-bold">{activeDirectoryEmployee.bankIfscCode}</span>
-                                  <Copy className="w-2.5 h-2.5 text-slate-400 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  <Copy className="w-2.5 h-2.5 text-slate-500 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </button>
                               ) : (
                                 <span className="text-slate-800 font-semibold">—</span>
@@ -1795,7 +1825,7 @@ export function EmployeeDossier({
 
                     {/* Premium Integration: Interactive Git & R&D Linkages */}
                     <div className="bg-white/90 border border-slate-200/60 rounded-2xl p-5 space-y-3 shadow-2xs">
-                      <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">Connected Developer Registries</h4>
+                      <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider font-mono">Connected Developer Registries</h4>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         {[
                           { name: "Git Registry", url: "https://github.com", icon: <GitBranch className="w-3.5 h-3.5 text-slate-700" /> },
@@ -1814,7 +1844,7 @@ export function EmployeeDossier({
                               {link.icon}
                               <span className="truncate">{link.name}</span>
                             </span>
-                            <ArrowUpRight className="w-3 h-3 text-slate-400 shrink-0" />
+                            <ArrowUpRight className="w-3 h-3 text-slate-500 shrink-0" />
                           </a>
                         ))}
                       </div>
@@ -1826,44 +1856,44 @@ export function EmployeeDossier({
                         <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono flex items-center gap-1.5">
                           <Activity className="w-3.5 h-3.5 text-slate-900 animate-pulse" /> Developer KPI Intelligence
                         </h4>
-                        <p className="text-[10px] text-slate-400">Continuous assessments calculated based on Git triggers, commits velocity, and QA coverage.</p>
+                        <p className="text-[11px] text-slate-500">Continuous assessments calculated based on Git triggers, commits velocity, and QA coverage.</p>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div className="bg-white/90 border border-slate-200/60 p-4 rounded-2xl space-y-2 shadow-2xs relative">
-                          <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Committed Stacks</span>
+                          <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Committed Stacks</span>
                           <div className="flex items-baseline gap-1.5">
                             <span className="text-xl font-extrabold text-slate-800 font-mono">18</span>
-                            <span className="text-[10px] text-slate-500 font-semibold">Technologies</span>
+                            <span className="text-[11px] text-slate-500 font-semibold">Technologies</span>
                           </div>
                           <div className="h-1.5 w-full bg-slate-200/40 rounded-full overflow-hidden">
                             <div className="h-full bg-slate-900 rounded-full" style={{ width: "78%" }} />
                           </div>
-                          <span className="text-[9px] text-slate-400 font-medium block">Top Skill: TypeScript</span>
+                          <span className="text-[10px] text-slate-500 font-medium block">Top Skill: TypeScript</span>
                         </div>
 
                         <div className="bg-white/90 border border-slate-200/60 p-4 rounded-2xl space-y-2 shadow-2xs relative">
-                          <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Sprint Velocity</span>
+                          <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Sprint Velocity</span>
                           <div className="flex items-baseline gap-1.5">
                             <span className="text-xl font-extrabold text-slate-800 font-mono">38</span>
-                            <span className="text-[10px] text-slate-500 font-semibold">Story Points</span>
+                            <span className="text-[11px] text-slate-500 font-semibold">Story Points</span>
                           </div>
                           <div className="h-1.5 w-full bg-slate-200/40 rounded-full overflow-hidden">
                             <div className="h-full bg-slate-900 rounded-full" style={{ width: "87%" }} />
                           </div>
-                          <span className="text-[9px] text-slate-400 font-medium block">87.5% completion rate</span>
+                          <span className="text-[10px] text-slate-500 font-medium block">87.5% completion rate</span>
                         </div>
 
                         <div className="bg-white/90 border border-slate-200/60 p-4 rounded-2xl space-y-2 shadow-2xs relative">
-                          <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Attendance Ratio</span>
+                          <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Attendance Ratio</span>
                           <div className="flex items-baseline gap-1.5">
                             <span className="text-xl font-extrabold text-slate-800 font-mono">{activeRecord?.attendance || 98}%</span>
-                            <span className="text-[10px] text-slate-500 font-semibold">This Cycle</span>
+                            <span className="text-[11px] text-slate-500 font-semibold">This Cycle</span>
                           </div>
                           <div className="h-1.5 w-full bg-slate-200/40 rounded-full overflow-hidden">
                             <div className="h-full bg-slate-900 rounded-full" style={{ width: `${activeRecord?.attendance || 98}%` }} />
                           </div>
-                          <span className="text-[9px] text-slate-400 font-medium block">Dhaka Hub Standard Shift</span>
+                          <span className="text-[10px] text-slate-500 font-medium block">Dhaka Hub Standard Shift</span>
                         </div>
                       </div>
                     </div>
@@ -1875,7 +1905,7 @@ export function EmployeeDossier({
                           <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono flex items-center gap-1.5">
                             <Calendar className="w-3.5 h-3.5 text-slate-900" /> Attendance Heatmap Calendar
                           </h4>
-                          <p className="text-[10px] text-slate-400">Daily roster visualization for the selected workspace cycle.</p>
+                          <p className="text-[11px] text-slate-500">Daily roster visualization for the selected workspace cycle.</p>
                         </div>
                         
                         <div className="flex items-center gap-2">
@@ -1893,7 +1923,7 @@ export function EmployeeDossier({
                             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
                               <span
                                 key={day}
-                                className={`text-[10px] font-bold uppercase tracking-wider font-mono ${
+                                className={`text-[11px] font-bold uppercase tracking-wider font-mono ${
                                   day === "Sun" || day === "Sat"
                                     ? "text-slate-800 font-extrabold"
                                     : "text-slate-500"
@@ -1915,7 +1945,7 @@ export function EmployeeDossier({
                               let statusText = "Working Day";
                               
                               if (cell.status === "Future") {
-                                cellClass += "bg-slate-50/40 border border-dashed border-slate-200 text-slate-400 cursor-not-allowed";
+                                cellClass += "bg-slate-50/40 border border-dashed border-slate-200 text-slate-500 cursor-not-allowed";
                                 statusText = "Future Roster";
                               } else if (cell.status === "Weekend") {
                                 cellClass += "bg-blue-50/50 border border-blue-200/60 text-blue-800 hover:bg-blue-100/60 shadow-2xs";
@@ -1972,7 +2002,7 @@ export function EmployeeDossier({
                         {/* Right Part: Legend & Statistics */}
                         <div id="attendance-heatmap-legend" className="md:col-span-4 flex flex-col justify-between bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4">
                           <div className="space-y-3">
-                            <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Attendance Index</span>
+                            <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Attendance Index</span>
                             
                             <div className="space-y-2.5">
                               {/* Present */}
@@ -2014,13 +2044,13 @@ export function EmployeeDossier({
                           </div>
 
                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center space-y-1 relative">
-                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider font-mono block">Roster Compliance</span>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-mono block">Roster Compliance</span>
                             <span className="text-base font-black font-mono text-slate-900">
                               {daysArray.workingDaysCount > 0 
                                 ? `${Math.round((daysArray.pCount / daysArray.workingDaysCount) * 100)}%`
                                 : "100%"}
                             </span>
-                            <p className="text-[9px] text-slate-400">Calculated as Present Days / Working Days in cycle.</p>
+                            <p className="text-[10px] text-slate-500">Calculated as Present Days / Working Days in cycle.</p>
                           </div>
                         </div>
                       </div>
@@ -2033,9 +2063,9 @@ export function EmployeeDossier({
                           <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono flex items-center gap-1.5">
                             <FileText className="w-3.5 h-3.5 text-slate-900" /> Manager Confidential Chronicle & Timeline
                           </h4>
-                          <p className="text-[10px] text-slate-400">Chronological journal of 1-on-1 reviews, coaching feedback, and manager private notes.</p>
+                          <p className="text-[11px] text-slate-500">Chronological journal of 1-on-1 reviews, coaching feedback, and manager private notes.</p>
                         </div>
-                        <span className="text-[9px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full font-mono w-fit">
+                        <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full font-mono w-fit">
                           Confidential Access
                         </span>
                       </div>
@@ -2043,13 +2073,13 @@ export function EmployeeDossier({
                       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Chronological Timeline column */}
                         <div className="lg:col-span-2 space-y-4">
-                          <h5 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">Timeline History</h5>
+                          <h5 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider font-mono">Timeline History</h5>
                           
                           {(!activeDirectoryEmployee?.managerNotes || activeDirectoryEmployee.managerNotes.length === 0) ? (
                             <div className="bg-slate-50/50 border border-dashed border-slate-200 rounded-xl p-8 text-center space-y-2">
                               <FileText className="w-8 h-8 text-slate-300 mx-auto" />
                               <p className="text-xs text-slate-500 font-medium">No confidential notes recorded yet.</p>
-                              <p className="text-[10px] text-slate-400 max-w-sm mx-auto">Use the quick-log panel on the right to post feedback, performance warnings, or milestone celebrations to this employee's timeline.</p>
+                              <p className="text-[11px] text-slate-500 max-w-sm mx-auto">Use the quick-log panel on the right to post feedback, performance warnings, or milestone celebrations to this employee's timeline.</p>
                             </div>
                           ) : (
                             <div className="relative pl-4 border-l-2 border-slate-200/80 ml-2 space-y-6 py-2">
@@ -2071,10 +2101,10 @@ export function EmployeeDossier({
                                       <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-3.5 space-y-2 transition-all hover:border-slate-300 hover:shadow-2xs">
                                         <div className="flex items-center justify-between gap-2">
                                           <div className="flex flex-wrap items-center gap-2">
-                                            <span className="text-[10px] font-bold text-slate-750 bg-slate-200/80 px-2 py-0.5 rounded">
+                                            <span className="text-[11px] font-bold text-slate-750 bg-slate-200/80 px-2 py-0.5 rounded">
                                               {note.author}
                                             </span>
-                                            <span className="text-[10px] text-slate-400 font-mono">
+                                            <span className="text-[11px] text-slate-500 font-mono">
                                               {dateFormatted}
                                             </span>
                                           </div>
@@ -2085,7 +2115,7 @@ export function EmployeeDossier({
                                                 handleDeleteManagerNote(note.id);
                                               }
                                             }}
-                                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-rose-50"
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-500 hover:text-rose-600 rounded hover:bg-rose-50"
                                             title="Delete Note"
                                           >
                                             <Trash2 className="w-3.5 h-3.5" />
@@ -2109,15 +2139,15 @@ export function EmployeeDossier({
                             <h5 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                               <MessageSquare className="w-3.5 h-3.5 text-slate-800" /> Log Confidential Observation
                             </h5>
-                            <p className="text-[10px] text-slate-400">Post performance remarks or general milestones to the active dossier timeline.</p>
+                            <p className="text-[11px] text-slate-500">Post performance remarks or general milestones to the active dossier timeline.</p>
                           </div>
 
                           <form onSubmit={handleAddManagerNote} className="space-y-3">
                             <div className="space-y-1">
-                              <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Manager / Author Name</label>
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Manager / Author Name</label>
                               <div className="relative">
                                 <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-                                  <User className="w-3 h-3 text-slate-400" />
+                                  <User className="w-3 h-3 text-slate-500" />
                                 </span>
                                 <input
                                   type="text"
@@ -2130,7 +2160,7 @@ export function EmployeeDossier({
                             </div>
 
                             <div className="space-y-1">
-                              <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Observation Note Content</label>
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Observation Note Content</label>
                               <textarea
                                 value={managerNoteText}
                                 onChange={(e) => setManagerNoteText(e.target.value)}
@@ -2176,7 +2206,7 @@ export function EmployeeDossier({
                           { key: "databases", label: "Databases & Brokers", color: "from-rose-500 to-red-500", icon: <Database className="w-3.5 h-3.5 text-slate-700" /> }
                         ].map((stack) => (
                           <div key={stack.key} className="bg-white border border-slate-200 rounded-2xl p-4.5 space-y-3 shadow-2xs">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono flex items-center gap-1.5">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono flex items-center gap-1.5">
                               {stack.icon} {stack.label}
                             </span>
                             <div className="flex flex-wrap gap-1.5">
@@ -2188,11 +2218,11 @@ export function EmployeeDossier({
                                   title="De-register Technology"
                                 >
                                   {skill}
-                                  <span className="text-slate-400 group-hover:text-rose-600 transition-colors font-bold">×</span>
+                                  <span className="text-slate-500 group-hover:text-rose-600 transition-colors font-bold">×</span>
                                 </span>
                               ))}
                               {skillsGrouped[stack.key as keyof typeof skillsGrouped].length === 0 && (
-                                <span className="text-[10px] text-slate-400 italic">No verified skills registered.</span>
+                                <span className="text-[11px] text-slate-500 italic">No verified skills registered.</span>
                               )}
                             </div>
                           </div>
@@ -2206,17 +2236,17 @@ export function EmployeeDossier({
                           <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-display">Enlist Corporate Technology</h4>
                           <form onSubmit={handleAddSkill} className="space-y-3.5">
                             <div>
-                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1.5">Technology Name</label>
+                              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono mb-1.5">Technology Name</label>
                               <input
                                 type="text"
                                 placeholder="e.g. Golang, GraphQL, Terraform"
                                 value={newSkillText}
                                 onChange={(e) => setNewSkillText(e.target.value)}
-                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800/10 rounded-xl text-xs outline-none focus:bg-white transition-all placeholder:text-slate-400 font-semibold text-slate-800"
+                                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800/10 rounded-xl text-xs outline-none focus:bg-white transition-all placeholder:text-slate-500 font-semibold text-slate-800"
                               />
                             </div>
                             <div>
-                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1.5">Division Segment</label>
+                              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono mb-1.5">Division Segment</label>
                               <select
                                 value={newSkillCat}
                                 onChange={(e) => setNewSkillCat(e.target.value as any)}
@@ -2244,8 +2274,8 @@ export function EmployeeDossier({
                             <Flame className="w-32 h-32 stroke-[1px]" />
                           </div>
                           <div className="space-y-2 relative z-10">
-                            <span className="text-[9px] font-mono tracking-widest uppercase text-slate-400 font-bold">IT Talent Architecture</span>
-                            <h3 className="text-sm font-extrabold tracking-tight font-display">Grade A - Principal Engineer</h3>
+                            <span className="text-[10px] font-mono tracking-widest uppercase text-slate-500 font-bold">IT Talent Architecture</span>
+                            <h3 className="text-xs font-extrabold tracking-tight font-display">Grade A - Principal Engineer</h3>
                             <p className="text-[11px] text-slate-300 leading-relaxed">
                               Verified across {Object.values(skillsGrouped).flat().length} corporate technologies. Excellent microservices synergy.
                             </p>
@@ -2265,18 +2295,18 @@ export function EmployeeDossier({
                     {/* Active Project Overview */}
                     <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-2xs">
                       <div className="space-y-1.5">
-                        <span className="inline-block text-[9px] font-bold text-slate-800 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full font-mono uppercase tracking-wider">
+                        <span className="inline-block text-[10px] font-bold text-slate-800 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full font-mono uppercase tracking-wider">
                           Active Sprint: Cycle 14
                         </span>
-                        <h3 className="text-sm font-bold text-slate-900 font-display">Antigravity Distributed API Router Pipeline</h3>
+                        <h3 className="text-xs font-bold text-slate-900 font-display">Antigravity Distributed API Router Pipeline</h3>
                         <p className="text-xs text-slate-500 max-w-lg leading-relaxed font-medium">
                           Refactoring monolithic session controls into HttpOnly secure cookies. Integrated to containerized environments on Cloud Run.
                         </p>
                       </div>
                       <div className="bg-slate-50 px-4 py-3 rounded-xl border border-slate-200 text-center shrink-0 min-w-[120px] shadow-2xs relative">
-                        <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Velocity Target</span>
+                        <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Velocity Target</span>
                         <span className="block text-lg font-mono font-extrabold text-slate-900 mt-0.5">38 SP</span>
-                        <span className="text-[9px] text-slate-400 font-bold">Q3 Goal Aligned</span>
+                        <span className="text-[10px] text-slate-500 font-bold">Q3 Goal Aligned</span>
                       </div>
                     </div>
 
@@ -2284,18 +2314,18 @@ export function EmployeeDossier({
                     <div className="space-y-3.5">
                       <div>
                         <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">Active Jira Board Issues</h4>
-                        <p className="text-[10px] text-slate-400">Manage development states and log timesheets directly against sprint issues.</p>
+                        <p className="text-[11px] text-slate-500">Manage development states and log timesheets directly against sprint issues.</p>
                       </div>
 
                       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-2xs">
                         <table className="w-full text-left border-collapse min-w-[600px]">
                           <thead>
                             <tr className="bg-slate-50 border-b border-slate-200">
-                              <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-24 font-mono">ID</th>
-                              <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Summary</th>
-                              <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-28">Sprint State</th>
-                              <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-24 text-center">Log Time</th>
-                              <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-36 text-right">Actions</th>
+                              <th className="px-4 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-24 font-mono">ID</th>
+                              <th className="px-4 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Summary</th>
+                              <th className="px-4 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-28">Sprint State</th>
+                              <th className="px-4 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Log Time</th>
+                              <th className="px-4 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-36 text-right">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
@@ -2324,7 +2354,7 @@ export function EmployeeDossier({
                                           <option value="Critical">Critical</option>
                                         </select>
                                         <div className="flex items-center gap-1.5">
-                                          <span className="text-[10px] text-slate-400 font-mono font-bold">SP:</span>
+                                          <span className="text-[11px] text-slate-500 font-mono font-bold">SP:</span>
                                           <input
                                             type="number"
                                             value={editTicketSP}
@@ -2343,13 +2373,13 @@ export function EmployeeDossier({
                                     <div className="flex items-center justify-end gap-1.5">
                                       <button
                                         onClick={() => handleSaveTicketEdit(t.id)}
-                                        className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded text-[10px] transition-colors cursor-pointer"
+                                        className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded text-[11px] transition-colors cursor-pointer"
                                       >
                                         Save
                                       </button>
                                       <button
                                         onClick={() => setEditingTicketId(null)}
-                                        className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded text-[10px] transition-colors cursor-pointer"
+                                        className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded text-[11px] transition-colors cursor-pointer"
                                       >
                                         Cancel
                                       </button>
@@ -2363,12 +2393,12 @@ export function EmployeeDossier({
                                     <div className="space-y-0.5">
                                       <p className="font-display font-bold text-slate-800">{t.title}</p>
                                       <div className="flex items-center gap-1.5">
-                                        <span className={`inline-block text-[9px] font-bold ${
+                                        <span className={`inline-block text-[10px] font-bold ${
                                           t.priority === "Critical" ? "text-red-700 bg-red-50 border border-red-100" : t.priority === "High" ? "text-orange-700 bg-orange-50 border border-orange-100" : "text-slate-600 bg-slate-50 border border-slate-200"
                                         } px-2 py-0.2 rounded-md font-mono shadow-2xs`}>
                                           {t.priority} Priority
                                         </span>
-                                        <span className="text-[9px] text-slate-400 font-mono font-bold">
+                                        <span className="text-[10px] text-slate-500 font-mono font-bold">
                                           ({t.sp || 3} Story Points)
                                         </span>
                                       </div>
@@ -2377,7 +2407,7 @@ export function EmployeeDossier({
                                   <td className="px-4 py-3">
                                     <button
                                       onClick={() => handleToggleTicketStatus(t.id, t.status)}
-                                      className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer ${
+                                      className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-all cursor-pointer ${
                                         t.status === "Done"
                                           ? "bg-emerald-50 border-emerald-200 text-emerald-700"
                                           : t.status === "In Review"
@@ -2404,7 +2434,7 @@ export function EmployeeDossier({
                                       />
                                       <button
                                         onClick={() => handleLogHours(t.id)}
-                                        className="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded text-[10px] transition-colors cursor-pointer"
+                                        className="px-2 py-1 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded text-[11px] transition-colors cursor-pointer"
                                       >
                                         Log
                                       </button>
@@ -2417,7 +2447,7 @@ export function EmployeeDossier({
                                       </button>
                                       <button
                                         onClick={() => handleDeleteTicket(t.id)}
-                                        className="p-1 rounded bg-slate-50 hover:bg-rose-50 hover:text-rose-600 text-slate-400 border border-slate-200 cursor-pointer"
+                                        className="p-1 rounded bg-slate-50 hover:bg-rose-50 hover:text-rose-600 text-slate-500 border border-slate-200 cursor-pointer"
                                         title="Delete Ticket"
                                       >
                                         <Trash2 className="w-3.5 h-3.5" />
@@ -2436,12 +2466,12 @@ export function EmployeeDossier({
                         <div className="flex items-center justify-between">
                           <div>
                             <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">Enlist Sprint Ticket</h4>
-                            <p className="text-[10px] text-slate-400">Add an active ticket onto this employee's active development sprint.</p>
+                            <p className="text-[11px] text-slate-500">Add an active ticket onto this employee's active development sprint.</p>
                           </div>
                           <button
                             type="button"
                             onClick={() => setIsAddingTicket(!isAddingTicket)}
-                            className="text-[10px] font-bold text-slate-800 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow-2xs"
+                            className="text-[11px] font-bold text-slate-800 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow-2xs"
                           >
                             {isAddingTicket ? "Hide Form" : "Create Ticket"}
                           </button>
@@ -2450,28 +2480,28 @@ export function EmployeeDossier({
                         {isAddingTicket && (
                           <form onSubmit={handleAddTicket} className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                             <div className="space-y-1.5">
-                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Ticket Key (Optional)</label>
+                              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono">Ticket Key (Optional)</label>
                               <input
                                 type="text"
                                 placeholder="e.g. DEV-1095 (Autogenerated if empty)"
                                 value={newTicketId}
                                 onChange={(e) => setNewTicketId(e.target.value)}
-                                className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-slate-800 rounded-xl text-xs outline-none transition-all font-semibold text-slate-800 placeholder:text-slate-400"
+                                className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-slate-800 rounded-xl text-xs outline-none transition-all font-semibold text-slate-800 placeholder:text-slate-500"
                               />
                             </div>
                             <div className="space-y-1.5">
-                              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Ticket Summary</label>
+                              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono">Ticket Summary</label>
                               <input
                                 type="text"
                                 placeholder="Describe the sprint scope..."
                                 value={newTicketTitle}
                                 onChange={(e) => setNewTicketTitle(e.target.value)}
-                                className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-slate-800 rounded-xl text-xs outline-none transition-all font-semibold text-slate-800 placeholder:text-slate-400"
+                                className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-slate-800 rounded-xl text-xs outline-none transition-all font-semibold text-slate-800 placeholder:text-slate-500"
                               />
                             </div>
                             <div className="grid grid-cols-3 gap-3 md:col-span-2">
                               <div className="space-y-1.5">
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Initial Status</label>
+                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono">Initial Status</label>
                                 <select
                                   value={newTicketStatus}
                                   onChange={(e: any) => setNewTicketStatus(e.target.value)}
@@ -2484,7 +2514,7 @@ export function EmployeeDossier({
                                 </select>
                               </div>
                               <div className="space-y-1.5">
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Priority</label>
+                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono">Priority</label>
                                 <select
                                   value={newTicketPriority}
                                   onChange={(e: any) => setNewTicketPriority(e.target.value)}
@@ -2497,7 +2527,7 @@ export function EmployeeDossier({
                                 </select>
                               </div>
                               <div className="space-y-1.5">
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Story Points</label>
+                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono">Story Points</label>
                                 <input
                                   type="number"
                                   min={1}
@@ -2533,9 +2563,9 @@ export function EmployeeDossier({
                         { label: "Research & Publications", value: `${portfolioItems.filter(p => p.category === "Research & Patent" || p.category === "Technical Writing").length} papers`, desc: "Patents & write-ups" }
                       ].map((stat, i) => (
                         <div key={i} className="bg-slate-50 border border-slate-200/80 p-4 rounded-xl text-center space-y-1 relative">
-                          <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">{stat.label}</span>
-                          <span className="block text-sm font-extrabold font-mono text-slate-900">{stat.value}</span>
-                          <span className="block text-[10px] text-slate-400 font-semibold">{stat.desc}</span>
+                          <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">{stat.label}</span>
+                          <span className="block text-xs font-extrabold font-mono text-slate-900">{stat.value}</span>
+                          <span className="block text-[11px] text-slate-500 font-semibold">{stat.desc}</span>
                         </div>
                       ))}
                     </div>
@@ -2545,12 +2575,12 @@ export function EmployeeDossier({
                       <div className="flex items-center justify-between">
                         <div>
                           <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">Enlist Showcase Artifact</h4>
-                          <p className="text-[10px] text-slate-400">Add an open-source library, system deployment, patent, or technical paper to this developer's official portfolio.</p>
+                          <p className="text-[11px] text-slate-500">Add an open-source library, system deployment, patent, or technical paper to this developer's official portfolio.</p>
                         </div>
                         <button
                           type="button"
                           onClick={() => setIsAddingPortfolio(!isAddingPortfolio)}
-                          className="text-[10px] font-bold text-slate-800 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 px-3 py-1.5 rounded-lg transition-all cursor-pointer shadow-2xs"
+                          className="text-[11px] font-bold text-slate-800 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 px-3 py-1.5 rounded-lg transition-all cursor-pointer shadow-2xs"
                         >
                           {isAddingPortfolio ? "Hide Form" : "Add Portfolio Item"}
                         </button>
@@ -2559,19 +2589,19 @@ export function EmployeeDossier({
                       {isAddingPortfolio && (
                         <form onSubmit={handleCreatePortfolio} className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3.5 border-t border-dashed border-slate-200">
                           <div className="space-y-1">
-                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Artifact Title</label>
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Artifact Title</label>
                             <input
                               type="text"
                               required
                               placeholder="e.g. Distributed Consensus Engine"
                               value={newPortfolioTitle}
                               onChange={(e) => setNewPortfolioTitle(e.target.value)}
-                              className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800 placeholder:text-slate-400"
+                              className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800 placeholder:text-slate-500"
                             />
                           </div>
 
                           <div className="space-y-1">
-                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Artifact Category</label>
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Artifact Category</label>
                             <select
                               value={newPortfolioCat}
                               onChange={(e) => setNewPortfolioCat(e.target.value as any)}
@@ -2585,58 +2615,58 @@ export function EmployeeDossier({
                           </div>
 
                           <div className="space-y-1 sm:col-span-2">
-                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Brief Description</label>
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Brief Description</label>
                             <textarea
                               rows={2}
                               required
                               placeholder="Describe the architectural impact, performance metrics, and features."
                               value={newPortfolioDesc}
                               onChange={(e) => setNewPortfolioDesc(e.target.value)}
-                              className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800 placeholder:text-slate-400 resize-none"
+                              className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800 placeholder:text-slate-500 resize-none"
                             />
                           </div>
 
                           <div className="space-y-1">
-                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Technologies (comma separated)</label>
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Technologies (comma separated)</label>
                             <input
                               type="text"
                               placeholder="TypeScript, Redis, Docker, gRPC"
                               value={newPortfolioTechs}
                               onChange={(e) => setNewPortfolioTechs(e.target.value)}
-                              className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800 placeholder:text-slate-400"
+                              className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800 placeholder:text-slate-500"
                             />
                           </div>
 
                           <div className="space-y-1">
-                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Performance Metrics / Status</label>
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Performance Metrics / Status</label>
                             <input
                               type="text"
                               placeholder="e.g. 1.2k Stars // v2.4.0 Active"
                               value={newPortfolioMetrics}
                               onChange={(e) => setNewPortfolioMetrics(e.target.value)}
-                              className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800 placeholder:text-slate-400"
+                              className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800 placeholder:text-slate-500"
                             />
                           </div>
 
                           <div className="space-y-1">
-                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Live Link / Source Repository URL</label>
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Live Link / Source Repository URL</label>
                             <input
                               type="text"
                               placeholder="e.g. github.com/user/project"
                               value={newPortfolioLink}
                               onChange={(e) => setNewPortfolioLink(e.target.value)}
-                              className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800 placeholder:text-slate-400"
+                              className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800 placeholder:text-slate-500"
                             />
                           </div>
 
                           <div className="space-y-1">
-                            <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Date Accomplished</label>
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Date Accomplished</label>
                             <input
                               type="text"
                               placeholder="e.g. June 2026"
                               value={newPortfolioDate}
                               onChange={(e) => setNewPortfolioDate(e.target.value)}
-                              className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800 placeholder:text-slate-400"
+                              className="w-full px-3 py-2 bg-white border border-slate-200 focus:border-slate-800 rounded-lg text-xs outline-none font-semibold text-slate-800 placeholder:text-slate-500"
                             />
                           </div>
 
@@ -2659,7 +2689,7 @@ export function EmployeeDossier({
                           {/* Top row */}
                           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                             <div className="flex items-center gap-2.5">
-                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider font-mono ${
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider font-mono ${
                                 item.category === "Open Source" ? "bg-emerald-50 border border-emerald-200/80 text-emerald-700" :
                                 item.category === "Internal Product" ? "bg-blue-50 border border-blue-200/80 text-blue-700" :
                                 item.category === "Technical Writing" ? "bg-indigo-50 border border-indigo-200/80 text-indigo-700" :
@@ -2667,7 +2697,7 @@ export function EmployeeDossier({
                               }`}>
                                 {item.category}
                               </span>
-                              <span className="text-[10px] text-slate-400 font-bold font-mono">{item.date}</span>
+                              <span className="text-[11px] text-slate-500 font-bold font-mono">{item.date}</span>
                             </div>
 
                             {/* Actions */}
@@ -2677,14 +2707,14 @@ export function EmployeeDossier({
                                   href={item.link.startsWith("http") ? item.link : `https://${item.link}`}
                                   target="_blank"
                                   referrerPolicy="no-referrer"
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-lg transition-all"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-lg transition-all"
                                 >
                                   View Live <ArrowUpRight className="w-3 h-3" />
                                 </a>
                               )}
                               <button
                                 onClick={() => handleDeletePortfolio(item.id, item.title)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50/50 border border-slate-200 transition-colors cursor-pointer"
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50/50 border border-slate-200 transition-colors cursor-pointer"
                                 title="Delete artifact"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -2694,7 +2724,7 @@ export function EmployeeDossier({
 
                           {/* Body */}
                           <div className="space-y-1">
-                            <h4 className="text-sm font-extrabold text-slate-950 font-display">{item.title}</h4>
+                            <h4 className="text-xs font-extrabold text-slate-950 font-display">{item.title}</h4>
                             <p className="text-xs text-slate-600 leading-relaxed font-medium">{item.description}</p>
                           </div>
 
@@ -2703,7 +2733,7 @@ export function EmployeeDossier({
                             {/* Technology pills */}
                             <div className="flex flex-wrap gap-1.5">
                               {item.technologies.map((t, idx) => (
-                                <span key={idx} className="px-2 py-0.5 rounded-lg text-[9px] font-bold bg-slate-100 text-slate-600 border border-slate-200/40 font-mono">
+                                <span key={idx} className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200/40 font-mono">
                                   {t}
                                 </span>
                               ))}
@@ -2711,8 +2741,8 @@ export function EmployeeDossier({
 
                             {/* Metrics indicator */}
                             {item.metrics && (
-                              <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-bold font-mono bg-slate-50 px-2.5 py-1 border border-slate-200/60 rounded-lg">
-                                <Activity className="w-3.5 h-3.5 text-slate-400" />
+                              <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-bold font-mono bg-slate-50 px-2.5 py-1 border border-slate-200/60 rounded-lg">
+                                <Activity className="w-3.5 h-3.5 text-slate-500" />
                                 <span>{item.metrics}</span>
                               </div>
                             )}
@@ -2723,7 +2753,7 @@ export function EmployeeDossier({
                       {portfolioItems.length === 0 && (
                         <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
                           <p className="text-xs text-slate-500 font-medium font-mono">No portfolio items showcase registered.</p>
-                          <p className="text-[10px] text-slate-400">Click the 'Add Portfolio Item' button above to highlight their technical achievements.</p>
+                          <p className="text-[11px] text-slate-500">Click the 'Add Portfolio Item' button above to highlight their technical achievements.</p>
                         </div>
                       )}
                     </div>
@@ -2744,9 +2774,9 @@ export function EmployeeDossier({
                         { label: "Festival / Holiday Break", balance: "4 / 8 days", used: "4 used", color: "border-slate-200 text-slate-800 bg-slate-50 shadow-2xs" }
                       ].map((bal, i) => (
                         <div key={i} className={`border p-4 rounded-xl text-center space-y-1 relative ${bal.color}`}>
-                          <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">{bal.label}</span>
+                          <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">{bal.label}</span>
                           <span className="block text-xs font-extrabold font-mono text-slate-800">{bal.balance}</span>
-                          <span className="block text-[10px] text-slate-400 font-mono">{bal.used}</span>
+                          <span className="block text-[11px] text-slate-500 font-mono">{bal.used}</span>
                         </div>
                       ))}
                     </div>
@@ -2754,11 +2784,11 @@ export function EmployeeDossier({
                     {/* Clock-In Compliance info */}
                     <div className="bg-white/90 border border-slate-200/60 rounded-2xl p-5 flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center shadow-2xs">
                       <div className="space-y-1">
-                        <span className="text-[9px] font-mono font-bold text-slate-400 uppercase">Timesheet compliance roster</span>
+                        <span className="text-[10px] font-mono font-bold text-slate-500 uppercase">Timesheet compliance roster</span>
                         <h4 className="text-xs font-bold text-slate-800 font-display">Shift: 09:00 AM - 06:00 PM BST (Standard Hub)</h4>
                         <p className="text-[11px] text-slate-500 font-medium">Average Clock-In timing over 30 days: <strong className="font-mono text-slate-800">09:12 AM</strong> (Excellent compliance ratio).</p>
                       </div>
-                      <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-100 border border-slate-200 text-slate-800 font-mono">
+                      <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 border border-slate-200 text-slate-800 font-mono">
                         Roster Aligned
                       </span>
                     </div>
@@ -2767,7 +2797,7 @@ export function EmployeeDossier({
                     <div className="space-y-3.5">
                       <div className="flex items-center justify-between">
                         <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider font-mono">Employee Leave History</h4>
-                        <span className="text-[10px] font-mono text-slate-400">Total Records: {leaveRequests.length}</span>
+                        <span className="text-[11px] font-mono text-slate-500">Total Records: {leaveRequests.length}</span>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {leaveRequests.map((lr) => (
@@ -2775,10 +2805,10 @@ export function EmployeeDossier({
                             <div className="flex justify-between items-start">
                               <div>
                                 <span className="font-extrabold text-slate-900 font-mono text-xs">{lr.type} Leave ({lr.days} days)</span>
-                                <p className="text-[10px] text-slate-400 font-mono mt-0.5">{lr.start} to {lr.end}</p>
+                                <p className="text-[11px] text-slate-500 font-mono mt-0.5">{lr.start} to {lr.end}</p>
                               </div>
                               <div className="flex flex-col items-end gap-1.5">
-                                <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
                                   lr.status === "Approved" ? "bg-emerald-50 border-emerald-200 text-emerald-800" : lr.status === "Rejected" ? "bg-rose-50 border-rose-200 text-rose-800" : "bg-amber-50 border-amber-200 text-amber-800"
                                 }`}>
                                   {lr.status}
@@ -2788,8 +2818,8 @@ export function EmployeeDossier({
                             <p className="text-slate-600 leading-relaxed italic text-[11px] bg-slate-50/50 p-2.5 rounded-xl border border-slate-150/50">"{lr.notes}"</p>
 
                             {/* Manager quick audits */}
-                            <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-[10px]">
-                              <span className="text-slate-400 font-mono font-bold">Audit Controls:</span>
+                            <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-[11px]">
+                              <span className="text-slate-500 font-mono font-bold">Audit Controls:</span>
                               <div className="flex items-center gap-1.5">
                                 {lr.status === "Pending" && (
                                   <>
@@ -2809,7 +2839,7 @@ export function EmployeeDossier({
                                 )}
                                 <button
                                   onClick={() => handleDeleteLeaveRequest(lr.id)}
-                                  className="p-1 rounded bg-slate-50 hover:bg-rose-50 hover:text-rose-600 text-slate-400 border border-slate-200 cursor-pointer transition-colors"
+                                  className="p-1 rounded bg-slate-50 hover:bg-rose-50 hover:text-rose-600 text-slate-500 border border-slate-200 cursor-pointer transition-colors"
                                   title="Cancel Request"
                                 >
                                   <Trash2 className="w-3 h-3" />
@@ -2820,7 +2850,7 @@ export function EmployeeDossier({
                         ))}
                       </div>
                       {leaveRequests.length === 0 && (
-                        <div className="text-center py-12 bg-slate-50/50 border border-dashed border-slate-200 rounded-2xl text-slate-400 text-xs italic">
+                        <div className="text-center py-12 bg-slate-50/50 border border-dashed border-slate-200 rounded-2xl text-slate-500 text-xs italic">
                           No leave logs or pending applications.
                         </div>
                       )}
@@ -2837,7 +2867,7 @@ export function EmployeeDossier({
                       {/* Compensation structure */}
                       <div className="bg-white/90 border border-slate-200/60 rounded-2xl p-6 flex flex-col justify-between shadow-2xs">
                         <div>
-                          <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-3">Compensation Package</span>
+                          <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono mb-3">Compensation Package</span>
                           <div className="space-y-2.5">
                             <div className="flex justify-between border-b border-slate-200 pb-1.5 text-xs relative group/comp cursor-help">
                               <span className="text-slate-500 font-semibold">Annual Gross</span>
@@ -2845,7 +2875,7 @@ export function EmployeeDossier({
 
                               {/* Tooltip on hover */}
                               <div className="absolute bottom-full mb-2 hidden group-hover/comp:flex flex-col items-center z-50 pointer-events-none w-56 left-1/2 -translate-x-1/2">
-                                <div className="bg-slate-950 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
+                                <div className="bg-slate-950 text-white text-[11px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
                                   <strong>Annual Gross:</strong> Contractual base salary package prior to standard tax withholdings or benefit deductibles.
                                 </div>
                                 <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
@@ -2858,7 +2888,7 @@ export function EmployeeDossier({
 
                               {/* Tooltip on hover */}
                               <div className="absolute bottom-full mb-2 hidden group-hover/comp:flex flex-col items-center z-50 pointer-events-none w-56 left-1/2 -translate-x-1/2">
-                                <div className="bg-slate-950 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
+                                <div className="bg-slate-950 text-white text-[11px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
                                   <strong>Monthly Salary:</strong> Calculated directly as Annual Gross / 12, processed on the final weekday of each month.
                                 </div>
                                 <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
@@ -2871,7 +2901,7 @@ export function EmployeeDossier({
 
                               {/* Tooltip on hover */}
                               <div className="absolute bottom-full mb-2 hidden group-hover/comp:flex flex-col items-center z-50 pointer-events-none w-56 left-1/2 -translate-x-1/2">
-                                <div className="bg-slate-950 text-white text-[10px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
+                                <div className="bg-slate-950 text-white text-[11px] py-1.5 px-2.5 rounded-lg shadow-md border border-slate-800 font-sans leading-normal font-medium text-center">
                                   <strong>Hike Adjustments:</strong> Historical count of salary adjustments and performance merit raises logged for this profile.
                                 </div>
                                 <div className="w-1.5 h-1.5 bg-slate-950 rotate-45 -mt-1 border-r border-b border-slate-800" />
@@ -2879,7 +2909,7 @@ export function EmployeeDossier({
                             </div>
                           </div>
                         </div>
-                        <div className="text-[10px] text-slate-400 italic mt-4">
+                        <div className="text-[11px] text-slate-500 italic mt-4">
                           Compensation package synced with global payroll cycles.
                         </div>
                       </div>
@@ -2888,7 +2918,7 @@ export function EmployeeDossier({
                       <div className="bg-white/90 border border-slate-200/60 rounded-2xl p-6 flex flex-col justify-between shadow-2xs">
                         <div>
                           <div className="flex items-center justify-between mb-3">
-                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Raise Progression</span>
+                            <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono">Raise Progression</span>
                             <button
                               type="button"
                               onClick={() => {
@@ -2899,7 +2929,7 @@ export function EmployeeDossier({
                                 });
                                 setIsIncrementModalOpen(true);
                               }}
-                              className="text-[9px] font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow-2xs"
+                              className="text-[10px] font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow-2xs"
                             >
                               Log Raise
                             </button>
@@ -2907,7 +2937,7 @@ export function EmployeeDossier({
 
                           <div className="space-y-3 max-h-[140px] overflow-y-auto pr-1">
                             {(!activeDirectoryEmployee.incrementHistory || activeDirectoryEmployee.incrementHistory.length === 0) ? (
-                              <div className="text-center py-8 text-slate-400 text-xs italic">
+                              <div className="text-center py-8 text-slate-500 text-xs italic">
                                 No registered raises logged yet.
                               </div>
                             ) : (
@@ -2915,7 +2945,7 @@ export function EmployeeDossier({
                                 const increasePct = Math.round(((inc.newSalary - inc.previousSalary) / inc.previousSalary) * 100);
                                 return (
                                   <div key={index} className="bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs shadow-2xs">
-                                    <div className="flex justify-between text-[10px] text-slate-400 font-mono font-bold mb-1">
+                                    <div className="flex justify-between text-[11px] text-slate-500 font-mono font-bold mb-1">
                                       <span>{inc.date}</span>
                                       <span className="text-slate-800">+{increasePct}% Hike</span>
                                     </div>
@@ -2939,7 +2969,7 @@ export function EmployeeDossier({
                         <button
                           type="button"
                           onClick={() => setIsAddingOkr(!isAddingOkr)}
-                          className="text-[10px] font-bold text-slate-800 hover:text-slate-900 bg-slate-50 border border-slate-200 hover:border-slate-300 px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow-2xs"
+                          className="text-[11px] font-bold text-slate-800 hover:text-slate-900 bg-slate-50 border border-slate-200 hover:border-slate-300 px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow-2xs"
                         >
                           {isAddingOkr ? "Cancel" : "Add OKR Target"}
                         </button>
@@ -2950,7 +2980,7 @@ export function EmployeeDossier({
                         <form onSubmit={handleAddOkr} className="bg-slate-50 border border-slate-200/60 p-4 rounded-xl space-y-3">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="space-y-1">
-                              <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Objective Title</label>
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Objective Title</label>
                               <input
                                 type="text"
                                 placeholder="e.g. Optimize search database indexing"
@@ -2960,7 +2990,7 @@ export function EmployeeDossier({
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Target Metric / Metric Indicator</label>
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Target Metric / Metric Indicator</label>
                               <input
                                 type="text"
                                 placeholder="e.g. Goal: Under 150ms response latency"
@@ -2972,7 +3002,7 @@ export function EmployeeDossier({
                           </div>
                           <div className="flex items-center justify-between gap-4">
                             <div className="flex items-center gap-2 text-xs">
-                              <span className="text-slate-400 font-mono font-bold">Initial Progress:</span>
+                              <span className="text-slate-500 font-mono font-bold">Initial Progress:</span>
                               <input
                                 type="number"
                                 min={0}
@@ -2999,7 +3029,7 @@ export function EmployeeDossier({
                             <div className="flex justify-between items-start text-slate-600 font-semibold text-[11px] gap-4">
                               <div className="space-y-0.5">
                                 <span className="font-bold text-slate-800">{okr.title}</span>
-                                <p className="text-[9px] font-mono font-semibold text-slate-400">{okr.metric}</p>
+                                <p className="text-[10px] font-mono font-semibold text-slate-500">{okr.metric}</p>
                               </div>
                               <div className="flex items-center gap-3 shrink-0">
                                 <div className="flex items-center gap-1 bg-white border border-slate-200/60 px-1.5 py-0.5 rounded-md font-bold text-slate-800">
@@ -3011,12 +3041,12 @@ export function EmployeeDossier({
                                     onChange={(e) => handleUpdateOkrPct(index, Number(e.target.value) || 0)}
                                     className="w-10 bg-transparent text-center font-bold text-slate-800 font-mono text-[11px] outline-none"
                                   />
-                                  <span className="font-mono text-slate-400 text-[10px] font-bold">%</span>
+                                  <span className="font-mono text-slate-500 text-[11px] font-bold">%</span>
                                 </div>
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteOkr(index)}
-                                  className="text-slate-400 hover:text-rose-600 p-1 hover:bg-white rounded border border-transparent hover:border-slate-200 transition-all cursor-pointer"
+                                  className="text-slate-500 hover:text-rose-600 p-1 hover:bg-white rounded border border-transparent hover:border-slate-200 transition-all cursor-pointer"
                                   title="Remove Objective"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
@@ -3032,7 +3062,7 @@ export function EmployeeDossier({
                           </div>
                         ))}
                         {okrs.length === 0 && (
-                          <div className="text-center py-6 text-slate-400 italic text-xs">
+                          <div className="text-center py-6 text-slate-500 italic text-xs">
                             No active Objective Key Results mapped to this cycle.
                           </div>
                         )}
@@ -3046,10 +3076,10 @@ export function EmployeeDossier({
                         <table className="w-full text-left border-collapse">
                           <thead>
                             <tr className="bg-slate-50 border-b border-slate-200">
-                              <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-16">Seq</th>
-                              <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Assessment Cycle</th>
-                              <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Attendance Ratio</th>
-                              <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">AI Assistant Sync</th>
+                              <th className="px-4 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-16">Seq</th>
+                              <th className="px-4 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Assessment Cycle</th>
+                              <th className="px-4 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Attendance Ratio</th>
+                              <th className="px-4 py-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right">AI Assistant Sync</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
@@ -3058,13 +3088,13 @@ export function EmployeeDossier({
                               .sort((a, b) => b.month.localeCompare(a.month))
                               .map((p, idx) => (
                                 <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                                  <td className="px-4 py-3 text-xs text-slate-400 font-bold font-mono">{idx + 1}</td>
+                                  <td className="px-4 py-3 text-xs text-slate-500 font-bold font-mono">{idx + 1}</td>
                                   <td className="px-4 py-3 text-xs font-bold text-slate-800 font-mono">{p.month}</td>
                                   <td className="px-4 py-3 text-xs text-slate-600 font-mono">{p.attendance}% attendance</td>
                                   <td className="px-4 py-3 text-right">
                                     <button
                                       onClick={() => handleQuickAnalyze(p.month)}
-                                      className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 rounded-lg text-[10px] font-bold cursor-pointer transition-all shadow-2xs"
+                                      className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 rounded-lg text-[11px] font-bold cursor-pointer transition-all shadow-2xs"
                                     >
                                       Run AI Audit
                                     </button>
@@ -3090,7 +3120,7 @@ export function EmployeeDossier({
                           <Bot className="w-4 h-4" />
                         </div>
                         <div className="space-y-1">
-                          <span className="text-[10px] font-mono text-slate-800 font-bold">Gemini Talent Co-pilot</span>
+                          <span className="text-[11px] font-mono text-slate-800 font-bold">Gemini Talent Co-pilot</span>
                           <p className="text-xs text-slate-700 leading-relaxed font-medium">
                             Hello! I am your Gemini Technical Success advisor. I can analyze {activeDirectoryEmployee.name}'s technology stacks, active sprint issues, GPG credentials compliance, or draft custom promotion recommendations. Let's begin!
                           </p>
@@ -3114,7 +3144,7 @@ export function EmployeeDossier({
                             {msg.sender === "user" ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                           </div>
                           <div className="space-y-1 w-full min-w-0">
-                            <span className={`text-[9px] font-mono font-bold uppercase tracking-wider block ${msg.sender === "user" ? "text-slate-300" : "text-slate-700"}`}>
+                            <span className={`text-[10px] font-mono font-bold uppercase tracking-wider block ${msg.sender === "user" ? "text-slate-300" : "text-slate-700"}`}>
                               {msg.sender === "user" ? "Corporate Admin" : "Gemini Talent Advisor"}
                             </span>
                             <p className="text-xs leading-relaxed whitespace-pre-line font-sans font-medium break-words">
@@ -3130,7 +3160,7 @@ export function EmployeeDossier({
                             <Bot className="w-4 h-4" />
                           </div>
                           <div className="space-y-1">
-                            <span className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-widest">Compiling engineering logs...</span>
+                            <span className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-widest">Compiling engineering logs...</span>
                             <div className="flex gap-1.5 py-2">
                               <span className="w-1.5 h-1.5 rounded-full bg-slate-700 animate-bounce" style={{ animationDelay: "0ms" }} />
                               <span className="w-1.5 h-1.5 rounded-full bg-slate-700 animate-bounce" style={{ animationDelay: "150ms" }} />
@@ -3153,7 +3183,7 @@ export function EmployeeDossier({
                           type="button"
                           onClick={() => handleSendCopilotMessage(preset.prompt)}
                           disabled={isCopilotLoading}
-                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 hover:text-slate-900 rounded-xl text-[10px] font-bold cursor-pointer shrink-0 transition-colors disabled:opacity-50 font-display shadow-2xs"
+                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 hover:text-slate-900 rounded-xl text-[11px] font-bold cursor-pointer shrink-0 transition-colors disabled:opacity-50 font-display shadow-2xs"
                         >
                           {preset.text}
                         </button>
@@ -3174,7 +3204,7 @@ export function EmployeeDossier({
                         value={copilotInput}
                         onChange={(e) => setCopilotInput(e.target.value)}
                         disabled={isCopilotLoading}
-                        className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800/10 focus:bg-white text-slate-800 text-xs rounded-xl focus:outline-none transition-all placeholder:text-slate-400 disabled:opacity-50 font-medium font-sans"
+                        className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 focus:border-slate-800 focus:ring-1 focus:ring-slate-800/10 focus:bg-white text-slate-800 text-xs rounded-xl focus:outline-none transition-all placeholder:text-slate-500 disabled:opacity-50 font-medium font-sans"
                       />
                       <button
                         type="submit"
@@ -3194,7 +3224,7 @@ export function EmployeeDossier({
           </div>
 
           {/* Footer synchronized brand details */}
-          <div className="border-t border-dashed border-slate-200 pt-5 mt-8 flex flex-col sm:flex-row justify-between items-center text-[9px] text-slate-400 font-bold uppercase tracking-wider gap-3 font-mono">
+          <div className="border-t border-dashed border-slate-200 pt-5 mt-8 flex flex-col sm:flex-row justify-between items-center text-[10px] text-slate-500 font-bold uppercase tracking-wider gap-3 font-mono">
             <span>R&D TALENT CONSOLE SYNCED</span>
             <span className="text-slate-500">Continuous Staging Sync</span>
           </div>
@@ -3223,7 +3253,7 @@ export function EmployeeDossier({
               <div className="font-extrabold text-[11px] text-slate-800 tracking-tight leading-none mb-1">
                 {hoveredLeave.employeeName}
               </div>
-              <div className="text-[9px] text-slate-400 font-medium tracking-tight leading-none truncate">
+              <div className="text-[10px] text-slate-500 font-medium tracking-tight leading-none truncate">
                 {hoveredLeave.employeeRole} • <span className="font-bold text-slate-500">{hoveredLeave.employeeTeam}</span>
               </div>
             </div>
@@ -3232,7 +3262,7 @@ export function EmployeeDossier({
           <div className="h-[1px] bg-slate-100" />
 
           <div className="flex items-center justify-between">
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-wider ${
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-black uppercase tracking-wider ${
               hoveredLeave.leaveType === "Sick" ? "bg-rose-50 text-rose-650 border-rose-100" :
               hoveredLeave.leaveType === "Casual" ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
               "bg-violet-50 text-violet-650 border-violet-100"
@@ -3244,28 +3274,28 @@ export function EmployeeDossier({
               }`} />
               {hoveredLeave.leaveType} Leave
             </span>
-            <span className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ${
+            <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ${
               hoveredLeave.status === "Approved" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-amber-50 text-amber-600 border-amber-100"
             }`}>
               {hoveredLeave.status}
             </span>
           </div>
 
-          <div className="flex flex-col gap-1 text-[10px] text-slate-500 bg-slate-50 p-2 rounded-xl border border-slate-100">
+          <div className="flex flex-col gap-1 text-[11px] text-slate-500 bg-slate-50 p-2 rounded-xl border border-slate-100">
             <div className="flex items-center gap-1">
-              <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
+              <Calendar className="w-3 h-3 text-slate-500 shrink-0" />
               <span className="font-bold text-slate-700">Roster Period:</span>
             </div>
-            <div className="font-mono text-[9px] pl-4 text-slate-600">
+            <div className="font-mono text-[10px] pl-4 text-slate-600">
               {hoveredLeave.start} to {hoveredLeave.end}
             </div>
-            <div className="pl-4 text-[9px] font-bold text-slate-800">
+            <div className="pl-4 text-[10px] font-bold text-slate-800">
               Duration: <span className="text-indigo-600 font-black">{hoveredLeave.days} {hoveredLeave.days === 1 ? "day" : "days"}</span>
             </div>
           </div>
 
-          <div className="text-[10px] text-slate-600 bg-indigo-50/20 p-2 rounded-xl border border-indigo-100/30 relative">
-            <div className="text-[8px] font-black text-indigo-500 uppercase tracking-widest mb-0.5">Notes</div>
+          <div className="text-[11px] text-slate-600 bg-indigo-50/20 p-2 rounded-xl border border-indigo-100/30 relative">
+            <div className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-0.5">Notes</div>
             <p className="italic font-medium text-slate-700">"{hoveredLeave.notes}"</p>
           </div>
         </div>

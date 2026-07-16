@@ -132,9 +132,9 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="px-3.5 py-1.5 hover:bg-white hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] text-slate-700 hover:text-slate-900 rounded-full text-[10px] font-black uppercase tracking-wider font-mono cursor-pointer transition-all duration-300 flex items-center gap-1.5 select-none"
+          className="px-3.5 py-1.5 hover:bg-white hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] text-slate-700 hover:text-slate-900 rounded-full text-[11px] font-black uppercase tracking-wider font-mono cursor-pointer transition-all duration-300 flex items-center gap-1.5 select-none"
         >
-          <Calendar className="h-3 w-3 text-slate-400" />
+          <Calendar className="h-3 w-3 text-slate-500" />
           <span>{selectedMonthName} {initialYear}</span>
         </button>
 

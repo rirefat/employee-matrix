@@ -9,6 +9,7 @@ import {
   Calendar,
   Layers,
   UserPlus,
+  ArrowUpRight,
   Trash2,
   Edit3,
   CheckCircle,
@@ -47,7 +48,8 @@ import {
   ShieldAlert,
   User,
   Paperclip,
-  Upload
+  Upload,
+  Link as LinkIcon
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -535,8 +537,34 @@ export default function App() {
       setReports(reps);
       setTargets(targs);
 
+      // Parse query parameters for direct profile/teammate sharing
+      const params = new URLSearchParams(window.location.search);
+      const qEmpId = params.get("employeeId") || params.get("empId");
+      const qPortal = params.get("portal");
+      const qTab = params.get("tab");
+
+      if (qPortal === "performance" || qPortal === "leaves" || qPortal === "employees" || qPortal === "profile") {
+        setActivePortal(qPortal as any);
+      } else if (qEmpId) {
+        // Default to performance portal when deep linking an employee
+        setActivePortal("performance");
+      }
+
+      if (qTab === "profile" || qTab === "team" || qTab === "roster" || qTab === "compare") {
+        setActiveTab(qTab as any);
+      } else if (qEmpId) {
+        // Default to profile tab
+        setActiveTab("profile");
+      }
+
       if (emps.length > 0) {
-        setReportEmployeeId(emps[0].id);
+        if (qEmpId && emps.some(e => e.id === qEmpId)) {
+          setReportEmployeeId(qEmpId);
+          setSelectedDirectoryEmpId(qEmpId);
+        } else {
+          setReportEmployeeId(emps[0].id);
+          setSelectedDirectoryEmpId(emps[0].id);
+        }
       }
     } catch (err) {
       console.error("Error fetching data:", err);
@@ -1291,6 +1319,21 @@ export default function App() {
 
   const selectedReportEmployeeObj = myEmployees.find(e => e.id === reportEmployeeId);
 
+  const leaveAlerts = useMemo(() => {
+    return myEmployees.map(emp => {
+      const balance = emp.leaveBalance || { sickLeaveUsed: 0, casualLeaveUsed: 0, govFestHolidaysUsed: 0 };
+      const used = (balance.sickLeaveUsed || 0) + (balance.casualLeaveUsed || 0) + (balance.govFestHolidaysUsed || 0);
+      const totalAllocation = 28;
+      const exceedsThreshold = used > (totalAllocation * 0.75); // 21 days (75% of 28)
+      return {
+        employee: emp,
+        used,
+        pct: Math.round((used / totalAllocation) * 100),
+        exceedsThreshold
+      };
+    }).filter(item => item.exceedsThreshold);
+  }, [myEmployees]);
+
   const activeEmployeesCount = useMemo(() => {
     return myEmployees.filter(e => e.active !== false).length || 1;
   }, [myEmployees]);
@@ -1412,10 +1455,10 @@ export default function App() {
               <Layers className="h-5 w-5 text-indigo-600 group-hover:scale-105 transition-all duration-300" />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-black text-slate-900 tracking-widest uppercase font-mono leading-none">
+              <span className="text-xs font-black text-slate-900 tracking-widest uppercase font-mono leading-none">
                 Matrix<span className="text-indigo-600 font-extrabold">.</span>
               </span>
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1.5 font-mono">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1.5 font-mono">
                 Workspace
               </span>
             </div>
@@ -1425,7 +1468,7 @@ export default function App() {
         {/* SIDEBAR BODY LINKS */}
         <div className="flex-1 overflow-y-auto py-6 px-3.5 space-y-6 relative">
           <div className="space-y-2">
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.25em] mb-3 px-2 font-mono">
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.25em] mb-3 px-2 font-mono">
               Portals
             </div>
               
@@ -1445,8 +1488,8 @@ export default function App() {
                 <LayoutDashboard className="h-4 w-4" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-bold tracking-tight">Performance Hub</div>
-                <div className={`text-[10px] font-mono leading-none mt-0.5 truncate ${activePortal === "performance" ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-500"}`}>
+                <div className="text-xs font-bold tracking-tight">Dashboard</div>
+                <div className={`text-[11px] font-mono leading-none mt-0.5 truncate ${activePortal === "performance" ? "text-indigo-600" : "text-slate-500 group-hover:text-slate-500"}`}>
                   KPI metrics & reports
                 </div>
               </div>
@@ -1472,7 +1515,7 @@ export default function App() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-bold tracking-tight">Leave Planner</div>
-                <div className={`text-[10px] font-mono leading-none mt-0.5 truncate ${activePortal === "leaves" ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-500"}`}>
+                <div className={`text-[11px] font-mono leading-none mt-0.5 truncate ${activePortal === "leaves" ? "text-indigo-600" : "text-slate-500 group-hover:text-slate-500"}`}>
                   Time off & calendar
                 </div>
               </div>
@@ -1498,7 +1541,7 @@ export default function App() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-bold tracking-tight">Teammate Directory</div>
-                <div className={`text-[10px] font-mono leading-none mt-0.5 truncate ${activePortal === "employees" ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-500"}`}>
+                <div className={`text-[11px] font-mono leading-none mt-0.5 truncate ${activePortal === "employees" ? "text-indigo-600" : "text-slate-500 group-hover:text-slate-500"}`}>
                   Profiles & responsibilities
                 </div>
               </div>
@@ -1524,7 +1567,7 @@ export default function App() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-bold tracking-tight">My Profile Info</div>
-                <div className={`text-[10px] font-mono leading-none mt-0.5 truncate ${activePortal === "profile" ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-500"}`}>
+                <div className={`text-[11px] font-mono leading-none mt-0.5 truncate ${activePortal === "profile" ? "text-indigo-600" : "text-slate-500 group-hover:text-slate-500"}`}>
                   View & edit my details
                 </div>
               </div>
@@ -1540,7 +1583,7 @@ export default function App() {
           {/* DOCUMENTATION & LINKS */}
           <div className="pt-2 border-t border-slate-100 space-y-2.5">
             <div className="flex items-center justify-between px-1">
-              <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-400 font-mono">RESOURCES</span>
+              <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500 font-mono">RESOURCES</span>
               <span className="flex items-center gap-1 text-[8.5px] font-bold text-emerald-700 font-mono tracking-wider bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded-md">
                 <span className="h-1 w-1 rounded-full bg-emerald-500 animate-ping shrink-0" />
                 SYSTEM LIVE
@@ -1550,29 +1593,29 @@ export default function App() {
             <div className="grid grid-cols-2 gap-1.5">
               <a 
                 href="#docs" 
-                className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200/60 hover:border-slate-300 text-[10px] text-slate-600 hover:text-slate-900 transition-all font-medium group shadow-3xs"
+                className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200/60 hover:border-slate-300 text-[11px] text-slate-600 hover:text-slate-900 transition-all font-medium group shadow-3xs"
               >
                 <BookOpen className="w-3 h-3 text-indigo-500 group-hover:scale-110 transition-transform" />
                 <span>Docs</span>
-                <ExternalLink className="w-2.5 h-2.5 text-slate-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ExternalLink className="w-2.5 h-2.5 text-slate-500 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
               </a>
               <a 
                 href="#support" 
-                className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200/60 hover:border-slate-300 text-[10px] text-slate-600 hover:text-slate-900 transition-all font-medium group shadow-3xs"
+                className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200/60 hover:border-slate-300 text-[11px] text-slate-600 hover:text-slate-900 transition-all font-medium group shadow-3xs"
               >
                 <HelpCircle className="w-3 h-3 text-indigo-500 group-hover:scale-110 transition-transform" />
                 <span>Support</span>
-                <ExternalLink className="w-2.5 h-2.5 text-slate-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ExternalLink className="w-2.5 h-2.5 text-slate-500 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
               </a>
             </div>
           </div>
 
           {/* COPYRIGHT */}
           <div className="pt-2 px-1 text-center border-t border-slate-100">
-            <p className="text-[9px] font-mono text-slate-450 font-bold tracking-wider uppercase">
+            <p className="text-[10px] font-mono text-slate-450 font-bold tracking-wider uppercase">
               Matrix Portal &copy; 2026
             </p>
-            <p className="text-[8px] font-mono text-slate-400 mt-0.5 tracking-tight">
+            <p className="text-[9px] font-mono text-slate-500 mt-0.5 tracking-tight">
               Enterprise HR Suite v1.2
             </p>
           </div>
@@ -1588,7 +1631,7 @@ export default function App() {
           toast.type === "success" ? "bg-emerald-600 text-white border-emerald-500" : "bg-rose-600 text-white border-rose-500"
         }`}>
           {toast.type === "success" ? <CheckCircle className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
-          <span className="text-sm font-semibold">{toast.message}</span>
+          <span className="text-xs font-semibold">{toast.message}</span>
         </div>
       )}
 
@@ -1615,7 +1658,7 @@ export default function App() {
                 {activePortal === "profile" && "Profile & Employment Details"}
               </h1>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500">
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
                   Live View
                 </span>
@@ -1645,7 +1688,7 @@ export default function App() {
               <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActivePortal("profile")}>
                 <div className="hidden md:flex flex-col items-end text-right">
                   <span className="text-xs font-semibold text-slate-700 group-hover:text-slate-900 transition-colors">{loggedInManager.name}</span>
-                  <span className="text-[10px] text-slate-400 font-medium">{loggedInManager.role}</span>
+                  <span className="text-[11px] text-slate-500 font-medium">{loggedInManager.role}</span>
                 </div>
                 <div className="relative">
                   <div className="w-9 h-9 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200 overflow-hidden shrink-0 group-hover:border-slate-300 transition-colors">
@@ -1667,7 +1710,7 @@ export default function App() {
                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
                   }`}
                 >
-                  <User className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
+                  <User className="h-4 w-4 text-slate-500 group-hover:text-slate-600" />
                   My Profile
                 </button>
                 <div className="h-px bg-slate-100 my-1" />
@@ -1687,6 +1730,83 @@ export default function App() {
       {activePortal === "performance" && (
         <>
       <main className="flex-1 w-full px-6 lg:px-10 xl:px-12 py-8 flex flex-col gap-8 overflow-y-auto overflow-x-hidden">
+          {/* Automated System Alerts for High Leave Consumption */}
+          {leaveAlerts.length > 0 && (
+            <div className="bg-amber-50/75 border border-amber-200/80 rounded-3xl p-6 relative overflow-hidden shadow-3xs flex flex-col gap-4 animate-fade-in">
+              <div className="absolute right-0 top-0 w-32 h-32 bg-gradient-to-bl from-amber-500/5 to-amber-600/5 blur-2xl pointer-events-none" />
+              <div className="flex items-start gap-3.5">
+                <div className="p-2 bg-amber-100 text-amber-700 rounded-2xl shrink-0 shadow-4xs">
+                  <AlertTriangle className="w-5 h-5 stroke-[2.5]" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-amber-950 tracking-tight font-display flex items-center gap-2">
+                    System Alert: High Annual Leave Consumption ({leaveAlerts.length})
+                  </h3>
+                  <p className="text-xs text-amber-700 mt-0.5 leading-relaxed font-medium">
+                    The following team members have consumed more than <strong className="font-extrabold text-amber-800">75%</strong> of their annual leave allowance (<strong className="font-extrabold text-amber-800">28 days</strong>). Please monitor their remaining balances.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {leaveAlerts.map(({ employee, used, pct }) => (
+                  <div key={employee.id} className="bg-white/90 backdrop-blur-xs border border-amber-200/60 rounded-2xl p-4 flex flex-col justify-between gap-3 shadow-4xs hover:border-amber-300 transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 overflow-hidden shrink-0">
+                        <img src={get3DAvatarUrl(employee.name)} alt={employee.name} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold text-slate-900 truncate font-display">{employee.name}</div>
+                        <div className="text-[11px] text-slate-500 font-mono truncate">{employee.role} • {employee.team}</div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-[11px] font-bold text-slate-600 font-mono">
+                        <span>Consumed: {used} / 28 Days</span>
+                        <span className="text-amber-700">{pct}%</span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-150">
+                        <div 
+                          className="bg-amber-500 h-full rounded-full transition-all duration-500" 
+                          style={{ width: `${Math.min(100, pct)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-1.5 pt-1 border-t border-slate-100">
+                      <button
+                        onClick={() => {
+                          setActivePortal("performance");
+                          setActiveTab("profile");
+                          setReportEmployeeId(employee.id);
+                          setSelectedDirectoryEmpId(employee.id);
+                          // Scroll smoothly if element exists
+                          setTimeout(() => {
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }, 100);
+                        }}
+                        className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-700 hover:text-slate-900 transition-colors cursor-pointer inline-flex items-center gap-1"
+                      >
+                        Profile <ArrowUpRight className="w-3 h-3 text-slate-500" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setActivePortal("leaves");
+                          // Filter list using directory or ledger search
+                          setLeaveLedgerSearch(employee.name);
+                        }}
+                        className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200/50 rounded-lg text-[11px] font-bold text-amber-800 hover:text-amber-900 transition-colors cursor-pointer inline-flex items-center gap-1"
+                      >
+                        Check Calendar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Content tabs selector */}
           <div className="flex flex-wrap bg-slate-100 p-1 rounded-xl gap-1 w-fit border border-slate-200/50">
             <button
@@ -1745,12 +1865,12 @@ export default function App() {
                         {selectedReportEmployeeObj ? (
                           <img src={get3DAvatarUrl(selectedReportEmployeeObj.name)} alt="" className="w-full h-full object-cover" />
                         ) : (
-                          <Users className="h-3 w-3 text-slate-400" />
+                          <Users className="h-3 w-3 text-slate-500" />
                         )}
                       </div>
                     </div>
                     <select 
-                      className="w-full appearance-none bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-sm font-medium rounded-full pl-10 pr-10 py-2 outline-none transition-all cursor-pointer shadow-xs focus:border-slate-300 focus:ring-4 focus:ring-slate-50"
+                      className="w-full appearance-none bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-medium rounded-full pl-10 pr-10 py-2 outline-none transition-all cursor-pointer shadow-xs focus:border-slate-300 focus:ring-4 focus:ring-slate-50"
                       value={reportEmployeeId || ""}
                       onChange={(e) => setReportEmployeeId(e.target.value)}
                     >
@@ -1759,7 +1879,7 @@ export default function App() {
                         <option key={emp.id} value={emp.id}>{emp.name}</option>
                       ))}
                     </select>
-                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none group-hover:text-slate-600 transition-colors" />
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none group-hover:text-slate-600 transition-colors" />
                   </div>
                   
                   <button 
@@ -1786,7 +1906,9 @@ export default function App() {
                     <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
                       
                       {/* Left Block: Main Profile Card (70%) */}
-                      <div className="lg:col-span-7 relative overflow-hidden rounded-2xl border border-slate-200/50 shadow-xl p-6 bg-white/70 backdrop-blur-md flex flex-col justify-between">
+                      <div className="lg:col-span-7 relative overflow-hidden rounded-2xl border border-slate-200/50 shadow-xl p-6 bg-white flex flex-col justify-between">
+                        {/* Background dot grid pattern with fade-out mask */}
+                        <div className="absolute inset-0 bg-grid-pattern pointer-events-none" style={{ maskImage: "radial-gradient(ellipse at center, black 30%, transparent 80%)", WebkitMaskImage: "radial-gradient(ellipse at center, black 30%, transparent 80%)" }} />
                         {/* Atmospheric color nodes under glass to enhance depth */}
                         <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-gradient-to-br from-indigo-500/15 to-purple-500/15 blur-3xl pointer-events-none" />
                         <div className="absolute -bottom-24 -left-24 w-48 h-48 rounded-full bg-gradient-to-br from-emerald-500/10 to-teal-500/15 blur-3xl pointer-events-none" />
@@ -1799,36 +1921,36 @@ export default function App() {
                         <div className="absolute bottom-3 right-3 w-1.5 h-1.5 border-b border-r border-slate-300 pointer-events-none" />
 
                         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
-                          <div className="flex gap-4">
+                          <div className="flex gap-4 flex-1 min-w-0">
                             {/* Avatar block with active state glowing borders */}
                             <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center shadow-md border border-slate-200 overflow-hidden shrink-0">
                               <img src={get3DAvatarUrl(selectedReportEmployeeObj.name)} alt={selectedReportEmployeeObj.name} className="w-full h-full object-cover" />
                             </div>
-                            <div>
-                              <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">{selectedReportEmployeeObj.name}</h1>
-                              <p className="text-xs text-slate-600 mt-1 flex items-center gap-1.5">
+                            <div className="min-w-0">
+                              <h1 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight truncate">{selectedReportEmployeeObj.name}</h1>
+                              <p className="text-xs text-slate-600 mt-1 flex flex-wrap items-center gap-1.5">
                                 <span className="font-medium">Matrix Tier:</span>
                                 {activeRecord ? (
                                   activeRecord.attendance >= (currentTarget?.attendanceMin || 95) && activeRecord.deliveredProjectsValue >= effectiveProjectValueMin ? (
-                                    <span className="text-emerald-700 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full text-[10px]">Exceeds Expectations</span>
+                                    <span className="text-emerald-700 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full text-[11px]">Exceeds Expectations</span>
                                   ) : (overallPerformance || 0) >= 80 ? (
-                                    <span className="text-blue-700 font-bold bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full text-[10px]">Meets Expectations</span>
+                                    <span className="text-blue-700 font-bold bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full text-[11px]">Meets Expectations</span>
                                   ) : (
-                                    <span className="text-amber-600 font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full text-[10px]">Development Required</span>
+                                    <span className="text-amber-600 font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full text-[11px]">Development Required</span>
                                   )
                                 ) : (
-                                  <span className="text-slate-400 italic font-medium">No metrics registered yet</span>
+                                  <span className="text-slate-500 italic font-medium">No metrics registered yet</span>
                                 )}
                               </p>
                               <div className="mt-4 pt-4 border-t border-slate-200/40 space-y-3">
                                 {/* Header Info */}
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-sans">
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-sans">
                                       Overall Performance Rating
                                     </span>
                                     {activeRecord && overallPerformance !== null ? (
-                                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold border transition-colors ${
+                                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold border transition-colors ${
                                         overallPerformance >= 90
                                           ? "bg-emerald-50 text-emerald-700 border-emerald-100"
                                           : overallPerformance >= 70
@@ -1848,11 +1970,11 @@ export default function App() {
                                   </div>
                                   
                                   {activeRecord && overallPerformance !== null ? (
-                                    <span className="text-sm font-bold font-mono text-slate-800">
+                                    <span className="text-xs font-bold font-mono text-slate-800">
                                       {overallPerformance}%
                                     </span>
                                   ) : (
-                                    <span className="text-xs text-slate-400 italic">No metrics registered yet</span>
+                                    <span className="text-xs text-slate-500 italic">No metrics registered yet</span>
                                   )}
                                 </div>
 
@@ -1881,7 +2003,7 @@ export default function App() {
                                     </div>
 
                                     {/* Minimal Status Key Legend */}
-                                    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 pt-1 text-[9px] font-semibold text-slate-400 font-mono">
+                                    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 pt-1 text-[10px] font-semibold text-slate-500 font-mono">
                                       <span className="flex items-center gap-1">
                                         <span className="h-1.5 w-1.5 rounded-full bg-rose-400" /> At Risk (&lt;70%)
                                       </span>
@@ -1899,7 +2021,7 @@ export default function App() {
                           </div>
 
                           {/* Action buttons inside Profile Card */}
-                          <div className="flex gap-2 w-full md:w-auto relative z-20">
+                          <div className="flex gap-2 w-full md:w-auto shrink-0 relative z-20">
                             <button
                               onClick={() => {
                                 if (selectedReportEmployeeObj) {
@@ -1938,9 +2060,9 @@ export default function App() {
                       }`}>
                         <div>
                           <div className="flex justify-between items-start mb-1">
-                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Attendance Rate</span>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Attendance Rate</span>
                             {activeRecord && (
-                              <span className={`text-[8px] font-bold px-1.5 py-0.2 rounded font-mono ${
+                              <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded font-mono ${
                                 activeRecord.attendance >= (currentTarget?.attendanceMin || 95)
                                   ? "text-emerald-700 bg-emerald-100/60"
                                   : "text-rose-700 bg-rose-100/60"
@@ -1952,11 +2074,11 @@ export default function App() {
                           <div className="text-xl font-bold font-mono text-slate-800">
                             {activeRecord ? `${activeRecord.attendance}%` : "—"}
                           </div>
-                          <div className="text-[9px] text-slate-500 font-medium font-sans mt-0.5">
+                          <div className="text-[10px] text-slate-500 font-medium font-sans mt-0.5">
                             Target: <span className="font-mono font-bold">{(currentTarget?.attendanceMin || 95)}%</span>
                           </div>
                           {activeRecord && (
-                            <div className="mt-1.5 flex flex-wrap gap-x-1.5 gap-y-0.5 text-[8px] font-semibold text-slate-500 font-mono">
+                            <div className="mt-1.5 flex flex-wrap gap-x-1.5 gap-y-0.5 text-[9px] font-semibold text-slate-500 font-mono">
                               <span className="text-emerald-700 bg-emerald-500/10 px-1 rounded">Pres: {activeRecord.presentDays !== undefined ? activeRecord.presentDays : Math.round((activeRecord.totalWorkingDays || 22) * (activeRecord.attendance / 100))}d</span>
                               <span className="text-rose-700 bg-rose-500/10 px-1 rounded">Abs: {activeRecord.absentDays !== undefined ? activeRecord.absentDays : ((activeRecord.totalWorkingDays || 22) - (activeRecord.presentDays !== undefined ? activeRecord.presentDays : Math.round((activeRecord.totalWorkingDays || 22) * (activeRecord.attendance / 100))))}d</span>
                             </div>
@@ -1984,9 +2106,9 @@ export default function App() {
                       }`}>
                         <div>
                           <div className="flex justify-between items-start mb-1">
-                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Delivered Value</span>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Delivered Value</span>
                             {activeRecord && (
-                              <span className={`text-[8px] font-bold px-1.5 py-0.2 rounded font-mono ${
+                              <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded font-mono ${
                                 activeRecord.deliveredProjectsValue >= effectiveProjectValueMin
                                   ? "text-indigo-700 bg-indigo-100/60"
                                   : "text-rose-700 bg-rose-100/60"
@@ -1998,7 +2120,7 @@ export default function App() {
                           <div className="text-xl font-bold font-mono text-slate-800">
                             {activeRecord ? `$${(activeRecord.deliveredProjectsValue).toLocaleString()}` : "—"}
                           </div>
-                          <div className="text-[9px] text-slate-500 font-medium font-sans mt-0.5">
+                          <div className="text-[10px] text-slate-500 font-medium font-sans mt-0.5">
                             Target: <span className="font-mono font-bold">${effectiveProjectValueMin.toLocaleString()}</span>
                           </div>
                         </div>
@@ -2017,12 +2139,12 @@ export default function App() {
                       {/* Box 3: Project Count */}
                       <div className="p-4 bg-white/40 border border-white/50 rounded-xl flex flex-col justify-between min-h-[120px] transition-all hover:bg-white/50 hover:shadow-xs">
                         <div>
-                          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Projects Shipped</div>
+                          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Projects Shipped</div>
                           <div className="text-xl font-bold font-mono text-slate-800">
                             {activeRecord ? activeRecord.deliveredProjectsAmount : "—"}
                           </div>
                         </div>
-                        <div className="text-[9px] text-emerald-700 font-bold mt-2 truncate bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-md inline-block w-max font-mono">
+                        <div className="text-[10px] text-emerald-700 font-bold mt-2 truncate bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-md inline-block w-max font-mono">
                           {activeRecord ? `+${activeRecord.deliveredProjectsAmount} Deliverables` : "No activity"}
                         </div>
                       </div>
@@ -2030,12 +2152,12 @@ export default function App() {
                       {/* Box 4: Meetings Conducted */}
                       <div className="p-4 bg-white/40 border border-white/50 rounded-xl flex flex-col justify-between min-h-[120px] transition-all hover:bg-white/50 hover:shadow-xs">
                         <div>
-                          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Meetings Conducted</div>
+                          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Meetings Conducted</div>
                           <div className="text-xl font-bold font-mono text-slate-800">
                             {activeRecord ? activeRecord.conductedMeetings : "—"}
                           </div>
                         </div>
-                        <div className="text-[9px] text-indigo-700 font-bold mt-2 truncate bg-indigo-500/10 border border-indigo-500/20 px-1.5 py-0.5 rounded-md inline-block w-max font-mono">
+                        <div className="text-[10px] text-indigo-700 font-bold mt-2 truncate bg-indigo-500/10 border border-indigo-500/20 px-1.5 py-0.5 rounded-md inline-block w-max font-mono">
                           {activeRecord ? `${activeRecord.conductedMeetings} sessions run` : "No activity"}
                         </div>
                       </div>
@@ -2044,7 +2166,10 @@ export default function App() {
                   </div>
 
                   {/* Right Block: DNA & Peer Kudos Indicator (30%) */}
-                  <div className="lg:col-span-3 relative overflow-hidden rounded-2xl border border-slate-200/50 shadow-xl p-5 bg-white/70 backdrop-blur-md flex flex-col justify-between">
+                  <div className="lg:col-span-3 relative overflow-hidden rounded-2xl border border-slate-200/50 shadow-xl p-5 bg-white flex flex-col justify-between">
+                    {/* Background dot grid pattern with fade-out mask */}
+                    <div className="absolute inset-0 bg-grid-pattern pointer-events-none" style={{ maskImage: "radial-gradient(ellipse at center, black 30%, transparent 80%)", WebkitMaskImage: "radial-gradient(ellipse at center, black 30%, transparent 80%)" }} />
+                    
                     {/* Ambient decorative lighting */}
                     <div className="absolute -top-12 -left-12 w-32 h-32 rounded-full bg-indigo-500/10 blur-2xl pointer-events-none" />
                     <div className="absolute -bottom-12 -right-12 w-32 h-32 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" />
@@ -2062,9 +2187,9 @@ export default function App() {
                             <Sparkles className="h-3.5 w-3.5 text-indigo-500 animate-pulse" />
                             DNA Kudos Hub
                           </h3>
-                          <p className="text-[10px] text-slate-400 font-medium">Click tags to award peer recognition.</p>
+                          <p className="text-[11px] text-slate-500 font-medium">Click tags to award peer recognition.</p>
                         </div>
-                        <span className="text-[9px] font-bold text-indigo-600 bg-indigo-500/10 px-1.5 py-0.5 rounded-md font-mono animate-pulse">
+                        <span className="text-[10px] font-bold text-indigo-600 bg-indigo-500/10 px-1.5 py-0.5 rounded-md font-mono animate-pulse">
                           Live
                         </span>
                       </div>
@@ -2088,8 +2213,8 @@ export default function App() {
                               className={`flex flex-col items-center justify-center p-2 rounded-xl border bg-white/50 text-center transition-all hover:scale-105 active:scale-95 shadow-2xs group cursor-pointer ${item.color}`}
                             >
                               <span className="text-base group-hover:animate-bounce">{item.icon}</span>
-                              <span className="text-[10px] font-bold text-slate-700 mt-1">{item.label}</span>
-                              <span className="text-[10px] font-extrabold font-mono text-slate-500 mt-0.5 bg-slate-100 px-1.5 py-0.2 rounded">
+                              <span className="text-[11px] font-bold text-slate-700 mt-1">{item.label}</span>
+                              <span className="text-[11px] font-extrabold font-mono text-slate-500 mt-0.5 bg-slate-100 px-1.5 py-0.2 rounded">
                                 {points}
                               </span>
                             </button>
@@ -2101,8 +2226,8 @@ export default function App() {
                     {/* Creative Operational DNA Pulse wave */}
                     <div className="relative z-10 pt-3 border-t border-slate-100 mt-3 flex items-center justify-between gap-3">
                       <div className="flex flex-col">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Synergy Wave</span>
-                        <span className="text-[10px] font-bold text-slate-800 font-mono">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Synergy Wave</span>
+                        <span className="text-[11px] font-bold text-slate-800 font-mono">
                           {(Object.values(getEmployeeKudos(selectedReportEmployeeObj.id, selectedReportEmployeeObj.name)) as number[]).reduce((a, b) => a + b, 0)} pts total
                         </span>
                       </div>
@@ -2139,7 +2264,7 @@ export default function App() {
                       <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                         Monthly Progress Trends
                       </h3>
-                      <span className="text-[10px] text-slate-400">Month-over-month performance overview</span>
+                      <span className="text-[11px] text-slate-500">Month-over-month performance overview</span>
                     </div>
 
                     <AnimatePresence mode="wait">
@@ -2152,7 +2277,7 @@ export default function App() {
                         className="w-full"
                       >
                         {employeeHistoryData.length === 0 ? (
-                          <div className="h-44 flex items-center justify-center text-xs text-slate-400 italic">
+                          <div className="h-44 flex items-center justify-center text-xs text-slate-500 italic">
                             Not enough historical data points to generate progress graphs. Record metrics for multiple months.
                           </div>
                         ) : (
@@ -2220,7 +2345,7 @@ export default function App() {
                       </span>
                       <span className="text-xs font-medium text-slate-600 text-center sm:text-left">
                         Development Recommendation:{" "}
-                        <span className="text-slate-800 font-bold uppercase text-[10px] tracking-wider ml-1 bg-slate-100 px-2 py-0.5 rounded">
+                        <span className="text-slate-800 font-bold uppercase text-[11px] tracking-wider ml-1 bg-slate-100 px-2 py-0.5 rounded">
                           {activeRecord && activeRecord.deliveredProjectsAmount >= 2
                             ? `Promotion track for Senior / Lead ${selectedReportEmployeeObj.role}`
                             : `Skill development and technical enrichment`}
@@ -2228,7 +2353,7 @@ export default function App() {
                       </span>
                     </div>
                     <button
-                      className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-[10px] uppercase font-bold rounded-lg transition-all"
+                      className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-[11px] uppercase font-bold rounded-lg transition-all"
                     >
                       View Path
                     </button>
@@ -2292,7 +2417,7 @@ export default function App() {
                     <Server className="h-4 w-4" />
                   </div>
                   <div>
-                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registry Engine</span>
+                    <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Registry Engine</span>
                     <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5 mt-0.5">
                       Active Cluster
                       <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -2305,7 +2430,7 @@ export default function App() {
                     <Users className="h-4 w-4" />
                   </div>
                   <div>
-                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Roster Size</span>
+                    <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Roster Size</span>
                     <span className="text-xs font-bold text-slate-800 mt-0.5 font-mono">{myEmployees.length} Active Profiles</span>
                   </div>
                 </div>
@@ -2315,7 +2440,7 @@ export default function App() {
                     <SlidersHorizontal className="h-4 w-4" />
                   </div>
                   <div>
-                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Query Matches</span>
+                    <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Query Matches</span>
                     <span className="text-xs font-bold text-slate-800 mt-0.5 font-mono">
                       {rosterFilteredEmployees.length} profiles listed
                     </span>
@@ -2329,7 +2454,7 @@ export default function App() {
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                   {/* Search input with inner styling */}
                   <div className="relative flex-1">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                     <input
                       type="text"
                       value={rosterSearchQuery}
@@ -2351,7 +2476,7 @@ export default function App() {
                   <div className="flex items-center gap-2.5 bg-slate-50/70 border border-slate-200/80 rounded-xl px-3 py-1.5 shadow-3xs hover:border-slate-300 transition-all sm:w-60 shrink-0">
                     <SlidersHorizontal className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <span className="block text-[8px] font-bold uppercase tracking-wider text-slate-400 font-mono">Order By</span>
+                      <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-500 font-mono">Order By</span>
                       <select
                         value={rosterSortBy}
                         onChange={(e) => setRosterSortBy(e.target.value as any)}
@@ -2370,7 +2495,7 @@ export default function App() {
                   <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden flex-nowrap whitespace-nowrap py-1">
                     {/* Divisions Section Header */}
                     <div className="flex items-center gap-1 shrink-0">
-                      <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50/80 px-2 py-0.5 rounded-md font-mono uppercase tracking-wider">
+                      <span className="text-[11px] font-bold text-indigo-600 bg-indigo-50/80 px-2 py-0.5 rounded-md font-mono uppercase tracking-wider">
                         Divisions
                       </span>
                     </div>
@@ -2402,7 +2527,7 @@ export default function App() {
                               {getDeptIcon(dept)}
                               {dept}
                             </span>
-                            <span className={`relative z-10 text-[9px] font-mono px-1.5 py-0.5 rounded-full ${
+                            <span className={`relative z-10 text-[10px] font-mono px-1.5 py-0.5 rounded-full ${
                               isActive ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"
                             }`}>
                               {count}
@@ -2419,7 +2544,7 @@ export default function App() {
 
                     {/* Teams Section Header */}
                     <div className="flex items-center gap-1 shrink-0">
-                      <span className="text-[10px] font-bold text-blue-600 bg-blue-50/80 px-2 py-0.5 rounded-md font-mono uppercase tracking-wider">
+                      <span className="text-[11px] font-bold text-blue-600 bg-blue-50/80 px-2 py-0.5 rounded-md font-mono uppercase tracking-wider">
                         Teams
                       </span>
                     </div>
@@ -2448,7 +2573,7 @@ export default function App() {
                               />
                             )}
                             <span className="relative z-10">{t}</span>
-                            <span className={`relative z-10 text-[9px] font-mono px-1.5 py-0.5 rounded-full ${
+                            <span className={`relative z-10 text-[10px] font-mono px-1.5 py-0.5 rounded-full ${
                               isActive ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"
                             }`}>
                               {count}
@@ -2465,7 +2590,7 @@ export default function App() {
               <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs text-slate-500">
-                    <thead className="bg-slate-50/70 uppercase text-slate-400 font-mono text-[9px] tracking-wider border-b border-slate-100">
+                    <thead className="bg-slate-50/70 uppercase text-slate-500 font-mono text-[10px] tracking-wider border-b border-slate-100">
                       <tr>
                         <th className="px-6 py-4 w-12 text-center">
                           <button
@@ -2608,11 +2733,11 @@ export default function App() {
                                     </span>
                                     <span className="block text-[11px] text-slate-500 font-medium mt-0.5 truncate">
                                       {emp.role} {rec ? (
-                                        <span className="text-slate-400 font-normal ml-1">
-                                          &middot; Attendance: <strong className={hasLowAttendance ? "text-rose-600 font-bold font-mono text-[10px]" : "text-slate-600 font-semibold font-mono text-[10px]"}>{rec.attendance}%</strong>
+                                        <span className="text-slate-500 font-normal ml-1">
+                                          &middot; Attendance: <strong className={hasLowAttendance ? "text-rose-600 font-bold font-mono text-[11px]" : "text-slate-600 font-semibold font-mono text-[11px]"}>{rec.attendance}%</strong>
                                         </span>
                                       ) : (
-                                        <span className="text-slate-400 font-normal italic ml-1">
+                                        <span className="text-slate-500 font-normal italic ml-1">
                                           &middot; Attendance: not set
                                         </span>
                                       )}
@@ -2626,7 +2751,7 @@ export default function App() {
                                 <div className="flex flex-col gap-1">
                                   <span className="text-xs font-bold text-slate-800">{emp.department}</span>
                                   {emp.team && (
-                                    <span className="text-[10px] font-medium text-slate-500">{emp.team}</span>
+                                    <span className="text-[11px] font-medium text-slate-500">{emp.team}</span>
                                   )}
                                 </div>
                               </td>
@@ -2638,7 +2763,7 @@ export default function App() {
                                     <span className="text-[11px] text-slate-600">{emp.email}</span>
                                     <button
                                       onClick={() => navigator.clipboard.writeText(emp.email)}
-                                      className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-700 transition-colors opacity-0 group-hover/email:opacity-100 cursor-pointer"
+                                      className="p-1 hover:bg-slate-200 rounded text-slate-500 hover:text-slate-700 transition-colors opacity-0 group-hover/email:opacity-100 cursor-pointer"
                                       title="Copy Email"
                                     >
                                       {isEmailCopied ? <CheckCircle className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
@@ -2646,10 +2771,10 @@ export default function App() {
                                   </div>
                                   
                                   <div className="flex items-center gap-1.5 group/id">
-                                    <span className="font-mono text-[10px] text-slate-400">ID: {emp.id}</span>
+                                    <span className="font-mono text-[11px] text-slate-500">ID: {emp.id}</span>
                                     <button
                                       onClick={() => navigator.clipboard.writeText(emp.id)}
-                                      className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-700 transition-colors opacity-0 group-hover/id:opacity-100 cursor-pointer"
+                                      className="p-1 hover:bg-slate-200 rounded text-slate-500 hover:text-slate-700 transition-colors opacity-0 group-hover/id:opacity-100 cursor-pointer"
                                       title="Copy ID"
                                     >
                                       {isIdCopied ? <CheckCircle className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
@@ -2661,17 +2786,29 @@ export default function App() {
                               {/* Action Items */}
                               <td className="px-6 py-4 text-right pr-6 space-x-1 shrink-0">
                                 <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const link = `${window.location.origin}${window.location.pathname}?portal=performance&tab=profile&employeeId=${emp.id}`;
+                                    navigator.clipboard.writeText(link);
+                                    showToast(`Copied ${emp.name}'s performance profile link!`, "success");
+                                  }}
+                                  className="p-2 text-slate-500 hover:bg-white hover:text-indigo-600 rounded-lg shadow-none hover:shadow-xs border border-transparent hover:border-indigo-100 transition-all cursor-pointer inline-flex items-center justify-center animate-pulse"
+                                  title="Copy Performance Profile Link"
+                                >
+                                  <LinkIcon className="h-3.5 w-3.5" />
+                                </button>
+                                <button
                                   onClick={() => {
                                     handleOpenEditEmployee(emp);
                                   }}
-                                  className="p-2 text-slate-400 hover:bg-white hover:text-slate-700 rounded-lg shadow-none hover:shadow-xs border border-transparent hover:border-slate-200 transition-all cursor-pointer inline-flex items-center justify-center"
+                                  className="p-2 text-slate-500 hover:bg-white hover:text-slate-700 rounded-lg shadow-none hover:shadow-xs border border-transparent hover:border-slate-200 transition-all cursor-pointer inline-flex items-center justify-center"
                                   title="Edit Employee"
                                 >
                                   <Edit3 className="h-3.5 w-3.5" />
                                 </button>
                                 <button
                                   onClick={() => setEmployeeToDelete(emp)}
-                                  className="p-2 text-slate-400 hover:bg-white hover:text-rose-600 rounded-lg shadow-none hover:shadow-xs border border-transparent hover:border-rose-100 transition-all cursor-pointer inline-flex items-center justify-center"
+                                  className="p-2 text-slate-500 hover:bg-white hover:text-rose-600 rounded-lg shadow-none hover:shadow-xs border border-transparent hover:border-rose-100 transition-all cursor-pointer inline-flex items-center justify-center"
                                   title="Delete Employee"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
@@ -2691,11 +2828,11 @@ export default function App() {
                               animate={{ opacity: 1, scale: 1 }}
                               className="max-w-xs mx-auto flex flex-col items-center"
                             >
-                              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-slate-400 mb-3">
+                              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-slate-500 mb-3">
                                 <Search className="h-5 w-5" />
                               </div>
                               <h4 className="text-xs font-bold text-slate-800">No Database Records Found</h4>
-                              <p className="text-[11px] text-slate-400 mt-1 leading-normal">
+                              <p className="text-[11px] text-slate-500 mt-1 leading-normal">
                                 No employees matched "{rosterSearchQuery}" or the "{rosterDeptFilter}" division filter. Try adjusting your query.
                               </p>
                               <button
@@ -2704,7 +2841,7 @@ export default function App() {
                                   setRosterDeptFilter("All");
                                   setRosterTeamFilter("All");
                                 }}
-                                className="mt-3 text-[10px] font-bold uppercase tracking-wider text-indigo-500 hover:text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                                className="mt-3 text-[11px] font-bold uppercase tracking-wider text-indigo-500 hover:text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
                               >
                                 Clear Filters
                               </button>
@@ -2744,7 +2881,7 @@ export default function App() {
                     First Employee
                   </label>
                   <select 
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     value={compareEmp1}
                     onChange={(e) => setCompareEmp1(e.target.value)}
                   >
@@ -2762,7 +2899,7 @@ export default function App() {
                     Second Employee
                   </label>
                   <select 
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                     value={compareEmp2}
                     onChange={(e) => setCompareEmp2(e.target.value)}
                   >
@@ -2777,9 +2914,9 @@ export default function App() {
               {/* Compare Data Display */}
               {(() => {
                 if (!compareEmp1 || !compareEmp2) return (
-                  <div className="text-center py-12 bg-white rounded-2xl border border-slate-200 border-dashed text-slate-400">
+                  <div className="text-center py-12 bg-white rounded-2xl border border-slate-200 border-dashed text-slate-500">
                       <ArrowLeftRight className="h-8 w-8 mx-auto mb-3 opacity-30" />
-                    <p className="text-sm font-medium">Please select two employees to compare their metrics side-by-side.</p>
+                    <p className="text-xs font-medium">Please select two employees to compare their metrics side-by-side.</p>
                   </div>
                 );
 
@@ -2886,7 +3023,7 @@ export default function App() {
                               <ArrowLeftRight className="h-4 w-4 text-indigo-500" />
                               Horizon Balance Map
                             </h4>
-                            <p className="text-[10px] text-slate-400 font-medium font-sans mt-0.5 font-bold uppercase tracking-wider">
+                            <p className="text-[11px] text-slate-500 font-medium font-sans mt-0.5 font-bold uppercase tracking-wider">
                               Dynamic performance parity telemetry
                             </p>
                           </div>
@@ -2895,18 +3032,18 @@ export default function App() {
                             {/* Synergy Index Badge */}
                             <div className="flex items-center gap-2 bg-indigo-50/70 border border-indigo-100 px-3 py-1.5 rounded-2xl">
                               <div className="flex flex-col">
-                                <span className="text-[8px] font-mono font-bold text-indigo-400 uppercase tracking-wider">Synergy Index</span>
+                                <span className="text-[9px] font-mono font-bold text-indigo-400 uppercase tracking-wider">Synergy Index</span>
                                 <span className="text-xs font-black text-indigo-700 font-mono">{synergyScore}%</span>
                               </div>
                               <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse" />
                             </div>
                             
-                            <div className="flex items-center gap-2.5 text-[10px] font-mono bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-2xl">
+                            <div className="flex items-center gap-2.5 text-[11px] font-mono bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-2xl">
                               <span className="flex items-center gap-1 text-blue-600 font-extrabold">
                                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                                 {emp1.name.split(' ')[0]}
                               </span>
-                              <span className="text-slate-400 font-light">vs</span>
+                              <span className="text-slate-500 font-light">vs</span>
                               <span className="flex items-center gap-1 text-emerald-600 font-extrabold">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                                 {emp2.name.split(' ')[0]}
@@ -2995,8 +3132,8 @@ export default function App() {
                             {/* Harmonic Oscilloscope Wave */}
                             <div className="mt-4 bg-slate-950/5 border border-slate-200/50 rounded-lg px-2.5 py-1.5 w-full flex items-center justify-between gap-3 shadow-2xs">
                               <div className="flex flex-col">
-                                <span className="text-[8px] font-mono font-bold text-slate-400 uppercase tracking-wider">Operational Resonance</span>
-                                <span className="text-[9px] font-mono font-extrabold text-slate-700">
+                                <span className="text-[9px] font-mono font-bold text-slate-500 uppercase tracking-wider">Operational Resonance</span>
+                                <span className="text-[10px] font-mono font-extrabold text-slate-700">
                                   {waveDiff < 5 ? "Harmonic Equilibrium" : waveDiff < 15 ? "Resonant Parity" : "Dispersive Skew"}
                                 </span>
                               </div>
@@ -3024,9 +3161,9 @@ export default function App() {
                             <div className="flex justify-between items-center">
                               <div className="flex items-center gap-1.5">
                                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                                <span className="text-[10px] font-extrabold text-slate-700 uppercase tracking-wider font-mono">{activeMetricData.label} focus</span>
+                                <span className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider font-mono">{activeMetricData.label} focus</span>
                               </div>
-                              <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100 font-mono">
+                              <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100 font-mono">
                                 {activeRatio > 50 ? `${activeRatio.toFixed(0)}% Left Bias` : activeRatio < 50 ? `${(100 - activeRatio).toFixed(0)}% Right Bias` : "Equilibrium"}
                               </span>
                             </div>
@@ -3043,13 +3180,13 @@ export default function App() {
 
                             <div className="grid grid-cols-2 gap-2">
                               <div className="bg-white p-2 rounded-xl border border-slate-100 flex justify-between items-center">
-                                <span className="text-[9px] text-slate-400 uppercase font-mono font-bold">{emp1.name.split(' ')[0]}</span>
+                                <span className="text-[10px] text-slate-500 uppercase font-mono font-bold">{emp1.name.split(' ')[0]}</span>
                                 <span className="text-xs font-black text-blue-600 font-mono">
                                   {activeMetricData.isCurrency ? `$${(activeMetricData.val1).toLocaleString()}` : `${activeMetricData.val1}${activeMetricData.unit}`}
                                 </span>
                               </div>
                               <div className="bg-white p-2 rounded-xl border border-slate-100 flex justify-between items-center">
-                                <span className="text-[9px] text-slate-400 uppercase font-mono font-bold">{emp2.name.split(' ')[0]}</span>
+                                <span className="text-[10px] text-slate-500 uppercase font-mono font-bold">{emp2.name.split(' ')[0]}</span>
                                 <span className="text-xs font-black text-emerald-600 font-mono">
                                   {activeMetricData.isCurrency ? `$${(activeMetricData.val2).toLocaleString()}` : `${activeMetricData.val2}${activeMetricData.unit}`}
                                 </span>
@@ -3060,7 +3197,7 @@ export default function App() {
 
                         {/* Interactive Selector Track Pill-Buttons */}
                         <div className="space-y-3">
-                          <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1">Select Metric to Deep-Dive Dial:</span>
+                          <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono mb-1">Select Metric to Deep-Dive Dial:</span>
                           {[
                             { label: "Attendance Rate", val1: perf1?.attendance || 0, val2: perf2?.attendance || 0, max: 100, unit: "%", icon: Calendar },
                             { label: "Delivered Value", val1: perf1?.deliveredProjectsValue || 0, val2: perf2?.deliveredProjectsValue || 0, max: maxValue, unit: "", isCurrency: true, icon: DollarSign },
@@ -3089,11 +3226,11 @@ export default function App() {
 
                                 <div className="flex justify-between items-center w-full mb-2 relative z-10">
                                   <span className="text-[11px] font-bold flex items-center gap-2 tracking-wide font-sans">
-                                    <metric.icon className={`h-3.5 w-3.5 ${isSelected ? "text-indigo-600" : "text-slate-400"}`} />
+                                    <metric.icon className={`h-3.5 w-3.5 ${isSelected ? "text-indigo-600" : "text-slate-500"}`} />
                                     {metric.label}
                                   </span>
 
-                                  <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border ${
+                                  <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${
                                     isSelected 
                                       ? "bg-indigo-100/40 border-indigo-200/50 text-indigo-700" 
                                       : "bg-slate-50 border-slate-100 text-slate-600"
@@ -3143,10 +3280,10 @@ export default function App() {
                       </div>
 
                       <div className="relative z-10 pt-3 mt-4 border-t border-slate-100 flex items-center justify-between">
-                        <p className="text-[9px] text-slate-400 font-mono">
+                        <p className="text-[10px] text-slate-500 font-mono">
                           * Click on any metric card to dynamically balance-tune the Gyroscopic Telemetry Dial.
                         </p>
-                        <span className="text-[8px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full font-mono uppercase tracking-widest">
+                        <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full font-mono uppercase tracking-widest">
                           Bilateral Dial v3.0
                         </span>
                       </div>
@@ -3163,9 +3300,9 @@ export default function App() {
                                 <Sparkles className="h-4 w-4 text-indigo-500" />
                                 Overlap Signature
                               </h4>
-                              <p className="text-[10px] text-slate-400 font-medium">Overlapping performance signature (normalized %)</p>
+                              <p className="text-[11px] text-slate-500 font-medium">Overlapping performance signature (normalized %)</p>
                             </div>
-                            <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full font-mono">
+                            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full font-mono">
                               Radar Matrix
                             </span>
                           </div>
@@ -3224,11 +3361,11 @@ export default function App() {
 
                         <div className="relative z-10 space-y-5">
                           <div className="flex justify-between items-center">
-                            <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 font-mono">
+                            <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 font-mono">
                               <Activity className="h-3.5 w-3.5 text-indigo-500" />
                               Partnership Synergy
                             </h4>
-                            <span className="text-[9px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md font-mono">
+                            <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md font-mono">
                               Match Archetype
                             </span>
                           </div>
@@ -3269,7 +3406,7 @@ export default function App() {
                                     {archetypeIcon}
                                   </div>
                                   <div>
-                                    <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border uppercase tracking-wider font-mono ${tagColor}`}>
+                                    <span className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full border uppercase tracking-wider font-mono ${tagColor}`}>
                                       {archetypeTitle}
                                     </span>
                                     <p className="text-xs text-slate-500 mt-1 leading-relaxed font-sans font-medium">{archetypeDesc}</p>
@@ -3279,7 +3416,7 @@ export default function App() {
                                 <div className="space-y-3 pt-3 border-t border-slate-100">
                                   {/* Synergy Insight Bullet 1 */}
                                   <div className="flex items-start gap-2.5 text-[11px] text-slate-600">
-                                    <span className="text-slate-400 mt-0.5">•</span>
+                                    <span className="text-slate-500 mt-0.5">•</span>
                                     <div>
                                       <span className="font-bold text-slate-800">Commercial Balance: </span>
                                       {val1 > val2 ? (
@@ -3294,7 +3431,7 @@ export default function App() {
 
                                   {/* Synergy Insight Bullet 2 */}
                                   <div className="flex items-start gap-2.5 text-[11px] text-slate-600">
-                                    <span className="text-slate-400 mt-0.5">•</span>
+                                    <span className="text-slate-500 mt-0.5">•</span>
                                     <div>
                                       <span className="font-bold text-slate-800">Culture Impact: </span>
                                       {totalKudos1 > totalKudos2 ? (
@@ -3314,7 +3451,7 @@ export default function App() {
                           {/* Overlap Matching Index Bar */}
                           <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                             <div className="flex flex-col">
-                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider font-mono">Co-velocity index</span>
+                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-mono">Co-velocity index</span>
                               <span className="text-[11px] font-extrabold text-indigo-600 font-mono">
                                 {(() => {
                                   const match = Math.round(
@@ -3468,7 +3605,7 @@ export default function App() {
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50 border border-slate-200/60 rounded-3xl p-6 relative overflow-hidden shadow-3xs">
                 <div className="absolute right-0 top-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
                 <div className="relative z-10 space-y-1">
-                  <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest font-mono bg-indigo-50 border border-indigo-100/60 px-2.5 py-1 rounded-full">
+                  <span className="text-[11px] font-bold text-indigo-600 uppercase tracking-widest font-mono bg-indigo-50 border border-indigo-100/60 px-2.5 py-1 rounded-full">
                     Operations Portal
                   </span>
                   <h2 className="text-xl font-black text-slate-900 tracking-tight font-display pt-1">
@@ -3481,11 +3618,87 @@ export default function App() {
                 
                 <div className="flex gap-2">
                   <div className="bg-white border border-slate-200 rounded-2xl px-4 py-3 text-center shadow-3xs">
-                    <span className="block text-[8px] font-bold uppercase tracking-widest text-slate-400 font-mono">Company Cap</span>
+                    <span className="block text-[9px] font-bold uppercase tracking-widest text-slate-500 font-mono">Company Cap</span>
                     <span className="block text-lg font-black text-slate-800 font-mono">28 Days</span>
                   </div>
                 </div>
               </div>
+
+              {/* Automated System Alerts for High Leave Consumption */}
+              {leaveAlerts.length > 0 && (
+                <div className="bg-amber-50/75 border border-amber-200/80 rounded-3xl p-6 relative overflow-hidden shadow-3xs flex flex-col gap-4 animate-fade-in">
+                  <div className="absolute right-0 top-0 w-32 h-32 bg-gradient-to-bl from-amber-500/5 to-amber-600/5 blur-2xl pointer-events-none" />
+                  <div className="flex items-start gap-3.5">
+                    <div className="p-2 bg-amber-100 text-amber-700 rounded-2xl shrink-0 shadow-4xs">
+                      <AlertTriangle className="w-5 h-5 stroke-[2.5]" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-black text-amber-950 tracking-tight font-display flex items-center gap-2">
+                        System Alert: High Annual Leave Consumption ({leaveAlerts.length})
+                      </h3>
+                      <p className="text-xs text-amber-700 mt-0.5 leading-relaxed font-medium">
+                        The following team members have consumed more than <strong className="font-extrabold text-amber-800">75%</strong> of their annual leave allowance (<strong className="font-extrabold text-amber-800">28 days</strong>). Please monitor their remaining balances.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {leaveAlerts.map(({ employee, used, pct }) => (
+                      <div key={employee.id} className="bg-white/90 backdrop-blur-xs border border-amber-200/60 rounded-2xl p-4 flex flex-col justify-between gap-3 shadow-4xs hover:border-amber-300 transition-all">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 overflow-hidden shrink-0">
+                            <img src={get3DAvatarUrl(employee.name)} alt={employee.name} className="w-full h-full object-cover" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-bold text-slate-900 truncate font-display">{employee.name}</div>
+                            <div className="text-[11px] text-slate-500 font-mono truncate">{employee.role} • {employee.team}</div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between text-[11px] font-bold text-slate-600 font-mono">
+                            <span>Consumed: {used} / 28 Days</span>
+                            <span className="text-amber-700">{pct}%</span>
+                          </div>
+                          <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-150">
+                            <div 
+                              className="bg-amber-500 h-full rounded-full transition-all duration-500" 
+                              style={{ width: `${Math.min(100, pct)}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end gap-1.5 pt-1 border-t border-slate-100">
+                          <button
+                            onClick={() => {
+                              setActivePortal("performance");
+                              setActiveTab("profile");
+                              setReportEmployeeId(employee.id);
+                              setSelectedDirectoryEmpId(employee.id);
+                              // Scroll smoothly if element exists
+                              setTimeout(() => {
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }, 100);
+                            }}
+                            className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-700 hover:text-slate-900 transition-colors cursor-pointer inline-flex items-center gap-1"
+                          >
+                            Profile <ArrowUpRight className="w-3 h-3 text-slate-500" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              // Filter list using directory or ledger search
+                              setLeaveLedgerSearch(employee.name);
+                            }}
+                            className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200/50 rounded-lg text-[11px] font-bold text-amber-800 hover:text-amber-900 transition-colors cursor-pointer inline-flex items-center gap-1"
+                          >
+                            Filter Calendar
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* 1. Analytics Deck */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -3493,56 +3706,56 @@ export default function App() {
                 {/* Stat 1 */}
                 <div className="bg-white border border-slate-200/60 rounded-2xl p-4.5 shadow-3xs hover:border-slate-300 transition-all duration-300">
                   <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Active Squad</span>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Active Squad</span>
                     <span className="p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-500">
                       <Users className="w-3.5 h-3.5" />
                     </span>
                   </div>
                   <div className="mt-3.5 flex items-baseline gap-1">
                     <span className="text-2xl font-black text-slate-800 font-mono">{myEmployees.length}</span>
-                    <span className="text-[10px] text-slate-400 font-bold font-mono">Staff</span>
+                    <span className="text-[11px] text-slate-500 font-bold font-mono">Staff</span>
                   </div>
                 </div>
 
                 {/* Stat 2 */}
                 <div className="bg-white border border-slate-200/60 rounded-2xl p-4.5 shadow-3xs hover:border-slate-300 transition-all duration-300">
                   <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Leaves Approved</span>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Leaves Approved</span>
                     <span className="p-1.5 bg-emerald-50 border border-emerald-100 rounded-lg text-emerald-600">
                       <Check className="w-3.5 h-3.5" />
                     </span>
                   </div>
                   <div className="mt-3.5 flex items-baseline gap-1">
                     <span className="text-2xl font-black text-emerald-600 font-mono">{totalApprovedDays}</span>
-                    <span className="text-[10px] text-slate-400 font-bold font-mono">Days</span>
+                    <span className="text-[11px] text-slate-500 font-bold font-mono">Days</span>
                   </div>
                 </div>
 
                 {/* Stat 3 */}
                 <div className="bg-white border border-slate-200/60 rounded-2xl p-4.5 shadow-3xs hover:border-slate-300 transition-all duration-300">
                   <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Pending Audits</span>
-                    <span className={`p-1.5 rounded-lg border text-xs ${allPendingRequests.length > 0 ? "bg-amber-50 border-amber-200 text-amber-600 animate-pulse" : "bg-slate-50 border-slate-200 text-slate-400"}`}>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Pending Audits</span>
+                    <span className={`p-1.5 rounded-lg border text-xs ${allPendingRequests.length > 0 ? "bg-amber-50 border-amber-200 text-amber-600 animate-pulse" : "bg-slate-50 border-slate-200 text-slate-500"}`}>
                       <Activity className="w-3.5 h-3.5" />
                     </span>
                   </div>
                   <div className="mt-3.5 flex items-baseline gap-1">
                     <span className={`text-2xl font-black font-mono ${allPendingRequests.length > 0 ? "text-amber-600" : "text-slate-800"}`}>{allPendingRequests.length}</span>
-                    <span className="text-[10px] text-slate-400 font-bold font-mono">Pending</span>
+                    <span className="text-[11px] text-slate-500 font-bold font-mono">Pending</span>
                   </div>
                 </div>
 
                 {/* Stat 4 */}
                 <div className="bg-white border border-slate-200/60 rounded-2xl p-4.5 shadow-3xs hover:border-slate-300 transition-all duration-300">
                   <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Avg Balance</span>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">Avg Balance</span>
                     <span className="p-1.5 bg-indigo-50 border border-indigo-100 rounded-lg text-indigo-600">
                       <Calendar className="w-3.5 h-3.5" />
                     </span>
                   </div>
                   <div className="mt-3.5 flex items-baseline gap-1">
                     <span className="text-2xl font-black text-indigo-600 font-mono">{averageRemainingBalance}</span>
-                    <span className="text-[10px] text-slate-400 font-bold font-mono">Days Left</span>
+                    <span className="text-[11px] text-slate-500 font-bold font-mono">Days Left</span>
                   </div>
                 </div>
 
@@ -3555,8 +3768,8 @@ export default function App() {
                     <span className="text-xs font-mono font-bold">CL</span>
                   </div>
                   <div>
-                    <span className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Casual Leave (CL)</span>
-                    <p className="text-[11px] text-slate-400 leading-tight mt-0.5">Allowance: <strong className="text-slate-600">7 Days / Year</strong>. Ideal for quick personal errands and non-medical affairs.</p>
+                    <span className="block text-[11px] font-black uppercase tracking-wider text-slate-500 font-mono">Casual Leave (CL)</span>
+                    <p className="text-[11px] text-slate-500 leading-tight mt-0.5">Allowance: <strong className="text-slate-600">7 Days / Year</strong>. Ideal for quick personal errands and non-medical affairs.</p>
                   </div>
                 </div>
                 <div className="bg-slate-50/50 border border-slate-200/50 p-4 rounded-2xl flex gap-3.5 items-start">
@@ -3564,8 +3777,8 @@ export default function App() {
                     <span className="text-xs font-mono font-bold">SL</span>
                   </div>
                   <div>
-                    <span className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Sick Leave (SL)</span>
-                    <p className="text-[11px] text-slate-400 leading-tight mt-0.5">Allowance: <strong className="text-slate-600">7 Days / Year</strong>. Validated against registered medical audits and emergencies.</p>
+                    <span className="block text-[11px] font-black uppercase tracking-wider text-slate-500 font-mono">Sick Leave (SL)</span>
+                    <p className="text-[11px] text-slate-500 leading-tight mt-0.5">Allowance: <strong className="text-slate-600">7 Days / Year</strong>. Validated against registered medical audits and emergencies.</p>
                   </div>
                 </div>
                 <div className="bg-slate-50/50 border border-slate-200/50 p-4 rounded-2xl flex gap-3.5 items-start">
@@ -3573,8 +3786,8 @@ export default function App() {
                     <span className="text-xs font-mono font-bold">GF</span>
                   </div>
                   <div>
-                    <span className="block text-[10px] font-black uppercase tracking-wider text-slate-500 font-mono">Gov & Festival (GF)</span>
-                    <p className="text-[11px] text-slate-400 leading-tight mt-0.5">Allowance: <strong className="text-slate-600">14 Days / Year</strong>. Allocated for scheduled cultural breaks and statutory breaks.</p>
+                    <span className="block text-[11px] font-black uppercase tracking-wider text-slate-500 font-mono">Gov & Festival (GF)</span>
+                    <p className="text-[11px] text-slate-500 leading-tight mt-0.5">Allowance: <strong className="text-slate-600">14 Days / Year</strong>. Allocated for scheduled cultural breaks and statutory breaks.</p>
                   </div>
                 </div>
               </div>
@@ -3590,7 +3803,7 @@ export default function App() {
                     </div>
                     <div>
                       <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest font-mono">Log Teammate Leave</h3>
-                      <p className="text-[10px] text-slate-400">Add or register timesheet breaks directly</p>
+                      <p className="text-[11px] text-slate-500">Add or register timesheet breaks directly</p>
                     </div>
                   </div>
 
@@ -3619,7 +3832,7 @@ export default function App() {
                     }
                   }} className="space-y-4">
                     <div>
-                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1.5">1. Target Teammate</label>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono mb-1.5">1. Target Teammate</label>
                       <select
                         value={behalfEmpId}
                         onChange={(e) => setBehalfEmpId(e.target.value)}
@@ -3634,7 +3847,7 @@ export default function App() {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1.5">2. Start Date</label>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono mb-1.5">2. Start Date</label>
                         <input
                           type="date"
                           value={behalfStart}
@@ -3643,7 +3856,7 @@ export default function App() {
                         />
                       </div>
                       <div>
-                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1.5">3. End Date</label>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono mb-1.5">3. End Date</label>
                         <input
                           type="date"
                           value={behalfEnd}
@@ -3655,7 +3868,7 @@ export default function App() {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1.5">4. Category</label>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono mb-1.5">4. Category</label>
                         <select
                           value={behalfType}
                           onChange={(e) => setBehalfType(e.target.value as any)}
@@ -3667,7 +3880,7 @@ export default function App() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1.5">5. Audit Status</label>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono mb-1.5">5. Audit Status</label>
                         <select
                           value={behalfStatus}
                           onChange={(e) => setBehalfStatus(e.target.value as any)}
@@ -3681,12 +3894,12 @@ export default function App() {
 
                     <div>
                       <div className="flex justify-between items-center mb-1.5">
-                        <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">6. Coverage Remarks / Purpose</label>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono">6. Coverage Remarks / Purpose</label>
                         <button
                           type="button"
                           onClick={handleSuggestLeaveNotes}
                           disabled={isSuggestingNotes}
-                          className="flex items-center gap-1 text-[10px] text-blue-600 hover:text-blue-700 hover:underline font-bold font-mono transition-all cursor-pointer disabled:opacity-50"
+                          className="flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-700 hover:underline font-bold font-mono transition-all cursor-pointer disabled:opacity-50"
                         >
                           <Sparkles className={`w-3 h-3 text-blue-500 ${isSuggestingNotes ? "animate-spin text-indigo-500" : ""}`} />
                           {isSuggestingNotes ? "Suggesting..." : "AI Suggest Notes"}
@@ -3719,10 +3932,10 @@ export default function App() {
                       </div>
                       <div>
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest font-mono">Pending Approvals Queue</h3>
-                        <p className="text-[10px] text-slate-400">Incoming teammate requests waiting for review</p>
+                        <p className="text-[11px] text-slate-500">Incoming teammate requests waiting for review</p>
                       </div>
                     </div>
-                    <span className="text-[9px] font-mono font-bold bg-amber-105 border border-amber-200 text-amber-800 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-mono font-bold bg-amber-105 border border-amber-200 text-amber-800 px-2 py-0.5 rounded-full">
                       {allPendingRequests.length} Active
                     </span>
                   </div>
@@ -3737,10 +3950,10 @@ export default function App() {
                             </div>
                             <div>
                               <div className="font-extrabold text-slate-800 text-[11px]">{employee.name}</div>
-                              <div className="text-[9px] text-slate-400 font-medium font-mono">{employee.role}</div>
+                              <div className="text-[10px] text-slate-500 font-medium font-mono">{employee.role}</div>
                             </div>
                           </div>
-                          <span className="text-[9px] font-black uppercase tracking-wider font-mono text-indigo-650 bg-indigo-50 border border-indigo-100/60 px-2 py-0.5 rounded">
+                          <span className="text-[10px] font-black uppercase tracking-wider font-mono text-indigo-650 bg-indigo-50 border border-indigo-100/60 px-2 py-0.5 rounded">
                             {request.type} ({request.days} Days)
                           </span>
                         </div>
@@ -3749,20 +3962,20 @@ export default function App() {
                           "{request.notes || "No special description provided."}"
                         </div>
 
-                        <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-[10px]">
-                          <span className="text-slate-400 font-bold font-mono">
+                        <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-[11px]">
+                          <span className="text-slate-500 font-bold font-mono">
                             Span: {request.start} to {request.end}
                           </span>
                           <div className="flex items-center gap-1.5">
                             <button
                               onClick={() => handleUpdateTeammateLeaveStatus(employee.id, request.id, "Approved")}
-                              className="px-2.5 py-1 bg-emerald-650 hover:bg-emerald-600 text-white font-bold rounded-lg cursor-pointer transition-colors shadow-3xs text-[10px]"
+                              className="px-2.5 py-1 bg-emerald-650 hover:bg-emerald-600 text-white font-bold rounded-lg cursor-pointer transition-colors shadow-3xs text-[11px]"
                             >
                               Approve
                             </button>
                             <button
                               onClick={() => handleUpdateTeammateLeaveStatus(employee.id, request.id, "Rejected")}
-                              className="px-2.5 py-1 bg-rose-650 hover:bg-rose-600 text-white font-bold rounded-lg cursor-pointer transition-colors shadow-3xs text-[10px]"
+                              className="px-2.5 py-1 bg-rose-650 hover:bg-rose-600 text-white font-bold rounded-lg cursor-pointer transition-colors shadow-3xs text-[11px]"
                             >
                               Reject
                             </button>
@@ -3780,11 +3993,11 @@ export default function App() {
 
                     {allPendingRequests.length === 0 && (
                       <div className="flex flex-col items-center justify-center text-center py-12 px-4 bg-slate-50/50 border border-dashed border-slate-200 rounded-2xl">
-                        <div className="w-9 h-9 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-2">
+                        <div className="w-9 h-9 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 mb-2">
                           <Check className="w-5 h-5 stroke-[2.5]" />
                         </div>
                         <span className="block text-[11px] font-black text-slate-500 uppercase tracking-widest font-mono">Queue Cleared</span>
-                        <p className="text-[10px] text-slate-400 max-w-xs mt-1 leading-tight">All teammate leave requests are fully audited. Excellent team scheduling management.</p>
+                        <p className="text-[11px] text-slate-500 max-w-xs mt-1 leading-tight">All teammate leave requests are fully audited. Excellent team scheduling management.</p>
                       </div>
                     )}
                   </div>
@@ -3802,14 +4015,14 @@ export default function App() {
                     </div>
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider font-mono">
+                        <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider font-mono">
                           Team Leave & Overlap Calendar
                         </h3>
-                        <span className="px-2 py-0.5 text-[8px] font-black uppercase tracking-widest font-mono text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-full animate-pulse">
+                        <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest font-mono text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-full animate-pulse">
                           Live Tracker
                         </span>
                       </div>
-                      <p className="text-[10px] text-slate-400 font-medium">Coordinate absence streams, track coverage overlaps, and avoid capacity bottlenecks</p>
+                      <p className="text-[11px] text-slate-500 font-medium">Coordinate absence streams, track coverage overlaps, and avoid capacity bottlenecks</p>
                     </div>
                   </div>
 
@@ -3819,25 +4032,25 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => setCalendarViewMode("timeline")}
-                        className={`h-full px-3.5 rounded-full text-[10px] font-black tracking-wider uppercase transition-all duration-200 whitespace-nowrap flex items-center justify-center gap-1.5 cursor-pointer ${
+                        className={`h-full px-3.5 rounded-full text-[11px] font-black tracking-wider uppercase transition-all duration-200 whitespace-nowrap flex items-center justify-center gap-1.5 cursor-pointer ${
                           calendarViewMode === "timeline"
                             ? "bg-white text-slate-900 shadow-4xs border border-slate-200/10 font-black"
                             : "text-slate-500 hover:text-slate-800 font-bold"
                         }`}
                       >
-                        <Layers className={`w-3 h-3 transition-transform ${calendarViewMode === "timeline" ? "text-indigo-600 rotate-180" : "text-slate-400"}`} />
+                        <Layers className={`w-3 h-3 transition-transform ${calendarViewMode === "timeline" ? "text-indigo-600 rotate-180" : "text-slate-500"}`} />
                         Timeline
                       </button>
                       <button
                         type="button"
                         onClick={() => setCalendarViewMode("grid")}
-                        className={`h-full px-3.5 rounded-full text-[10px] font-black tracking-wider uppercase transition-all duration-200 whitespace-nowrap flex items-center justify-center gap-1.5 cursor-pointer ${
+                        className={`h-full px-3.5 rounded-full text-[11px] font-black tracking-wider uppercase transition-all duration-200 whitespace-nowrap flex items-center justify-center gap-1.5 cursor-pointer ${
                           calendarViewMode === "grid"
                             ? "bg-white text-slate-900 shadow-4xs border border-slate-200/10 font-black"
                             : "text-slate-500 hover:text-slate-800 font-bold"
                         }`}
                       >
-                        <Calendar className={`w-3 h-3 ${calendarViewMode === "grid" ? "text-indigo-600" : "text-slate-400"}`} />
+                        <Calendar className={`w-3 h-3 ${calendarViewMode === "grid" ? "text-indigo-600" : "text-slate-500"}`} />
                         Grid
                       </button>
                     </div>
@@ -3847,10 +4060,10 @@ export default function App() {
                       <button
                         type="button"
                         onClick={handleJumpToToday}
-                        className="group flex items-center gap-1.5 h-8 px-3.5 bg-white hover:bg-slate-50 text-slate-700 hover:text-indigo-600 font-black font-mono text-[10px] uppercase tracking-wider rounded-full border border-slate-200/60 hover:border-indigo-250 transition-all shadow-4xs hover:shadow-3xs cursor-pointer active:scale-95 shrink-0"
+                        className="group flex items-center gap-1.5 h-8 px-3.5 bg-white hover:bg-slate-50 text-slate-700 hover:text-indigo-600 font-black font-mono text-[11px] uppercase tracking-wider rounded-full border border-slate-200/60 hover:border-indigo-250 transition-all shadow-4xs hover:shadow-3xs cursor-pointer active:scale-95 shrink-0"
                         title="Jump to Today"
                       >
-                        <Compass className="w-3.5 h-3.5 stroke-[2.5] text-slate-400 group-hover:text-indigo-500 group-hover:rotate-45 transition-all duration-300" />
+                        <Compass className="w-3.5 h-3.5 stroke-[2.5] text-slate-500 group-hover:text-indigo-500 group-hover:rotate-45 transition-all duration-300" />
                         Today
                       </button>
 
@@ -3874,9 +4087,9 @@ export default function App() {
                       <div className="overflow-x-auto sleek-scrollbar">
                         <div className="min-w-[850px]">
                           {/* Timeline Header Row */}
-                          <div className="flex border-b border-slate-100 bg-slate-50/30 font-mono text-[9px] font-bold tracking-wider text-slate-400">
+                          <div className="flex border-b border-slate-100 bg-slate-50/30 font-mono text-[10px] font-bold tracking-wider text-slate-500">
                             {/* Sticky Teammate header */}
-                            <div className="w-48 sticky left-0 bg-slate-50/90 backdrop-blur-md border-r border-slate-100 shrink-0 px-4 py-3.5 z-10 flex items-center justify-between text-[10px] font-black text-slate-600">
+                            <div className="w-48 sticky left-0 bg-slate-50/90 backdrop-blur-md border-r border-slate-100 shrink-0 px-4 py-3.5 z-10 flex items-center justify-between text-[11px] font-black text-slate-600">
                               <span>TEAM MEMBER</span>
                             </div>
                             
@@ -3895,11 +4108,11 @@ export default function App() {
                                       isTodayCell ? "bg-indigo-50 border-x border-indigo-200/50 text-indigo-700 font-extrabold shadow-4xs" : ""
                                     } ${
                                       isOverlap ? "bg-rose-500/[0.04] border-r border-rose-200/50" : ""
-                                    } ${isWeekend && !isOverlap ? "bg-slate-50/20 text-slate-400" : "text-slate-500"}`}
+                                    } ${isWeekend && !isOverlap ? "bg-slate-50/20 text-slate-500" : "text-slate-500"}`}
                                     title={isOverlap ? `Overlap on day ${d}: Multiple approved leaves` : ""}
                                   >
                                     <span className={`text-[7px] uppercase tracking-wider opacity-60 font-black ${isTodayCell ? "text-indigo-650" : ""}`}>{getWeekdayName(d)}</span>
-                                    <span className={`text-[10px] font-mono leading-tight mt-0.5 font-bold ${isOverlap ? "text-rose-500 font-black" : isTodayCell ? "text-indigo-700 font-black scale-110" : "text-slate-700"}`}>
+                                    <span className={`text-[11px] font-mono leading-tight mt-0.5 font-bold ${isOverlap ? "text-rose-500 font-black" : isTodayCell ? "text-indigo-700 font-black scale-110" : "text-slate-700"}`}>
                                       {d}
                                     </span>
                                     {isOverlap && (
@@ -3922,7 +4135,7 @@ export default function App() {
                                   </div>
                                   <div className="overflow-hidden space-y-0.5">
                                     <div className="font-extrabold text-[11px] text-slate-800 tracking-tight truncate" title={emp.name}>{emp.name}</div>
-                                    <div className="text-[9px] text-slate-400 font-medium tracking-tight truncate" title={emp.role}>{emp.role}</div>
+                                    <div className="text-[10px] text-slate-500 font-medium tracking-tight truncate" title={emp.role}>{emp.role}</div>
                                   </div>
                                 </div>
 
@@ -3941,7 +4154,7 @@ export default function App() {
                                       const isEnd = dateKey === leave.end;
                                       const isSingle = isStart && isEnd;
 
-                                      let baseClasses = "h-6 flex items-center justify-center text-[9px] font-black font-mono transition-all cursor-pointer select-none";
+                                      let baseClasses = "h-6 flex items-center justify-center text-[10px] font-black font-mono transition-all cursor-pointer select-none";
                                       let pillStyle = "";
                                       
                                       if (leave.type === "Sick") {
@@ -4014,18 +4227,18 @@ export default function App() {
                       <div className="flex flex-wrap items-center gap-4">
                         <div className="flex items-center gap-2">
                           <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 border border-emerald-500/10 shadow-3xs" />
-                          <span className="font-mono text-slate-600 text-[10px]">Casual Leave (CL)</span>
+                          <span className="font-mono text-slate-600 text-[11px]">Casual Leave (CL)</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="w-2.5 h-2.5 rounded-full bg-rose-400 border border-rose-500/10 shadow-3xs" />
-                          <span className="font-mono text-slate-600 text-[10px]">Sick Leave (SL)</span>
+                          <span className="font-mono text-slate-600 text-[11px]">Sick Leave (SL)</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="w-2.5 h-2.5 rounded-full bg-violet-400 border border-violet-500/10 shadow-3xs" />
-                          <span className="font-mono text-slate-600 text-[10px]">Gov & Festival (GF)</span>
+                          <span className="font-mono text-slate-600 text-[11px]">Gov & Festival (GF)</span>
                         </div>
                       </div>
-                      <span className="flex items-center gap-1.5 text-slate-400 text-[10px] font-mono">
+                      <span className="flex items-center gap-1.5 text-slate-500 text-[11px] font-mono">
                         <span className="w-1.5 h-1.5 rounded-full bg-rose-450 animate-pulse" /> Vertical bands and indicators alert managers about overlap days.
                       </span>
                     </div>
@@ -4036,7 +4249,7 @@ export default function App() {
                     {/* Left 2 Cols: The standard Calendar Grid */}
                     <div className="lg:col-span-2 space-y-4">
                       {/* Grid Header days of week */}
-                      <div className="grid grid-cols-7 text-center font-mono text-[9px] font-black tracking-widest text-slate-400 border-b border-slate-100 pb-3">
+                      <div className="grid grid-cols-7 text-center font-mono text-[10px] font-black tracking-widest text-slate-500 border-b border-slate-100 pb-3">
                         <span>Sun</span>
                         <span>Mon</span>
                         <span>Tue</span>
@@ -4133,7 +4346,7 @@ export default function App() {
                                       }}
                                       onMouseMove={handleLeaveMove}
                                       onMouseLeave={handleLeaveLeave}
-                                      className={`flex items-center gap-1 border rounded-lg px-1.5 py-0.5 text-[8px] font-bold ${typeBg} ${typeText} truncate shadow-4xs hover:scale-[1.03] transition-transform`}
+                                      className={`flex items-center gap-1 border rounded-lg px-1.5 py-0.5 text-[9px] font-bold ${typeBg} ${typeText} truncate shadow-4xs hover:scale-[1.03] transition-transform`}
                                     >
                                       <div className={`w-1 h-1 rounded-full shrink-0 ${typeColor}`} />
                                       <span className="truncate">{employee.name.split(" ")[0]}</span>
@@ -4142,7 +4355,7 @@ export default function App() {
                                 })}
 
                                 {leaves.length > 2 && (
-                                  <div className="text-[7px] font-mono font-bold text-slate-400 text-right pr-0.5">
+                                  <div className="text-[7px] font-mono font-bold text-slate-500 text-right pr-0.5">
                                     +{leaves.length - 2} more
                                   </div>
                                 )}
@@ -4170,7 +4383,7 @@ export default function App() {
                         return (
                           <div className="space-y-4 h-full flex flex-col">
                             <div>
-                              <span className="text-[8px] font-mono font-bold uppercase tracking-wider text-slate-400">Selected Calendar Audit</span>
+                              <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-slate-500">Selected Calendar Audit</span>
                               <h4 className="font-black text-slate-800 text-[13px] tracking-tight pt-0.5">{fullDateFormatted}</h4>
                             </div>
 
@@ -4180,8 +4393,8 @@ export default function App() {
                                   <AlertTriangle className="w-3.5 h-3.5 stroke-[2.5]" />
                                 </div>
                                 <div className="space-y-0.5">
-                                  <span className="block text-[10px] font-black text-rose-800 uppercase tracking-wider font-mono leading-none">Roster Conflict Alert</span>
-                                  <p className="text-[10px] text-rose-700 leading-normal font-medium">
+                                  <span className="block text-[11px] font-black text-rose-800 uppercase tracking-wider font-mono leading-none">Roster Conflict Alert</span>
+                                  <p className="text-[11px] text-rose-700 leading-normal font-medium">
                                     There are <strong className="font-extrabold">{leavesOnThisDay.length} team members</strong> away simultaneously. Ensure proper backup coverage.
                                   </p>
                                 </div>
@@ -4209,20 +4422,20 @@ export default function App() {
                                         </div>
                                         <div>
                                           <div className="font-bold text-[11px] text-slate-800 leading-none">{employee.name}</div>
-                                          <div className="text-[8px] text-slate-400 font-semibold font-mono mt-0.5 uppercase tracking-wide">{employee.role}</div>
+                                          <div className="text-[9px] text-slate-500 font-semibold font-mono mt-0.5 uppercase tracking-wide">{employee.role}</div>
                                         </div>
                                       </div>
-                                      <span className={`text-[8px] font-black px-2 py-0.5 rounded-lg border uppercase tracking-widest font-mono flex items-center gap-1 ${badgeColor}`}>
+                                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-lg border uppercase tracking-widest font-mono flex items-center gap-1 ${badgeColor}`}>
                                         <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
                                         {request.type}
                                       </span>
                                     </div>
 
-                                    <div className="text-[10px] text-slate-500 leading-relaxed bg-slate-50/50 border border-slate-100 p-2.5 rounded-xl italic">
+                                    <div className="text-[11px] text-slate-500 leading-relaxed bg-slate-50/50 border border-slate-100 p-2.5 rounded-xl italic">
                                       "{request.notes || "Standard annual leave breakout."}"
                                     </div>
 
-                                    <div className="flex justify-between items-center text-[9px] text-slate-400 font-mono font-medium pt-0.5">
+                                    <div className="flex justify-between items-center text-[10px] text-slate-500 font-mono font-medium pt-0.5">
                                       <span className="flex items-center gap-1">
                                         <span className="w-1.5 h-1.5 rounded-full bg-slate-200" />
                                         {request.start} to {request.end}
@@ -4238,8 +4451,8 @@ export default function App() {
                                   <div className="w-9 h-9 bg-emerald-50 text-emerald-500 border border-emerald-100 rounded-full flex items-center justify-center mb-2.5">
                                     <Check className="w-4 h-4 stroke-[2.5]" />
                                   </div>
-                                  <span className="block text-[10px] font-black text-slate-600 uppercase tracking-widest font-mono">Full Teammate Presence</span>
-                                  <p className="text-[9px] text-slate-450 max-w-[180px] mt-1 leading-normal">Every squad member is on deck today. No scheduled timesheet absences.</p>
+                                  <span className="block text-[11px] font-black text-slate-600 uppercase tracking-widest font-mono">Full Teammate Presence</span>
+                                  <p className="text-[10px] text-slate-450 max-w-[180px] mt-1 leading-normal">Every squad member is on deck today. No scheduled timesheet absences.</p>
                                 </div>
                               )}
                             </div>
@@ -4251,7 +4464,7 @@ export default function App() {
                             <Calendar className="w-5 h-5" />
                           </div>
                           <span className="block text-[11px] font-black text-slate-600 uppercase tracking-widest font-mono">Select Active Calendar Day</span>
-                          <p className="text-[10px] text-slate-400 max-w-xs mt-1.5 leading-relaxed font-medium">
+                          <p className="text-[11px] text-slate-500 max-w-xs mt-1.5 leading-relaxed font-medium">
                             Pick any colored day inside the calendar grid to audit individual teammate leave reasons, coverages, and active overlap statistics.
                           </p>
                         </div>
@@ -4275,7 +4488,7 @@ export default function App() {
                     </div>
                     
                     {/* Visual Category Legend */}
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono mt-2">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500 font-bold uppercase tracking-wider font-mono mt-2">
                       <span className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-rose-500 ring-2 ring-rose-100/50 inline-block" />
                         Sick Leave Focus
@@ -4297,7 +4510,7 @@ export default function App() {
 
                   <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0">
                     <div className="relative w-full md:w-60 group">
-                      <Search className="w-3.5 h-3.5 text-slate-400 group-focus-within:text-indigo-500 absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors pointer-events-none" />
+                      <Search className="w-3.5 h-3.5 text-slate-500 group-focus-within:text-indigo-500 absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors pointer-events-none" />
                       <input
                         type="text"
                         placeholder="Search teammate..."
@@ -4376,7 +4589,7 @@ export default function App() {
                                 </div>
                                 <div>
                                   <div className="font-bold text-slate-800 text-[12.5px] tracking-tight">{emp.name}</div>
-                                  <div className="text-[9px] text-slate-400 font-bold font-mono uppercase tracking-wider flex items-center gap-1 mt-0.5">
+                                  <div className="text-[10px] text-slate-500 font-bold font-mono uppercase tracking-wider flex items-center gap-1 mt-0.5">
                                     <span className="w-1 h-1 rounded-full bg-slate-300" />
                                     Hub: {emp.team || "Nexus"}
                                   </div>
@@ -4391,9 +4604,9 @@ export default function App() {
                                     ? "bg-rose-50 text-rose-600 border border-rose-100 shadow-4xs" 
                                     : sickUsed > 0
                                       ? "bg-slate-50 text-slate-700 border border-slate-200/50"
-                                      : "bg-slate-50/40 text-slate-400 border border-slate-200/20 font-semibold"
+                                      : "bg-slate-50/40 text-slate-500 border border-slate-200/20 font-semibold"
                                 }`}>
-                                  {sickUsed} <span className="text-[9px] opacity-50 font-bold font-sans">/ 7</span>
+                                  {sickUsed} <span className="text-[10px] opacity-50 font-bold font-sans">/ 7</span>
                                 </span>
                               </div>
                             </td>
@@ -4405,9 +4618,9 @@ export default function App() {
                                     ? "bg-amber-50 text-amber-600 border border-amber-100 shadow-4xs" 
                                     : casUsed > 0
                                       ? "bg-slate-50 text-slate-700 border border-slate-200/50"
-                                      : "bg-slate-50/40 text-slate-400 border border-slate-200/20 font-semibold"
+                                      : "bg-slate-50/40 text-slate-500 border border-slate-200/20 font-semibold"
                                 }`}>
-                                  {casUsed} <span className="text-[9px] opacity-50 font-bold font-sans">/ 7</span>
+                                  {casUsed} <span className="text-[10px] opacity-50 font-bold font-sans">/ 7</span>
                                 </span>
                               </div>
                             </td>
@@ -4419,9 +4632,9 @@ export default function App() {
                                     ? "bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-4xs" 
                                     : govUsed > 0
                                       ? "bg-slate-50 text-slate-700 border border-slate-200/50"
-                                      : "bg-slate-50/40 text-slate-400 border border-slate-200/20 font-semibold"
+                                      : "bg-slate-50/40 text-slate-500 border border-slate-200/20 font-semibold"
                                 }`}>
-                                  {govUsed} <span className="text-[9px] opacity-50 font-bold font-sans">/ 14</span>
+                                  {govUsed} <span className="text-[10px] opacity-50 font-bold font-sans">/ 14</span>
                                 </span>
                               </div>
                             </td>
@@ -4429,7 +4642,7 @@ export default function App() {
                             <td className="px-6 py-4 text-center">
                               <div className="inline-flex items-center justify-center">
                                 <span className="font-mono text-xs font-black text-slate-800 bg-slate-100/50 border border-slate-200/30 px-3 py-1 rounded-full shadow-4xs">
-                                  {totalUsed} <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider ml-0.5 font-sans">days</span>
+                                  {totalUsed} <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider ml-0.5 font-sans">days</span>
                                 </span>
                               </div>
                             </td>
@@ -4499,7 +4712,7 @@ export default function App() {
                                          </span>
                                          {statusLabel}
                                        </span>
-                                       <div className="text-[8.5px] text-slate-400 font-bold font-mono tracking-wider uppercase mt-0.5">
+                                       <div className="text-[8.5px] text-slate-500 font-bold font-mono tracking-wider uppercase mt-0.5">
                                          {statusSub}
                                        </div>
                                      </>
@@ -4513,7 +4726,7 @@ export default function App() {
 
                       {filteredLedgerEmployees.length === 0 && (
                         <tr>
-                          <td colSpan={7} className="text-center py-12 text-slate-400 italic text-xs bg-slate-50/20">
+                          <td colSpan={7} className="text-center py-12 text-slate-500 italic text-xs bg-slate-50/20">
                             No matching teammates found.
                           </td>
                         </tr>
@@ -4580,7 +4793,7 @@ export default function App() {
                 <button 
                   type="button"
                   onClick={() => setIsEmployeeModalOpen(false)} 
-                  className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+                  className="text-slate-500 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -4645,7 +4858,7 @@ export default function App() {
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Employee UID / ID *</label>
                           <input 
                             type="text" 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none font-mono font-medium" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none font-mono font-medium" 
                             value={employeeFormData.id || ''} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, id: e.target.value})} 
                             placeholder="e.g. emp-100" 
@@ -4656,7 +4869,7 @@ export default function App() {
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Full Name *</label>
                           <input 
                             type="text" 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none" 
                             value={employeeFormData.name || ''} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, name: e.target.value})} 
                             placeholder="e.g. Jane Doe" 
@@ -4667,7 +4880,7 @@ export default function App() {
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Corporate Email *</label>
                           <input 
                             type="email" 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none" 
                             value={employeeFormData.email || ''} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, email: e.target.value})} 
                             placeholder="e.g. jane.doe@company.com" 
@@ -4681,7 +4894,7 @@ export default function App() {
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Corporate Role *</label>
                           <input 
                             type="text" 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none" 
                             value={employeeFormData.role || ''} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, role: e.target.value})} 
                             placeholder="e.g. Senior Developer" 
@@ -4692,7 +4905,7 @@ export default function App() {
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Joining Date *</label>
                           <input 
                             type="date" 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none font-mono" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none font-mono" 
                             value={employeeFormData.joiningDate || ''} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, joiningDate: e.target.value})} 
                             required 
@@ -4704,7 +4917,7 @@ export default function App() {
                         <div>
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Department</label>
                           <select 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none cursor-pointer" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none cursor-pointer" 
                             value={employeeFormData.department || DEPARTMENTS[0]} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, department: e.target.value})}
                           >
@@ -4714,7 +4927,7 @@ export default function App() {
                         <div>
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Team Hub</label>
                           <select 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none cursor-pointer" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none cursor-pointer" 
                             value={employeeFormData.team || TEAMS[0]} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, team: e.target.value})}
                           >
@@ -4728,7 +4941,7 @@ export default function App() {
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Base Salary ($ / year) *</label>
                           <input 
                             type="number" 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none font-mono" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none font-mono" 
                             value={employeeFormData.salary || ''} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, salary: parseFloat(e.target.value) || 0})} 
                             placeholder="e.g. 75000" 
@@ -4738,7 +4951,7 @@ export default function App() {
                         <div>
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Employment Type</label>
                           <select 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none cursor-pointer" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none cursor-pointer" 
                             value={employeeFormData.employmentType || "Full-time"} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, employmentType: e.target.value})}
                           >
@@ -4754,7 +4967,7 @@ export default function App() {
                         <div>
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Work Location</label>
                           <select 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none cursor-pointer" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none cursor-pointer" 
                             value={employeeFormData.workLocation || "Office"} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, workLocation: e.target.value})}
                           >
@@ -4766,7 +4979,7 @@ export default function App() {
                         <div>
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Probation Period</label>
                           <select 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none cursor-pointer" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none cursor-pointer" 
                             value={employeeFormData.probationPeriod || "None"} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, probationPeriod: e.target.value})}
                           >
@@ -4788,7 +5001,7 @@ export default function App() {
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Mobile Phone</label>
                           <input 
                             type="text" 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none" 
                             value={employeeFormData.phone || ''} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, phone: e.target.value})} 
                             placeholder="e.g. +1 (555) 019-2834" 
@@ -4798,7 +5011,7 @@ export default function App() {
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Personal Email</label>
                           <input 
                             type="email" 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none" 
                             value={employeeFormData.personalEmail || ''} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, personalEmail: e.target.value})} 
                             placeholder="e.g. jane.personal@gmail.com" 
@@ -4811,7 +5024,7 @@ export default function App() {
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Date of Birth</label>
                           <input 
                             type="date" 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none font-mono" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none font-mono" 
                             value={employeeFormData.dob || ''} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, dob: e.target.value})} 
                           />
@@ -4819,7 +5032,7 @@ export default function App() {
                         <div>
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Blood Group</label>
                           <select 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none cursor-pointer font-mono" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none cursor-pointer font-mono" 
                             value={employeeFormData.bloodGroup || ""} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, bloodGroup: e.target.value})}
                           >
@@ -4840,7 +5053,7 @@ export default function App() {
                         <div>
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Gender</label>
                           <select 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none cursor-pointer" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none cursor-pointer" 
                             value={employeeFormData.gender || ""} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, gender: e.target.value})}
                           >
@@ -4854,7 +5067,7 @@ export default function App() {
                         <div>
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Marital Status</label>
                           <select 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none cursor-pointer" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none cursor-pointer" 
                             value={employeeFormData.maritalStatus || ""} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, maritalStatus: e.target.value})}
                           >
@@ -4872,7 +5085,7 @@ export default function App() {
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Nationality</label>
                           <input 
                             type="text" 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none" 
                             value={employeeFormData.nationality || ''} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, nationality: e.target.value})} 
                             placeholder="e.g. Bangladeshi" 
@@ -4882,7 +5095,7 @@ export default function App() {
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Emergency Contact (Name, Phone & Relation)</label>
                           <input 
                             type="text" 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none" 
                             value={employeeFormData.emergencyContact || ''} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, emergencyContact: e.target.value})} 
                             placeholder="e.g. Mary Doe (Spouse) - +1 (555) 019-9999" 
@@ -4900,7 +5113,7 @@ export default function App() {
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Highest Academic Qualification</label>
                           <input 
                             type="text" 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none" 
                             value={employeeFormData.highestQualification || ''} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, highestQualification: e.target.value})} 
                             placeholder="e.g. B.Sc. in Computer Science" 
@@ -4910,7 +5123,7 @@ export default function App() {
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Total Experience (Years)</label>
                           <input 
                             type="number" 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none font-mono" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none font-mono" 
                             value={employeeFormData.experienceYears || ''} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, experienceYears: parseInt(e.target.value) || 0})} 
                             placeholder="e.g. 5" 
@@ -4923,7 +5136,7 @@ export default function App() {
                           <label className="block text-xs font-semibold text-slate-500 mb-1">National ID / Passport Number</label>
                           <input 
                             type="text" 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none font-mono" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none font-mono" 
                             value={employeeFormData.nationalId || ''} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, nationalId: e.target.value})} 
                             placeholder="e.g. NID-483920194 or Passport No." 
@@ -4933,7 +5146,7 @@ export default function App() {
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Tax / PAN Identification ID</label>
                           <input 
                             type="text" 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none font-mono" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none font-mono" 
                             value={employeeFormData.taxId || ''} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, taxId: e.target.value})} 
                             placeholder="e.g. TAX-3829103" 
@@ -5009,7 +5222,7 @@ export default function App() {
                                   <p className="text-xs font-bold text-slate-800 line-clamp-1 max-w-[220px] mx-auto">
                                     {employeeFormData.resumeName}
                                   </p>
-                                  <p className="text-[10px] text-emerald-600 font-medium">Ready for sync</p>
+                                  <p className="text-[11px] text-emerald-600 font-medium">Ready for sync</p>
                                 </div>
                                 <button
                                   type="button"
@@ -5021,20 +5234,20 @@ export default function App() {
                                       resumeUrl: ""
                                     });
                                   }}
-                                  className="text-[10px] font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded transition-colors"
+                                  className="text-[11px] font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded transition-colors"
                                 >
                                   Remove File
                                 </button>
                               </div>
                             ) : (
                               <div className="space-y-1.5 py-1">
-                                <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+                                <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-500">
                                   <Upload className="w-4 h-4" />
                                 </div>
                                 <div className="text-[11px] font-medium text-slate-500">
                                   <span className="font-bold text-indigo-600">Click to upload</span> or drag & drop
                                 </div>
-                                <p className="text-[9px] text-slate-400">PDF, DOC, DOCX, TXT up to 10MB</p>
+                                <p className="text-[10px] text-slate-500">PDF, DOC, DOCX, TXT up to 10MB</p>
                               </div>
                             )}
                           </div>
@@ -5056,14 +5269,14 @@ export default function App() {
                                   placeholder="e.g. https://drive.google.com/file/d/..."
                                 />
                               </div>
-                              <p className="text-[10px] text-slate-400 leading-relaxed">
+                              <p className="text-[11px] text-slate-500 leading-relaxed">
                                 Share a link to a Google Drive document, Dropbox PDF, LinkedIn profile, or personal CV portal.
                               </p>
                             </div>
                             
                             {employeeFormData.resumeUrl && (
-                              <div className="pt-2 flex items-center justify-between text-[10px] font-medium text-slate-500 border-t border-slate-100/50 mt-2">
-                                <span className="truncate max-w-[140px] font-mono text-[9px]">{employeeFormData.resumeUrl}</span>
+                              <div className="pt-2 flex items-center justify-between text-[11px] font-medium text-slate-500 border-t border-slate-100/50 mt-2">
+                                <span className="truncate max-w-[140px] font-mono text-[10px]">{employeeFormData.resumeUrl}</span>
                                 <a 
                                   href={employeeFormData.resumeUrl} 
                                   target="_blank" 
@@ -5088,7 +5301,7 @@ export default function App() {
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Bank Name</label>
                           <input 
                             type="text" 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none" 
                             value={employeeFormData.bankName || ''} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, bankName: e.target.value})} 
                             placeholder="e.g. Standard Chartered" 
@@ -5098,7 +5311,7 @@ export default function App() {
                           <label className="block text-xs font-semibold text-slate-500 mb-1">Account Number</label>
                           <input 
                             type="text" 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none font-mono" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none font-mono" 
                             value={employeeFormData.bankAccountNumber || ''} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, bankAccountNumber: e.target.value})} 
                             placeholder="e.g. 10293810293" 
@@ -5108,7 +5321,7 @@ export default function App() {
                           <label className="block text-xs font-semibold text-slate-500 mb-1">IFSC / SWIFT Code</label>
                           <input 
                             type="text" 
-                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none font-mono" 
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none font-mono" 
                             value={employeeFormData.bankIfscCode || ''} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, bankIfscCode: e.target.value})} 
                             placeholder="e.g. SCBLBDDX" 
@@ -5120,7 +5333,7 @@ export default function App() {
                         <label className="block text-xs font-semibold text-slate-500 mb-1">Current Residential Address</label>
                         <textarea 
                           rows={2}
-                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none resize-none" 
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none resize-none" 
                           value={employeeFormData.currentAddress || ''} 
                           onChange={(e) => setEmployeeFormData({...employeeFormData, currentAddress: e.target.value})} 
                           placeholder="Provide the current home address details." 
@@ -5133,14 +5346,14 @@ export default function App() {
                           <button
                             type="button"
                             onClick={() => setEmployeeFormData({...employeeFormData, permanentAddress: employeeFormData.currentAddress})}
-                            className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded"
+                            className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded"
                           >
                             Copy Current Address
                           </button>
                         </div>
                         <textarea 
                           rows={2}
-                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none resize-none" 
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none resize-none" 
                           value={employeeFormData.permanentAddress || ''} 
                           onChange={(e) => setEmployeeFormData({...employeeFormData, permanentAddress: e.target.value})} 
                           placeholder="Provide the permanent legal address details." 
@@ -5151,7 +5364,7 @@ export default function App() {
                         <label className="block text-xs font-semibold text-slate-500 mb-1">Internal HR & Executive Notes</label>
                         <textarea 
                           rows={2}
-                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none resize-none" 
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none resize-none" 
                           value={employeeFormData.notes || ''} 
                           onChange={(e) => setEmployeeFormData({...employeeFormData, notes: e.target.value})} 
                           placeholder="Provide additional internal notes, administrative guidelines, etc." 
@@ -5166,13 +5379,13 @@ export default function App() {
                   <button 
                     type="button" 
                     onClick={() => setIsEmployeeModalOpen(false)}
-                    className="flex-1 py-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold border border-slate-200 rounded-lg transition-colors cursor-pointer text-sm"
+                    className="flex-1 py-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold border border-slate-200 rounded-lg transition-colors cursor-pointer text-xs"
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit" 
-                    className="flex-1 py-2 bg-slate-950 hover:bg-slate-900 text-white font-bold rounded-lg transition-colors shadow-sm cursor-pointer text-sm"
+                    className="flex-1 py-2 bg-slate-950 hover:bg-slate-900 text-white font-bold rounded-lg transition-colors shadow-sm cursor-pointer text-xs"
                   >
                     {editingEmployee ? "Save Profile" : "Create Profile"}
                   </button>
@@ -5202,7 +5415,7 @@ export default function App() {
                 <button 
                   type="button"
                   onClick={() => setIsIncrementModalOpen(false)} 
-                  className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+                  className="text-slate-500 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -5212,7 +5425,7 @@ export default function App() {
                   <label className="block text-xs font-semibold text-slate-500 mb-1">Target Employee</label>
                   <input 
                     type="text" 
-                    className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-sm transition-all outline-none text-slate-600 font-bold" 
+                    className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-xs transition-all outline-none text-slate-600 font-bold" 
                     value={activeDirectoryEmployee ? activeDirectoryEmployee.name : "N/A"}
                     disabled
                   />
@@ -5223,7 +5436,7 @@ export default function App() {
                     <label className="block text-xs font-semibold text-slate-500 mb-1">Current Base ($)</label>
                     <input 
                       type="text" 
-                      className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-sm transition-all outline-none font-mono text-slate-600 font-bold" 
+                      className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-xs transition-all outline-none font-mono text-slate-600 font-bold" 
                       value={activeDirectoryEmployee ? `$${(activeDirectoryEmployee.salary || 55000).toLocaleString()}` : "$0"}
                       disabled
                     />
@@ -5232,7 +5445,7 @@ export default function App() {
                     <label className="block text-xs font-semibold text-slate-500 mb-1">New Base Annual ($)</label>
                     <input 
                       type="number" 
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none font-mono font-bold" 
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none font-mono font-bold" 
                       value={incrementFormData.newSalary || ""} 
                       onChange={(e) => setIncrementFormData({...incrementFormData, newSalary: parseInt(e.target.value) || 0})}
                       placeholder="e.g. 65000"
@@ -5245,7 +5458,7 @@ export default function App() {
                   <label className="block text-xs font-semibold text-slate-500 mb-1">Adjustment Date</label>
                   <input 
                     type="date" 
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none font-mono" 
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none font-mono" 
                     value={incrementFormData.date} 
                     onChange={(e) => setIncrementFormData({...incrementFormData, date: e.target.value})}
                     required 
@@ -5256,7 +5469,7 @@ export default function App() {
                   <label className="block text-xs font-semibold text-slate-500 mb-1">Adjustment Reason / Remarks</label>
                   <textarea 
                     rows={3}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm transition-all outline-none resize-none" 
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs transition-all outline-none resize-none" 
                     value={incrementFormData.remarks} 
                     onChange={(e) => setIncrementFormData({...incrementFormData, remarks: e.target.value})} 
                     placeholder="e.g. Annual merit review, promotion to senior engineer..." 
@@ -5268,13 +5481,13 @@ export default function App() {
                   <button 
                     type="button" 
                     onClick={() => setIsIncrementModalOpen(false)}
-                    className="flex-1 py-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold border border-slate-200 rounded-lg transition-colors cursor-pointer text-sm"
+                    className="flex-1 py-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold border border-slate-200 rounded-lg transition-colors cursor-pointer text-xs"
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit" 
-                    className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors shadow-sm cursor-pointer text-sm"
+                    className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors shadow-sm cursor-pointer text-xs"
                   >
                     Log Raise
                   </button>
@@ -5310,7 +5523,7 @@ export default function App() {
                 <button 
                   type="button"
                   onClick={() => setIsPerformanceModalOpen(false)} 
-                  className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+                  className="text-slate-500 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -5321,7 +5534,7 @@ export default function App() {
                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-slate-700">Logging Mode</span>
-                    <div className="flex items-center gap-1 bg-slate-200/50 p-0.5 rounded-lg text-[10px] font-bold">
+                    <div className="flex items-center gap-1 bg-slate-200/50 p-0.5 rounded-lg text-[11px] font-bold">
                       <button
                         type="button"
                         onClick={() => setEntryMode("overwrite")}
@@ -5346,7 +5559,7 @@ export default function App() {
                       </button>
                     </div>
                   </div>
-                  <p className="text-[10px] text-slate-500 leading-relaxed">
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
                     {entryMode === "overwrite"
                       ? "Directly replace the logged values. Fetched active data is shown in fields."
                       : "Input new numbers to add them on top of the currently recorded values."}
@@ -5357,7 +5570,7 @@ export default function App() {
                 {entryMode === "add" && existingRecordForSelected && (
                   <div className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-3 text-xs text-slate-700">
                     <span className="font-semibold text-indigo-700">Currently Recorded for {selectedMonth}:</span>
-                    <div className="grid grid-cols-3 gap-2 mt-1.5 font-mono text-[10px] text-slate-600">
+                    <div className="grid grid-cols-3 gap-2 mt-1.5 font-mono text-[11px] text-slate-600">
                       <div>• Meetings: <span className="font-bold text-slate-800">{existingRecordForSelected.conductedMeetings}</span></div>
                       <div>• Projects: <span className="font-bold text-slate-800">{existingRecordForSelected.deliveredProjectsAmount}</span></div>
                       <div>• Value: <span className="font-bold text-slate-800">${existingRecordForSelected.deliveredProjectsValue.toLocaleString()}</span></div>
@@ -5374,13 +5587,13 @@ export default function App() {
                       type="number" 
                       min="0" 
                       max="100"
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm font-mono outline-none" 
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs font-mono outline-none" 
                       value={perfFormData.attendance} 
                       onChange={(e) => setPerfFormData({...perfFormData, attendance: parseFloat(e.target.value) || 0})} 
                       required
                     />
                     {entryMode === "add" && (
-                      <span className="text-[9px] text-slate-400 block mt-0.5 font-mono">Absolute percentage rate</span>
+                      <span className="text-[10px] text-slate-500 block mt-0.5 font-mono">Absolute percentage rate</span>
                     )}
                   </div>
                   <div>
@@ -5390,7 +5603,7 @@ export default function App() {
                     <input 
                       type="number" 
                       min="0"
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm font-mono outline-none" 
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs font-mono outline-none" 
                       value={perfFormData.conductedMeetings} 
                       onChange={(e) => setPerfFormData({...perfFormData, conductedMeetings: parseInt(e.target.value) || 0})} 
                       required
@@ -5403,7 +5616,7 @@ export default function App() {
                     <input 
                       type="number" 
                       min="0"
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm font-mono outline-none" 
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs font-mono outline-none" 
                       value={perfFormData.deliveredProjectsAmount} 
                       onChange={(e) => setPerfFormData({...perfFormData, deliveredProjectsAmount: parseInt(e.target.value) || 0})} 
                       required
@@ -5416,7 +5629,7 @@ export default function App() {
                     <input 
                       type="number" 
                       min="0"
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm font-mono outline-none" 
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs font-mono outline-none" 
                       value={perfFormData.deliveredProjectsValue} 
                       onChange={(e) => setPerfFormData({...perfFormData, deliveredProjectsValue: parseInt(e.target.value) || 0})} 
                       required
@@ -5429,7 +5642,7 @@ export default function App() {
                     {entryMode === "add" ? "Additional Remarks (Optional)" : "Manager Remarks (Optional)"}
                   </label>
                   <textarea 
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm outline-none resize-none h-16 transition-all"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs outline-none resize-none h-16 transition-all"
                     value={perfFormData.managerRemarks || ""}
                     onChange={(e) => setPerfFormData({...perfFormData, managerRemarks: e.target.value})}
                     placeholder={
@@ -5477,7 +5690,7 @@ export default function App() {
                 <button 
                   type="button"
                   onClick={() => setIsTargetsModalOpen(false)} 
-                  className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+                  className="text-slate-500 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -5489,7 +5702,7 @@ export default function App() {
                     type="number" 
                     min="0" 
                     max="100"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm font-mono outline-none" 
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs font-mono outline-none" 
                     value={targetFormData.attendanceMin} 
                     onChange={(e) => setTargetFormData({...targetFormData, attendanceMin: parseFloat(e.target.value) || 0})} 
                     required
@@ -5500,7 +5713,7 @@ export default function App() {
                   <input 
                     type="number" 
                     min="0"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-sm font-mono outline-none" 
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-lg text-xs font-mono outline-none" 
                     value={targetFormData.projectValueMin} 
                     onChange={(e) => setTargetFormData({...targetFormData, projectValueMin: parseInt(e.target.value) || 0})} 
                     required
@@ -5538,7 +5751,7 @@ export default function App() {
               <div className="font-extrabold text-[11px] text-slate-800 tracking-tight leading-none mb-1">
                 {hoveredLeave.employeeName}
               </div>
-              <div className="text-[9px] text-slate-400 font-medium tracking-tight leading-none truncate">
+              <div className="text-[10px] text-slate-500 font-medium tracking-tight leading-none truncate">
                 {hoveredLeave.employeeRole} • <span className="font-bold text-slate-500">{hoveredLeave.employeeTeam}</span>
               </div>
             </div>
@@ -5547,7 +5760,7 @@ export default function App() {
           <div className="h-[1px] bg-slate-100" />
 
           <div className="flex items-center justify-between">
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-wider ${
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-black uppercase tracking-wider ${
               hoveredLeave.leaveType === "Sick" ? "bg-rose-50 text-rose-600 border-rose-100" :
               hoveredLeave.leaveType === "Casual" ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
               "bg-violet-50 text-violet-650 border-violet-100"
@@ -5559,28 +5772,28 @@ export default function App() {
               }`} />
               {hoveredLeave.leaveType} Leave
             </span>
-            <span className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ${
+            <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ${
               hoveredLeave.status === "Approved" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-amber-50 text-amber-600 border-amber-100"
             }`}>
               {hoveredLeave.status}
             </span>
           </div>
 
-          <div className="flex flex-col gap-1 text-[10px] text-slate-500 bg-slate-50 p-2 rounded-xl border border-slate-100">
+          <div className="flex flex-col gap-1 text-[11px] text-slate-500 bg-slate-50 p-2 rounded-xl border border-slate-100">
             <div className="flex items-center gap-1">
-              <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
+              <Calendar className="w-3 h-3 text-slate-500 shrink-0" />
               <span className="font-bold text-slate-700">Roster Period:</span>
             </div>
-            <div className="font-mono text-[9px] pl-4 text-slate-600">
+            <div className="font-mono text-[10px] pl-4 text-slate-600">
               {hoveredLeave.start} to {hoveredLeave.end}
             </div>
-            <div className="pl-4 text-[9px] font-bold text-slate-800">
+            <div className="pl-4 text-[10px] font-bold text-slate-800">
               Duration: <span className="text-indigo-600 font-black">{hoveredLeave.days} {hoveredLeave.days === 1 ? "day" : "days"}</span>
             </div>
           </div>
 
-          <div className="text-[10px] text-slate-600 bg-indigo-50/20 p-2 rounded-xl border border-indigo-100/30 relative">
-            <div className="text-[8px] font-black text-indigo-500 uppercase tracking-widest mb-0.5">Notes</div>
+          <div className="text-[11px] text-slate-600 bg-indigo-50/20 p-2 rounded-xl border border-indigo-100/30 relative">
+            <div className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-0.5">Notes</div>
             <p className="italic font-medium text-slate-700">"{hoveredLeave.notes}"</p>
           </div>
         </div>

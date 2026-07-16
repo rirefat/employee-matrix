@@ -181,14 +181,14 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">Nexus Portal</h1>
             </div>
             <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight leading-tight mb-2">Welcome Back.</h2>
-            <p className="text-sm text-slate-500">Sign in to manage your dedicated teams and track performance metrics.</p>
+            <p className="text-xs text-slate-500">Sign in to manage your dedicated teams and track performance metrics.</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Work Email</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
                   <Mail className="h-4 w-4" />
                 </div>
                 <input 
@@ -196,7 +196,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="manager@nexus.com"
-                  className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all placeholder:text-slate-400 shadow-sm"
+                  className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all placeholder:text-slate-500 shadow-sm"
                   required
                 />
               </div>
@@ -205,7 +205,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Password</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-500">
                   <Lock className="h-4 w-4" />
                 </div>
                 <input 
@@ -213,7 +213,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all placeholder:text-slate-400 shadow-sm"
+                  className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all placeholder:text-slate-500 shadow-sm"
                   required
                 />
               </div>
@@ -228,7 +228,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
             <button 
               type="submit"
-              className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-blue-500/25 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+              className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-500/25 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
             >
               Secure Login <ArrowRight className="h-4 w-4" />
             </button>
@@ -237,7 +237,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
         <div className="bg-slate-50/50 p-10 md:p-14 flex flex-col justify-center">
           <div className="mb-8">
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest mb-1 flex items-center gap-2">
+            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest mb-1 flex items-center gap-2">
               <Zap className="h-4 w-4 text-emerald-500" /> Demo Accounts
             </h3>
             <p className="text-xs text-slate-500">Use these credentials to preview different role-based views. Password for all is <strong className="text-slate-700">admin123</strong>.</p>
@@ -260,10 +260,10 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                   <img src={get3DAvatarUrl(manager.name)} alt={manager.name} className="w-full h-full object-cover" />
                 </div>
                 <div className="flex-1">
-                  <h4 className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{manager.name}</h4>
+                  <h4 className="text-xs font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{manager.name}</h4>
                   <p className="text-xs text-slate-500">{manager.email}</p>
                 </div>
-                <div className="px-2.5 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-md uppercase tracking-wide group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                <div className="px-2.5 py-1 bg-slate-100 text-slate-600 text-[11px] font-bold rounded-md uppercase tracking-wide group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
                   {manager.role}
                 </div>
               </motion.div>

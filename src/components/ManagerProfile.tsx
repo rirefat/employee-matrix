@@ -232,23 +232,23 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
 
           <div className="text-center sm:text-left space-y-2 flex-1">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-full">
+              <span className="text-[11px] font-mono font-bold uppercase tracking-widest text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-full">
                 Workspace Administrator
               </span>
-              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+              <span className="text-[11px] font-mono font-bold uppercase tracking-widest text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-0.5 rounded-full flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Active Session
               </span>
             </div>
             <h2 className="text-2xl font-black text-slate-900 tracking-tight">{name || "Administrator"}</h2>
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-1.5 text-sm font-semibold text-slate-500">
-              <span className="flex items-center gap-1.5"><Briefcase className="w-4 h-4 text-slate-400" /> {role || "Nexus Manager"}</span>
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-1.5 text-xs font-semibold text-slate-500">
+              <span className="flex items-center gap-1.5"><Briefcase className="w-4 h-4 text-slate-500" /> {role || "Nexus Manager"}</span>
               <span className="hidden sm:inline text-slate-300">•</span>
-              <span className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-0.5 rounded-md text-xs border border-slate-100"><Fingerprint className="w-3.5 h-3.5 text-slate-400" /> ID: {employeeId}</span>
+              <span className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-0.5 rounded-md text-xs border border-slate-100"><Fingerprint className="w-3.5 h-3.5 text-slate-500" /> ID: {employeeId}</span>
             </div>
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1 pt-1 text-xs text-slate-400 font-medium">
-              <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5 text-slate-400" /> {email}</span>
-              <span className="hidden sm:inline text-slate-200">•</span>
-              <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-slate-400" /> {location}</span>
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1 pt-1 text-xs text-slate-550 font-bold">
+              <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5 text-slate-500" /> {email}</span>
+              <span className="hidden sm:inline text-slate-300">•</span>
+              <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-slate-500" /> {location}</span>
             </div>
           </div>
         </div>
@@ -263,10 +263,10 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
             <div className="p-6 border-b border-slate-100 bg-slate-50/20">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest font-mono">
+                  <h3 className="text-xs font-black text-slate-850 uppercase tracking-widest font-mono">
                     Profile & Professional Details
                   </h3>
-                  <p className="text-xs text-slate-400 mt-1">Configure your personal biography, workspace configurations, and emergency preferences.</p>
+                  <p className="text-xs text-slate-600 font-medium mt-1">Configure your personal biography, workspace configurations, and emergency preferences.</p>
                 </div>
               </div>
 
@@ -324,7 +324,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                       <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-1.5">Full Name</label>
                         <div className="relative">
-                          <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                           <input 
                             type="text"
                             value={name}
@@ -339,7 +339,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                       <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-1.5">Work Email Address</label>
                         <div className="relative">
-                          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                           <input 
                             type="email"
                             value={email}
@@ -356,7 +356,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                       <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-1.5">Direct Line (Phone)</label>
                         <div className="relative">
-                          <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                           <input 
                             type="text"
                             value={phone}
@@ -370,7 +370,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                       <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-1.5">Operational Base (Location)</label>
                         <div className="relative">
-                          <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                           <input 
                             type="text"
                             value={location}
@@ -386,7 +386,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                       <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-1.5">Date of Birth</label>
                         <div className="relative">
-                          <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                           <input 
                             type="date"
                             value={dob}
@@ -399,7 +399,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                       <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-1.5">Blood Group</label>
                         <div className="relative">
-                          <Heart className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <Heart className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                           <select 
                             value={bloodGroup}
                             onChange={(e) => setBloodGroup(e.target.value)}
@@ -415,7 +415,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                             <option value="O+">O+</option>
                             <option value="O-">O-</option>
                           </select>
-                          <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
                             <ChevronDown className="w-4 h-4" />
                           </div>
                         </div>
@@ -425,7 +425,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                     <div>
                       <label className="block text-xs font-semibold text-slate-500 mb-1.5">Highest Educational Degree</label>
                       <div className="relative">
-                        <GraduationCap className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <GraduationCap className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                         <input 
                           type="text"
                           value={education}
@@ -440,7 +440,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                       <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-1.5">LinkedIn Profile Link</label>
                         <div className="relative">
-                          <LinkIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                          <LinkIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
                           <input 
                             type="url"
                             value={linkedinLink}
@@ -454,7 +454,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                       <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-1.5">GitHub / Portfolio Link</label>
                         <div className="relative">
-                          <LinkIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                          <LinkIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
                           <input 
                             type="url"
                             value={githubLink}
@@ -469,7 +469,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                     <div>
                       <label className="block text-xs font-semibold text-slate-500 mb-1.5">Preferred Workspace Language</label>
                       <div className="relative">
-                        <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                         <input 
                           type="text"
                           value={preferredLanguage}
@@ -557,7 +557,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                                 <p className="text-xs font-bold text-slate-800 line-clamp-1 max-w-[220px] mx-auto">
                                   {resumeName}
                                 </p>
-                                <p className="text-[10px] text-emerald-600 font-medium">Ready for sync</p>
+                                <p className="text-[11px] text-emerald-600 font-medium">Ready for sync</p>
                               </div>
                               <button
                                 type="button"
@@ -566,20 +566,20 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                                   setResumeName("");
                                   setResumeUrl("");
                                 }}
-                                className="text-[10px] font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded transition-colors"
+                                className="text-[11px] font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded transition-colors"
                               >
                                 Remove File
                               </button>
                             </div>
                           ) : (
                             <div className="space-y-1.5 py-1">
-                              <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+                              <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-500">
                                 <Upload className="w-4 h-4" />
                               </div>
                               <div className="text-[11px] font-medium text-slate-500">
                                 <span className="font-bold text-indigo-600">Click to upload</span> or drag & drop
                               </div>
-                              <p className="text-[9px] text-slate-400">PDF, DOC, DOCX, TXT up to 10MB</p>
+                              <p className="text-[10px] text-slate-500">PDF, DOC, DOCX, TXT up to 10MB</p>
                             </div>
                           )}
                         </div>
@@ -604,14 +604,14 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                                 placeholder="e.g. https://drive.google.com/file/d/..."
                               />
                             </div>
-                            <p className="text-[10px] text-slate-400 leading-relaxed">
+                            <p className="text-[11px] text-slate-500 leading-relaxed">
                               Prefer using a cloud link? Share a direct link to a Google Drive document, Dropbox PDF, LinkedIn profile, or personal web portfolio.
                             </p>
                           </div>
                           
                           {resumeUrl && (
-                            <div className="pt-2 flex items-center justify-between text-[10px] font-medium text-slate-500 border-t border-slate-100/50 mt-2">
-                              <span className="truncate max-w-[140px] font-mono text-[9px]">{resumeUrl}</span>
+                            <div className="pt-2 flex items-center justify-between text-[11px] font-medium text-slate-500 border-t border-slate-100/50 mt-2">
+                              <span className="truncate max-w-[140px] font-mono text-[10px]">{resumeUrl}</span>
                               <a 
                                 href={resumeUrl} 
                                 target="_blank" 
@@ -639,7 +639,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                       <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-1.5">Employee Identification Badge</label>
                         <div className="relative">
-                          <Fingerprint className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <Fingerprint className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                           <input 
                             type="text"
                             value={employeeId}
@@ -654,7 +654,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                       <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-1.5">Primary Department / Division</label>
                         <div className="relative">
-                          <Building className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <Building className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                           <input 
                             type="text"
                             value={department}
@@ -671,7 +671,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                       <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-1.5">Professional Role Title</label>
                         <div className="relative">
-                          <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                           <input 
                             type="text"
                             value={role}
@@ -686,7 +686,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                       <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-1.5">Employment Type Class</label>
                         <div className="relative">
-                          <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                           <select 
                             value={employeeType}
                             onChange={(e) => setEmployeeType(e.target.value)}
@@ -697,7 +697,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                             <option value="Contractor">Contractor (1099)</option>
                             <option value="Intern">Internship</option>
                           </select>
-                          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
+                          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 text-xs">
                             ▼
                           </div>
                         </div>
@@ -737,7 +737,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                       <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-1.5">Working Style Preference</label>
                         <div className="relative">
-                          <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                           <select 
                             value={workStyle}
                             onChange={(e) => setWorkStyle(e.target.value)}
@@ -747,7 +747,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                             <option value="Hybrid">Hybrid Work Schedule</option>
                             <option value="Onsite">100% On-Site Location</option>
                           </select>
-                          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
+                          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 text-xs">
                             ▼
                           </div>
                         </div>
@@ -805,7 +805,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                     <div>
                       <label className="block text-xs font-semibold text-slate-500 mb-1.5">Emergency Contact Full Name</label>
                       <div className="relative">
-                        <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                         <input 
                           type="text"
                           value={emergencyContactName}
@@ -820,7 +820,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                     <div>
                       <label className="block text-xs font-semibold text-slate-500 mb-1.5">Emergency Contact Direct Phone</label>
                       <div className="relative">
-                        <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                         <input 
                           type="text"
                           value={emergencyContactPhone}
@@ -864,7 +864,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                 <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest font-mono flex items-center gap-2">
                   <Tag className="w-4 h-4 text-indigo-500" /> Managed Hubs
                 </h3>
-                <p className="text-[11px] text-slate-400 mt-1 leading-normal">
+                <p className="text-[11px] text-slate-500 mt-1 leading-normal">
                   Configure departments and focus teams currently linked to your workspace session.
                 </p>
               </div>
@@ -888,7 +888,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                   </span>
                 ))}
                 {teams.length === 0 && (
-                  <span className="text-[10px] text-slate-400 font-medium italic self-center">
+                  <span className="text-[11px] text-slate-500 font-medium italic self-center">
                     No teams registered
                   </span>
                 )}
@@ -919,7 +919,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                 <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest font-mono flex items-center gap-2">
                   <Award className="w-4 h-4 text-violet-500" /> Core Competencies
                 </h3>
-                <p className="text-[11px] text-slate-400 mt-1 leading-normal">
+                <p className="text-[11px] text-slate-500 mt-1 leading-normal">
                   Define your specialized skills or professional capabilities for team routing.
                 </p>
               </div>
@@ -943,7 +943,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                   </span>
                 ))}
                 {skills.length === 0 && (
-                  <span className="text-[10px] text-slate-400 font-medium italic self-center">
+                  <span className="text-[11px] text-slate-500 font-medium italic self-center">
                     No skills registered
                   </span>
                 )}
@@ -970,39 +970,39 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
 
             {/* Quick Session Stats */}
             <div className="bg-slate-50/50 border border-slate-200/80 rounded-3xl p-5 space-y-4">
-              <span className="text-[9px] font-mono font-black uppercase tracking-wider text-slate-400 block">
+              <span className="text-[10px] font-mono font-black uppercase tracking-wider text-slate-500 block">
                 Session Telemetry
               </span>
               
               <div className="divide-y divide-slate-100">
                 <div className="py-2.5 flex items-center justify-between text-xs">
                   <span className="text-slate-450 font-semibold flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-slate-400" /> Date of Hire
+                    <Calendar className="w-3.5 h-3.5 text-slate-500" /> Date of Hire
                   </span>
                   <span className="font-bold text-slate-700 font-mono">{joinDate}</span>
                 </div>
 
                 <div className="py-2.5 flex items-center justify-between text-xs">
                   <span className="text-slate-450 font-semibold flex items-center gap-1.5">
-                    <Users className="w-3.5 h-3.5 text-slate-400" /> Class
+                    <Users className="w-3.5 h-3.5 text-slate-500" /> Class
                   </span>
-                  <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md font-mono text-[10px]">
+                  <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md font-mono text-[11px]">
                     {employeeType}
                   </span>
                 </div>
                 
                 <div className="py-2.5 flex items-center justify-between text-xs">
                   <span className="text-slate-450 font-semibold flex items-center gap-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5 text-slate-400" /> Permission
+                    <ShieldCheck className="w-3.5 h-3.5 text-slate-500" /> Permission
                   </span>
-                  <span className="font-bold text-indigo-700 bg-indigo-50 border border-indigo-100/60 px-2 py-0.5 rounded-md font-mono text-[10px]">
+                  <span className="font-bold text-indigo-700 bg-indigo-50 border border-indigo-100/60 px-2 py-0.5 rounded-md font-mono text-[11px]">
                     Root Manager
                   </span>
                 </div>
 
                 <div className="py-2.5 flex items-center justify-between text-xs">
                   <span className="text-slate-450 font-semibold flex items-center gap-1.5">
-                    <Tag className="w-3.5 h-3.5 text-slate-400" /> Active Hubs
+                    <Tag className="w-3.5 h-3.5 text-slate-500" /> Active Hubs
                   </span>
                   <span className="font-bold text-slate-750 font-mono">{teams.length} focus hubs</span>
                 </div>

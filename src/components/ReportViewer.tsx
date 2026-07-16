@@ -87,9 +87,9 @@ ${report.developmentPlan}
             <Sparkles className="h-8 w-8 animate-pulse" />
           </div>
         </div>
-        <h4 className="text-lg font-semibold text-slate-800 animate-pulse">Consulting Gemini Coach</h4>
-        <p className="text-xs text-blue-600 mt-2 font-mono h-5">{loadingTip}</p>
-        <p className="text-xs text-slate-400 mt-4 max-w-sm text-center">
+        <h4 className="text-lg font-bold text-slate-900 animate-pulse">Consulting Gemini Coach</h4>
+        <p className="text-xs text-blue-700 mt-2 font-mono font-bold h-5">{loadingTip}</p>
+        <p className="text-xs text-slate-600 font-medium mt-4 max-w-sm text-center">
           We use Google Gemini AI to analyze performance vectors and construct a bespoke professional roadmap.
         </p>
       </div>
@@ -103,7 +103,7 @@ ${report.developmentPlan}
           <FileText className="h-6 w-6" />
         </div>
         <h4 className="text-md font-semibold text-slate-800">No Performance Data Logged</h4>
-        <p className="text-sm text-slate-500 max-w-md mt-2">
+        <p className="text-xs text-slate-500 max-w-md mt-2">
           You must record employee performance metrics (attendance, meetings, and projects) for <strong>{formatMonth(month)}</strong> before a talent development report can be generated.
         </p>
       </div>
@@ -117,13 +117,13 @@ ${report.developmentPlan}
           <Sparkles className="h-6 w-6" />
         </div>
         <h4 className="text-md font-bold text-slate-800">Generate Development Roadmap</h4>
-        <p className="text-sm text-slate-600 max-w-md mt-2">
+        <p className="text-xs text-slate-600 max-w-md mt-2">
           Use Gemini AI to analyze {employee.name}'s performance ({record.attendance}% attendance, {record.conductedMeetings} meetings, {record.deliveredProjectsAmount} projects) and write a monthly development plan.
         </p>
         <button
           id="btn-generate-report"
           onClick={onGenerate}
-          className="mt-5 flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all"
+          className="mt-5 flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all"
         >
           <Sparkles className="h-4 w-4" />
           Generate AI Report
@@ -131,7 +131,7 @@ ${report.developmentPlan}
 
         {record.managerRemarks && (
           <div className="mt-5 w-full max-w-md bg-white border border-slate-200 rounded-xl p-3 text-left shadow-xs">
-            <span className="block text-[9px] font-extrabold text-indigo-500 uppercase tracking-wider mb-1">Attached Manager Remarks</span>
+            <span className="block text-[10px] font-extrabold text-indigo-500 uppercase tracking-wider mb-1">Attached Manager Remarks</span>
             <p className="text-xs text-slate-600 italic">"{record.managerRemarks}"</p>
           </div>
         )}
@@ -149,7 +149,7 @@ ${report.developmentPlan}
               <span className="text-xs bg-blue-500/20 text-blue-300 font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider print:hidden">
                 Talent Development
               </span>
-              <span className="text-xs text-slate-400 font-mono">
+              <span className="text-xs text-slate-500 font-mono">
                 ID: {report.id}
               </span>
             </div>
@@ -191,10 +191,10 @@ ${report.developmentPlan}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-800/80 print:grid-cols-4 print:text-slate-800 print:border-slate-200">
           <div className="bg-slate-800/40 p-3 rounded-xl print:bg-slate-50 flex flex-col justify-between">
             <div>
-              <span className="block text-[10px] text-slate-400 font-medium uppercase tracking-wider">Attendance</span>
+              <span className="block text-[11px] text-slate-500 font-medium uppercase tracking-wider">Attendance</span>
               <span className="text-md font-bold font-mono">{record.attendance}%</span>
             </div>
-            <div className="mt-1.5 flex flex-wrap gap-1 text-[8px] font-semibold text-slate-300 print:text-slate-500 font-mono">
+            <div className="mt-1.5 flex flex-wrap gap-1 text-[9px] font-semibold text-slate-300 print:text-slate-500 font-mono">
               <span className="bg-slate-700/50 px-1 rounded print:bg-slate-100">Pres: {record.presentDays !== undefined ? record.presentDays : Math.round((record.totalWorkingDays || 22) * (record.attendance / 100))}d</span>
               <span className="bg-slate-700/50 px-1 rounded print:bg-slate-100">Abs: {record.absentDays !== undefined ? record.absentDays : ((record.totalWorkingDays || 22) - (record.presentDays !== undefined ? record.presentDays : Math.round((record.totalWorkingDays || 22) * (record.attendance / 100))))}d</span>
               {record.leaveDays !== undefined && record.leaveDays > 0 && (
@@ -203,15 +203,15 @@ ${report.developmentPlan}
             </div>
           </div>
           <div className="bg-slate-800/40 p-3 rounded-xl print:bg-slate-50">
-            <span className="block text-[10px] text-slate-400 font-medium uppercase tracking-wider">Meetings</span>
+            <span className="block text-[11px] text-slate-500 font-medium uppercase tracking-wider">Meetings</span>
             <span className="text-md font-bold font-mono">{record.conductedMeetings}</span>
           </div>
           <div className="bg-slate-800/40 p-3 rounded-xl print:bg-slate-50">
-            <span className="block text-[10px] text-slate-400 font-medium uppercase tracking-wider">Projects Amount</span>
+            <span className="block text-[11px] text-slate-500 font-medium uppercase tracking-wider">Projects Amount</span>
             <span className="text-md font-bold font-mono">{record.deliveredProjectsAmount}</span>
           </div>
           <div className="bg-slate-800/40 p-3 rounded-xl print:bg-slate-50">
-            <span className="block text-[10px] text-slate-400 font-medium uppercase tracking-wider">Delivered Value</span>
+            <span className="block text-[11px] text-slate-500 font-medium uppercase tracking-wider">Delivered Value</span>
             <span className="text-md font-bold font-mono text-emerald-400 print:text-emerald-700">
               ${record.deliveredProjectsValue.toLocaleString()}
             </span>
@@ -223,11 +223,11 @@ ${report.developmentPlan}
       <div className="p-6 space-y-6">
         {/* Summary Block */}
         <div>
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1.5">
             <FileText className="h-3.5 w-3.5 text-blue-500" />
             Performance Synthesis
           </h4>
-          <p className="text-sm text-slate-700 leading-relaxed bg-blue-50/20 p-4 rounded-xl border border-blue-100/30">
+          <p className="text-xs text-slate-700 leading-relaxed bg-blue-50/20 p-4 rounded-xl border border-blue-100/30">
             {report.summary}
           </p>
         </div>
@@ -255,7 +255,7 @@ ${report.developmentPlan}
             <ul className="space-y-2.5">
               {report.strengths.map((strength, index) => (
                 <li key={index} className="flex gap-2 text-xs text-slate-700 items-start">
-                  <span className="h-5 w-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                  <span className="h-5 w-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-[11px] shrink-0 mt-0.5">
                     {index + 1}
                   </span>
                   <span className="leading-relaxed">{strength}</span>
@@ -272,7 +272,7 @@ ${report.developmentPlan}
             <ul className="space-y-2.5">
               {report.growthOpportunities.map((opp, index) => (
                 <li key={index} className="flex gap-2 text-xs text-slate-700 items-start">
-                  <span className="h-5 w-5 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                  <span className="h-5 w-5 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-[11px] shrink-0 mt-0.5">
                     {index + 1}
                   </span>
                   <span className="leading-relaxed">{opp}</span>
@@ -293,10 +293,10 @@ ${report.developmentPlan}
               <ArrowRight className="h-5 w-5 animate-pulse" />
             </div>
             <div>
-              <p className="text-sm font-medium leading-relaxed">
+              <p className="text-xs font-medium leading-relaxed">
                 {report.developmentPlan}
               </p>
-              <span className="block mt-2 text-[10px] text-blue-200">
+              <span className="block mt-2 text-[11px] text-blue-200">
                 Action items should be integrated into standard 1-on-1 operational review agendas.
               </span>
             </div>
@@ -305,7 +305,7 @@ ${report.developmentPlan}
       </div>
 
       {/* Footer */}
-      <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 flex justify-between items-center text-[11px] text-slate-400">
+      <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 flex justify-between items-center text-[11px] text-slate-500">
         <span>Generated: {new Date(report.generatedAt).toLocaleString()}</span>
         <span className="font-mono">Employee Card ID: {employee.id}</span>
       </div>
