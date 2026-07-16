@@ -130,7 +130,22 @@ export default function App() {
     remarks: "Annual Performance Review",
     date: new Date().toISOString().split("T")[0]
   });
-  const [loggedInManager, setLoggedInManager] = useState<Manager | null>(null);
+  const [loggedInManager, setLoggedInManager] = useState<Manager | null>(() => {
+    try {
+      const saved = localStorage.getItem("loggedInManager");
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    if (loggedInManager) {
+      localStorage.setItem("loggedInManager", JSON.stringify(loggedInManager));
+    } else {
+      localStorage.removeItem("loggedInManager");
+    }
+  }, [loggedInManager]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [performance, setPerformance] = useState<PerformanceRecord[]>([]);
   const [reports, setReports] = useState<MonthlyReport[]>([]);
