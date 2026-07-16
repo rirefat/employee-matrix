@@ -1031,13 +1031,8 @@ export function EmployeeDossier({
   }
 
   return (
-    <div className="flex-1 w-full px-6 lg:px-10 xl:px-12 py-8 overflow-y-auto overflow-x-hidden bg-transparent text-slate-800 relative h-[calc(100vh-4rem)] font-sans">
+    <div className="flex-1 w-full px-6 lg:px-10 xl:px-12 py-8 overflow-y-auto overflow-x-hidden text-slate-800">
       
-      {/* Decorative gradient glowing spots matching the performance portal's signature aesthetic */}
-      <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-gradient-to-tr from-blue-500/8 to-indigo-500/8 blur-3xl pointer-events-none" />
-      <div className="absolute top-1/4 -right-40 w-96 h-96 rounded-full bg-gradient-to-bl from-indigo-500/8 to-purple-500/8 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-10 left-1/3 w-80 h-80 rounded-full bg-gradient-to-br from-emerald-500/4 to-teal-500/8 blur-3xl pointer-events-none" />
-
       {/* Main Container Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full relative z-10">
         

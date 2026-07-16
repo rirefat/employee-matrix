@@ -1666,12 +1666,15 @@ export default function App() {
       </AnimatePresence>
 
       {/* Top Futuristic Header Navigation - Glassmorphic, Modern, Minimal */}
-      <header className="sticky top-0 z-40 w-full bg-white/70 backdrop-blur-md border-b border-slate-200/80 transition-all duration-300">
-        {/* Glow-bar Accent Line */}
-        <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 opacity-90" />
-        
-        <div className="w-full h-16 px-6 lg:px-10 xl:px-12 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <div className="relative z-50 w-full px-4 lg:px-8 xl:px-10 pt-4 shrink-0 transition-all duration-300 pointer-events-none">
+        <header className="relative w-full h-16 bg-white/50 backdrop-blur-xl border border-white/80 shadow-[0_8px_32px_rgb(0,0,0,0.08)] rounded-2xl flex items-center justify-between px-4 lg:px-6 pointer-events-auto">
+          {/* Subtle Inner Glow / Light reflection */}
+          <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+            <div className="absolute inset-0 bg-gradient-to-tr from-white/60 via-transparent to-white/20" />
+            <div className="absolute -top-10 -left-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl" />
+          </div>
+          
+          <div className="relative flex items-center gap-4 z-10">
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className="lg:hidden p-2 -ml-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-850 transition-colors cursor-pointer flex items-center justify-center shrink-0"
@@ -1696,7 +1699,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 sm:gap-6">
+          <div className="relative flex items-center gap-3 sm:gap-6 z-10">
             {/* Month selector directly in header */}
             <MonthPicker
               value={selectedMonth}
@@ -1754,8 +1757,8 @@ export default function App() {
               </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
+      </div>
 
       {activePortal === "performance" && (
         <>
