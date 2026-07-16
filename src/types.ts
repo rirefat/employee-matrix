@@ -40,6 +40,7 @@ export interface Manager {
   permanentAddress?: string;
   resumeName?: string;
   resumeUrl?: string;
+  avatarUrl?: string;
 }
 
 export interface ManagerNote {

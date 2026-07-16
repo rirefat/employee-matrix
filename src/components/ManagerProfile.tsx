@@ -33,7 +33,7 @@ import {
   FileText,
   ExternalLink
 } from "lucide-react";
-import { get3DAvatarUrl } from "../utils";
+import { get3DAvatarUrl, getSocialAvatarUrl } from "../utils";
 import { Manager } from "../types";
 
 interface ManagerProfileProps {
@@ -195,6 +195,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
       permanentAddress: permanentAddress.trim(),
       resumeName: resumeName.trim(),
       resumeUrl: resumeUrl.trim(),
+      avatarUrl: getSocialAvatarUrl(githubLink.trim(), linkedinLink.trim()) || undefined,
       employeeId: employeeId.trim(),
       department: department.trim(),
       employeeType: employeeType.trim(),
@@ -227,7 +228,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
           <div className="relative shrink-0">
             <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-slate-50 border border-slate-200/80 overflow-hidden shadow-sm">
               <img 
-                src={get3DAvatarUrl(name || manager.name)} 
+                src={getSocialAvatarUrl(githubLink, linkedinLink) || manager.avatarUrl || get3DAvatarUrl(name || manager.name)} 
                 alt="Manager Avatar" 
                 className="w-full h-full object-cover" 
               />

@@ -46,6 +46,21 @@ export const get3DAvatarUrl = (name: string = "User") => {
     <circle cx="50" cy="32" r="24" fill="url(#hh-${uniqueId})" />
   </g>
 </svg>`;
-
   return `data:image/svg+xml;base64,${btoa(svg)}`;
+};
+
+export const getSocialAvatarUrl = (githubLink?: string, linkedinLink?: string): string | null => {
+  if (githubLink) {
+    const match = githubLink.match(/github\.com\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+      return `https://github.com/${match[1]}.png`;
+    }
+  }
+  if (linkedinLink) {
+    const match = linkedinLink.match(/linkedin\.com\/in\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+      return `https://unavatar.io/linkedin/${match[1]}`;
+    }
+  }
+  return null;
 };

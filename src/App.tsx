@@ -1647,14 +1647,23 @@ export default function App() {
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
 
       {/* Toast Notification */}
-      {toast && (
-        <div id="toast-notif" className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border transition-all animate-bounce ${
-          toast.type === "success" ? "bg-emerald-600 text-white border-emerald-500" : "bg-rose-600 text-white border-rose-500"
-        }`}>
-          {toast.type === "success" ? <CheckCircle className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
-          <span className="text-xs font-semibold">{toast.message}</span>
-        </div>
-      )}
+      <AnimatePresence>
+        {toast && (
+          <motion.div 
+            initial={{ opacity: 0, y: -40, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.9 }}
+            transition={{ type: "spring", bounce: 0.4, duration: 0.5 }}
+            id="toast-notif" 
+            className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-4 py-3 rounded-full shadow-[0_10px_40px_rgb(0,0,0,0.1)] border border-slate-200/60 bg-white/95 backdrop-blur-xl"
+          >
+            <div className={`flex items-center justify-center rounded-full ${toast.type === "success" ? "text-emerald-500" : "text-rose-500"}`}>
+              {toast.type === "success" ? <CheckCircle className="h-4 w-4 stroke-[2.5]" /> : <AlertCircle className="h-4 w-4 stroke-[2.5]" />}
+            </div>
+            <span className="text-[13px] font-semibold tracking-wide text-slate-800 pr-2">{toast.message}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Top Futuristic Header Navigation - Glassmorphic, Modern, Minimal */}
       <header className="sticky top-0 z-40 w-full bg-white/70 backdrop-blur-md border-b border-slate-200/80 transition-all duration-300">
@@ -1713,7 +1722,7 @@ export default function App() {
                 </div>
                 <div className="relative">
                   <div className="w-9 h-9 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200 overflow-hidden shrink-0 group-hover:border-slate-300 transition-colors">
-                    <img src={get3DAvatarUrl(loggedInManager.name)} alt={loggedInManager.name} className="w-full h-full object-cover" />
+                    <img src={loggedInManager.avatarUrl || get3DAvatarUrl(loggedInManager.name)} alt={loggedInManager.name} className="w-full h-full object-cover" />
                   </div>
                   <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white z-10" />
                 </div>
@@ -1974,13 +1983,13 @@ export default function App() {
                               </p>
                               <div className="mt-4 pt-4 border-t border-slate-200/40 space-y-3">
                                 {/* Header Info */}
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
+                                <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-4">
+                                  <div className="flex flex-wrap items-center gap-2">
                                     <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-sans">
                                       Overall Performance Rating
                                     </span>
                                     {activeRecord && overallPerformance !== null ? (
-                                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold border transition-colors ${
+                                      <span className={`whitespace-nowrap inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold border transition-colors ${
                                         overallPerformance >= 90
                                           ? "bg-emerald-50 text-emerald-700 border-emerald-100"
                                           : overallPerformance >= 70
@@ -2033,14 +2042,14 @@ export default function App() {
                                     </div>
 
                                     {/* Minimal Status Key Legend */}
-                                    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 pt-1 text-[10px] font-semibold text-slate-500 font-mono">
-                                      <span className="flex items-center gap-1">
+                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1 text-[10px] font-semibold text-slate-500 font-mono">
+                                      <span className="flex items-center gap-1 whitespace-nowrap">
                                         <span className="h-1.5 w-1.5 rounded-full bg-rose-400" /> At Risk (&lt;70%)
                                       </span>
-                                      <span className="flex items-center gap-1">
+                                      <span className="flex items-center gap-1 whitespace-nowrap">
                                         <span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> Needs Attention (70%-89%)
                                       </span>
-                                      <span className="flex items-center gap-1">
+                                      <span className="flex items-center gap-1 whitespace-nowrap">
                                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> On Track (90%+)
                                       </span>
                                     </div>
