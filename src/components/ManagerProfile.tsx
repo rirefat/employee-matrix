@@ -256,7 +256,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1 pt-1 text-xs text-slate-550 font-bold">
               <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5 text-slate-500" /> {email}</span>
               <span className="hidden sm:inline text-slate-300">•</span>
-              <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-slate-500" /> {location}</span>
+              <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-slate-500" /> {presentAddress || location || "Address not set"}</span>
             </div>
           </div>
         </div>
