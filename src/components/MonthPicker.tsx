@@ -185,7 +185,7 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({
             </div>
 
             {/* Months Grid */}
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-3 gap-1.5 mb-3">
               {MONTHS_SHORT.map((monthName, idx) => {
                 const isSelected = viewYear === initialYear && idx === initialMonthIdx;
                 return (
@@ -203,6 +203,23 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({
                   </button>
                 );
               })}
+            </div>
+
+            {/* Current Month Shortcut */}
+            <div className="pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  const now = new Date();
+                  const y = now.getFullYear();
+                  const m = String(now.getMonth() + 1).padStart(2, "0");
+                  onChange(`${y}-${m}`);
+                  setIsOpen(false);
+                }}
+                className="w-full py-2 text-xs font-bold text-slate-500 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 rounded-xl transition-all duration-200 cursor-pointer"
+              >
+                Current Month
+              </button>
             </div>
           </motion.div>
         )}

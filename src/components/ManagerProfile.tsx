@@ -61,6 +61,8 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
   const [preferredLanguage, setPreferredLanguage] = useState(manager.preferredLanguage || "English (US)");
   const [dob, setDob] = useState(manager.dob || "");
   const [bloodGroup, setBloodGroup] = useState(manager.bloodGroup || "");
+  const [presentAddress, setPresentAddress] = useState(manager.presentAddress || "");
+  const [permanentAddress, setPermanentAddress] = useState(manager.permanentAddress || "");
   const [resumeName, setResumeName] = useState(manager.resumeName || "");
   const [resumeUrl, setResumeUrl] = useState(manager.resumeUrl || "");
 
@@ -189,6 +191,8 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
       preferredLanguage: preferredLanguage.trim(),
       dob: dob.trim(),
       bloodGroup: bloodGroup.trim(),
+      presentAddress: presentAddress.trim(),
+      permanentAddress: permanentAddress.trim(),
       resumeName: resumeName.trim(),
       resumeUrl: resumeUrl.trim(),
       employeeId: employeeId.trim(),
@@ -463,6 +467,36 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                             value={githubLink}
                             onChange={(e) => setGithubLink(e.target.value)}
                             placeholder="https://github.com/..."
+                            className="w-full pl-10 pr-4 h-10 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-bold text-slate-700 transition-all outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1.5">Present Address</label>
+                        <div className="relative">
+                          <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                          <input 
+                            type="text"
+                            value={presentAddress}
+                            onChange={(e) => setPresentAddress(e.target.value)}
+                            placeholder="e.g. 123 Main St, City, State"
+                            className="w-full pl-10 pr-4 h-10 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-bold text-slate-700 transition-all outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1.5">Permanent Address</label>
+                        <div className="relative">
+                          <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                          <input 
+                            type="text"
+                            value={permanentAddress}
+                            onChange={(e) => setPermanentAddress(e.target.value)}
+                            placeholder="e.g. 456 Old Rd, Hometown, State"
                             className="w-full pl-10 pr-4 h-10 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-bold text-slate-700 transition-all outline-none"
                           />
                         </div>

@@ -36,6 +36,8 @@ export interface Manager {
   timezone?: string;
   dob?: string;
   bloodGroup?: string;
+  presentAddress?: string;
+  permanentAddress?: string;
   resumeName?: string;
   resumeUrl?: string;
 }
