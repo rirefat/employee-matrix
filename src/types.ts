@@ -17,6 +17,7 @@ export interface Manager {
   reportingTo?: string;
   emergencyContactName?: string;
   emergencyContactPhone?: string;
+  emergencyContactRelation?: string;
   employeeType?: string; // e.g. Full-Time, Contractor, etc.
   skills?: string[];
   jobConfirmed?: string;

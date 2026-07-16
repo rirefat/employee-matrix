@@ -12,6 +12,15 @@ const PORT = 3000;
 
 app.use(express.json());
 
+// Prevent Vercel from caching API responses
+app.use("/api", (req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader("Surrogate-Control", "no-store");
+  next();
+});
+
 // --- API ROUTES ---
 
 // DB Status

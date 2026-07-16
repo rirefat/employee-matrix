@@ -1872,9 +1872,10 @@ class DatabaseService {
     }
 
     if (this.db && this.dbStatus.connectionType === "mongodb") {
+      const { _id: _idEmp, ...empToSave } = emp as any;
       await this.db.collection("employees").updateOne(
         { id: id },
-        { $set: emp }
+        { $set: empToSave }
       );
       if (hasIdChanged) {
         // Cascade update associated tables
@@ -1956,8 +1957,9 @@ class DatabaseService {
     await this.ensureInitialized();
     const existing = await this.findPerformance(record.employeeId, record.month);
     
+    const { _id, ...cleanRecord } = record as any;
     const recordToSave = {
-      ...record,
+      ...cleanRecord,
       updatedAt: new Date().toISOString()
     };
 
@@ -2034,8 +2036,9 @@ class DatabaseService {
     await this.ensureInitialized();
     const existing = await this.findReport(report.employeeId, report.month);
     
+    const { _id, ...cleanReport } = report as any;
     const reportToSave = {
-      ...report,
+      ...cleanReport,
       generatedAt: new Date().toISOString()
     };
 
@@ -2109,8 +2112,9 @@ class DatabaseService {
     await this.ensureInitialized();
     const existing = await this.findTarget(target.month);
     
+    const { _id, ...cleanTarget } = target as any;
     const targetToSave = {
-      ...target,
+      ...cleanTarget,
       updatedAt: new Date().toISOString()
     };
 
@@ -2218,9 +2222,10 @@ class DatabaseService {
   public async updateManager(id: string, manager: Partial<Manager>): Promise<Manager | null> {
     await this.ensureInitialized();
     if (this.db && this.dbStatus.connectionType === "mongodb") {
+      const { _id: _idManager, ...managerToSave } = manager as any;
       await this.db.collection("managers").updateOne(
         { id: id },
-        { $set: manager }
+        { $set: managerToSave }
       );
       const doc = await this.db.collection("managers").findOne({ id: id });
       if (!doc) return null;

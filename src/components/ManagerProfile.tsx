@@ -81,6 +81,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
   // Emergency state
   const [emergencyContactName, setEmergencyContactName] = useState(manager.emergencyContactName || "");
   const [emergencyContactPhone, setEmergencyContactPhone] = useState(manager.emergencyContactPhone || "");
+  const [emergencyContactRelation, setEmergencyContactRelation] = useState(manager.emergencyContactRelation || "");
 
   // Managed Teams/Hubs list
   const [teams, setTeams] = useState<string[]>(manager.teams || []);
@@ -155,6 +156,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
 
     setEmergencyContactName(manager.emergencyContactName || "");
     setEmergencyContactPhone(manager.emergencyContactPhone || "");
+    setEmergencyContactRelation(manager.emergencyContactRelation || "");
     setTeams(manager.teams || []);
     setSkills(manager.skills || []);
     showToast("Profile changes reset to current records", "info");
@@ -202,6 +204,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
       timezone: timezone.trim(),
       emergencyContactName: emergencyContactName.trim(),
       emergencyContactPhone: emergencyContactPhone.trim(),
+      emergencyContactRelation: emergencyContactRelation.trim(),
       skills: skills
     };
 
@@ -826,6 +829,21 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                           value={emergencyContactPhone}
                           onChange={(e) => setEmergencyContactPhone(e.target.value)}
                           placeholder="e.g. +1 (555) 012-3456"
+                          className="w-full pl-10 pr-4 h-10 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-bold text-slate-700 transition-all outline-none"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1.5">Relationship to Contact</label>
+                      <div className="relative">
+                        <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                        <input 
+                          type="text"
+                          value={emergencyContactRelation}
+                          onChange={(e) => setEmergencyContactRelation(e.target.value)}
+                          placeholder="e.g. Spouse, Parent, Sibling"
                           className="w-full pl-10 pr-4 h-10 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-bold text-slate-700 transition-all outline-none"
                           required
                         />
