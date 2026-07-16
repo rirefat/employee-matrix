@@ -49,7 +49,8 @@ import {
   User,
   Paperclip,
   Upload,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Terminal
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -66,7 +67,10 @@ import {
   Radar,
   BarChart,
   Bar,
-  Legend
+  Legend,
+  PieChart,
+  Pie,
+  Cell
 } from "recharts";
 import { Employee, PerformanceRecord, MonthlyReport, MonthlyTarget, LeaveRequest, Manager } from "./types";
 import { ReportViewer } from "./components/ReportViewer";
@@ -106,13 +110,15 @@ export default function App() {
   const [activePortal, setActivePortal] = useState<"performance" | "leaves" | "employees" | "profile">("performance");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [profileSubTab, setProfileSubTab] = useState<"overview" | "performance" | "progression" | "leaves" | "copilot">("overview");
-  const [activeTab, setActiveTab] = useState<"profile" | "team" | "roster" | "compare">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "team" | "roster" | "compare" | "projects">("profile");
 
   const [copilotMessages, setCopilotMessages] = useState<{ sender: "user" | "ai"; text: string }[]>([]);
   const [copilotInput, setCopilotInput] = useState("");
   const [isCopilotLoading, setIsCopilotLoading] = useState(false);
   const [compareEmp1, setCompareEmp1] = useState<string>("");
   const [compareEmp2, setCompareEmp2] = useState<string>("");
+  const [projectEmpId, setProjectEmpId] = useState<string>("");
+  const [projectStatusFilter, setProjectStatusFilter] = useState<string>("All");
   const [selectedDirectoryEmpId, setSelectedDirectoryEmpId] = useState<string>("");
   const [employeeDirectorySearch, setEmployeeDirectorySearch] = useState<string>("");
   const [selectedDirectoryDept, setSelectedDirectoryDept] = useState<string>("All");
@@ -1845,6 +1851,15 @@ export default function App() {
                 <ArrowLeftRight className="h-3.5 w-3.5" />
               Compare
             </button>
+            <button
+              onClick={() => setActiveTab("projects")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+                activeTab === "projects" ? "bg-white text-blue-600 shadow-xs font-bold" : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+                <Briefcase className="h-3.5 w-3.5" />
+              Projects
+            </button>
 
           </div>
 
@@ -3476,6 +3491,280 @@ export default function App() {
                             </div>
                           </div>
                         </div>
+                      </div>
+                    </div>
+
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* TAB CONTENT: PROJECTS */}
+          {activeTab === "projects" && (
+            <div className="space-y-6">
+              {/* Header Section */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+                <div>
+                  <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">Project Portfolio</h3>
+                  <p className="text-sm text-slate-500 mt-1">Track deliverables and economic value output.</p>
+                </div>
+                
+                {/* Filters */}
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  {/* Status Filter */}
+                  <div className="relative flex-1 sm:flex-none">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Layers className="h-4 w-4 text-slate-400" />
+                    </div>
+                    <select 
+                      className="w-full pl-9 pr-8 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all appearance-none shadow-sm cursor-pointer"
+                      value={projectStatusFilter}
+                      onChange={(e) => setProjectStatusFilter(e.target.value)}
+                    >
+                      <option value="All">All Statuses</option>
+                      <option value="Completed">Completed</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="In Review">In Review</option>
+                      <option value="Planning">Planning</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                      <ChevronDown className="h-4 w-4 text-slate-400" />
+                    </div>
+                  </div>
+
+                  {/* Clean Selector */}
+                  <div className="relative flex-1 sm:flex-none">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <User className="h-4 w-4 text-slate-400" />
+                    </div>
+                    <select 
+                      className="w-full pl-9 pr-8 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all appearance-none shadow-sm cursor-pointer"
+                      value={projectEmpId}
+                      onChange={(e) => setProjectEmpId(e.target.value)}
+                    >
+                      <option value="">Select Employee...</option>
+                      {myEmployees.map(e => (
+                        <option key={e.id} value={e.id}>{e.name}</option>
+                      ))}
+                    </select>
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                      <ChevronDown className="h-4 w-4 text-slate-400" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Data Visualization */}
+              {(() => {
+                if (!projectEmpId) return (
+                  <div className="text-center py-20 bg-slate-50 rounded-3xl border border-slate-200/60 border-dashed text-slate-500 mt-8">
+                    <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mx-auto mb-4">
+                      <Briefcase className="h-6 w-6 text-slate-300" />
+                    </div>
+                    <p className="text-sm font-medium">Select an employee to reveal their project portfolio.</p>
+                  </div>
+                );
+
+                const emp = myEmployees.find(e => e.id === projectEmpId);
+                const perf = performance.find(p => p.employeeId === projectEmpId && p.month === selectedMonth);
+
+                if (!emp || !perf) return null;
+
+                const amount = perf.deliveredProjectsAmount || 0;
+                const value = perf.deliveredProjectsValue || 0;
+                
+                // Generate mock projects based on amount
+                const mockProjects = Array.from({ length: amount || 3 }).map((_, i) => {
+                  const seed = emp.name.charCodeAt(0) + i;
+                  const types = ["Platform Engineering", "API Integration", "UI/UX Redesign", "Data Pipeline", "Security Audit", "Infrastructure Setup"];
+                  const statuses = ["Completed", "In Progress", "In Review", "Planning"];
+                  return {
+                    id: i,
+                    name: `Project Alpha-${seed}-${i + 1}`,
+                    type: types[seed % types.length],
+                    status: statuses[i % statuses.length],
+                    valueShare: Math.round(value / (amount || 3)) + (i * 1500),
+                    progress: Math.min(100, 40 + (seed * 5) + (i * 15))
+                  };
+                });
+
+                const filteredProjects = mockProjects.filter(p => projectStatusFilter === "All" || p.status === projectStatusFilter);
+
+                const statusCounts = mockProjects.reduce((acc, p) => {
+                  acc[p.status] = (acc[p.status] || 0) + 1;
+                  return acc;
+                }, {} as Record<string, number>);
+
+                const pieData = Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
+                const COLORS: Record<string, string> = {
+                  "Completed": "#10b981",
+                  "In Progress": "#f59e0b",
+                  "In Review": "#3b82f6",
+                  "Planning": "#8b5cf6"
+                };
+
+                return (
+                  <div className="space-y-8 animate-fade-in">
+                    
+                    {/* Minimalist Metrics Grid */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      {/* Metric 1: Volume */}
+                      <div className="bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm relative overflow-hidden group">
+                        {/* Background dot grid pattern with fade-out mask */}
+                        <div className="absolute inset-0 bg-grid-pattern opacity-40 pointer-events-none" style={{ maskImage: "radial-gradient(ellipse at top left, black 30%, transparent 70%)", WebkitMaskImage: "radial-gradient(ellipse at top left, black 30%, transparent 70%)" }} />
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-bl-full pointer-events-none transition-transform group-hover:scale-110 duration-500" />
+                        <div className="relative z-10 flex flex-col h-full justify-between">
+                          <div>
+                            <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-4">Delivery Volume</span>
+                            <div className="flex items-baseline gap-3">
+                              <span className="text-6xl font-extrabold text-slate-900 tracking-tighter">{amount}</span>
+                              <span className="text-slate-500 text-sm font-medium">projects</span>
+                            </div>
+                          </div>
+                          <div className="mt-8 pt-4 border-t border-slate-100 flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-xs font-semibold text-slate-600">Active portfolio for {new Date(selectedMonth + "-01").toLocaleDateString("en-US", { month: "short", year: "numeric" })}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Metric 2: Value */}
+                      <div className="bg-slate-900 rounded-3xl p-8 border border-slate-800 shadow-xl relative overflow-hidden group">
+                        {/* Abstract Background pattern */}
+                        <div className="absolute inset-0 bg-grid-pattern opacity-20 pointer-events-none" style={{ maskImage: "radial-gradient(ellipse at bottom right, black 40%, transparent 80%)", WebkitMaskImage: "radial-gradient(ellipse at bottom right, black 40%, transparent 80%)" }} />
+                        <div className="absolute -bottom-16 -right-16 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+                        
+                        <div className="relative z-10 flex flex-col h-full justify-between">
+                          <div>
+                            <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-4">Economic Output</span>
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-5xl md:text-6xl font-extrabold text-white tracking-tighter">${value.toLocaleString()}</span>
+                            </div>
+                          </div>
+                          <div className="mt-8 pt-4 border-t border-slate-700/50 flex items-center gap-3">
+                            <span className="bg-white/10 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider backdrop-blur-md">High Yield</span>
+                            <span className="text-xs font-medium text-slate-400">Total generated value</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Metric 3: Distribution */}
+                      <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm relative overflow-hidden flex flex-col">
+                        <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-2">Project Statuses</span>
+                        <div className="flex-1 min-h-[160px] flex items-center justify-center -ml-4 -mt-4">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={pieData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={40}
+                                outerRadius={60}
+                                paddingAngle={2}
+                                dataKey="value"
+                                stroke="none"
+                              >
+                                {pieData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS] || "#slate-300"} />
+                                ))}
+                              </Pie>
+                              <Tooltip 
+                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)', fontSize: '12px', fontWeight: 'bold' }}
+                                itemStyle={{ color: '#334155' }}
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-2 gap-y-2 mt-2">
+                          {pieData.map((entry, index) => (
+                            <div key={index} className="flex items-center gap-1.5">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[entry.name as keyof typeof COLORS] || "#slate-300" }} />
+                              <span className="text-[10px] font-semibold text-slate-600 truncate" title={entry.name}>{entry.name} ({entry.value})</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                    </div>
+
+                    {/* Minimalist Project List */}
+                    <div>
+                      <div className="mb-4">
+                        <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 font-display">
+                          <Layers className="h-4 w-4 text-slate-400" />
+                          Detailed Breakdown
+                        </h4>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 gap-3">
+                        {filteredProjects.length === 0 ? (
+                          <div className="text-center py-10 bg-slate-50 border border-slate-200/60 border-dashed rounded-2xl">
+                            <p className="text-sm font-medium text-slate-500">No projects match the selected filter.</p>
+                          </div>
+                        ) : (
+                          filteredProjects.map((proj, idx) => {
+                            const isHighImpact = proj.valueShare > universalProjectValueTarget;
+                            return (
+                          <div key={proj.id} className={`group bg-white border ${isHighImpact ? 'border-amber-300 ring-1 ring-amber-100 shadow-sm' : 'border-slate-200/80 hover:border-slate-300'} rounded-2xl p-4 sm:p-5 hover:shadow-sm transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden`}>
+                            
+                            {isHighImpact && <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-amber-100/80 to-transparent rounded-bl-full pointer-events-none" />}
+
+                            <div className="flex items-center gap-4 relative z-10">
+                              <div className={`w-10 h-10 rounded-full ${isHighImpact ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'} border flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform`}>
+                                <span className={`text-xs font-bold ${isHighImpact ? 'text-amber-600' : 'text-slate-500'} font-mono`}>0{idx + 1}</span>
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <h5 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{proj.name}</h5>
+                                  {isHighImpact && (
+                                    <span className="bg-amber-100 text-amber-700 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-widest flex items-center gap-1">
+                                      <Sparkles className="h-2.5 w-2.5" /> High Impact
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">{proj.type}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-6 sm:w-1/2 justify-between sm:justify-end">
+                              <div className="flex-1 max-w-[140px] hidden sm:block">
+                                <div className="flex justify-between items-center mb-1.5">
+                                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Progress</span>
+                                  <span className="text-xs font-bold text-slate-700">{proj.progress}%</span>
+                                </div>
+                                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                  <div 
+                                    className={`h-full rounded-full transition-all duration-1000 ${
+                                      proj.progress === 100 ? "bg-slate-900" : "bg-blue-500"
+                                    }`}
+                                    style={{ width: `${proj.progress}%` }}
+                                  />
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-4 sm:gap-6 shrink-0">
+                                <div className="text-right">
+                                  <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Assigned</span>
+                                  <span className="text-sm font-bold text-slate-900 font-mono">${proj.valueShare.toLocaleString()}</span>
+                                </div>
+                                
+                                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
+                                  proj.status === "Completed" ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60" :
+                                  proj.status === "In Progress" ? "bg-amber-50 text-amber-700 border border-amber-200/60" :
+                                  proj.status === "Planning" ? "bg-slate-50 text-slate-600 border border-slate-200/60" :
+                                  "bg-purple-50 text-purple-700 border border-purple-200/60"
+                                }`}>
+                                  {proj.status}
+                                </span>
+                              </div>
+                            </div>
+
+                          </div>
+                        );
+                        }))}
                       </div>
                     </div>
 

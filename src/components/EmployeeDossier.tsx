@@ -1142,6 +1142,9 @@ export function EmployeeDossier({
           {/* Left Main Profile Card - Reimagined with Premium Vercel/Linear elegance */}
           <div className="bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-3xl p-6.5 shadow-xs hover:shadow-md hover:border-slate-300 transition-all duration-300 flex flex-col items-center text-center relative overflow-hidden group">
             
+            {/* Background dot grid pattern with fade-out mask */}
+            <div className="absolute inset-0 bg-grid-pattern pointer-events-none" style={{ maskImage: "radial-gradient(ellipse at center, black 30%, transparent 80%)", WebkitMaskImage: "radial-gradient(ellipse at center, black 30%, transparent 80%)" }} />
+
             {/* Atmospheric color nodes under glass to enhance depth */}
             <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-gradient-to-br from-blue-500/8 to-indigo-600/8 blur-3xl pointer-events-none" />
             <div className="absolute -bottom-24 -left-24 w-48 h-48 rounded-full bg-gradient-to-br from-indigo-500/4 to-purple-500/8 blur-3xl pointer-events-none" />
@@ -1454,37 +1457,84 @@ export function EmployeeDossier({
                   <div className="space-y-8">
                     
                     {/* Modern Bento Block for General Info */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-8 bg-white/90 border border-slate-200/60 rounded-2xl p-6 relative overflow-hidden shadow-2xs">
-                      <div className="absolute top-0 right-0 p-1 bg-gradient-to-bl from-blue-500/10 to-transparent w-24 h-24 rounded-bl-full pointer-events-none" />
-                      <div>
-                        <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono">Engineering Name</span>
-                        <span className="block text-xs font-bold text-slate-900 mt-1 font-display">{activeDirectoryEmployee.name}</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8 bg-white/90 border border-slate-200/60 rounded-3xl p-7 relative overflow-hidden shadow-2xs group">
+                      {/* Background dot grid pattern with fade-out mask */}
+                      <div className="absolute inset-0 bg-grid-pattern pointer-events-none opacity-60" style={{ maskImage: "radial-gradient(ellipse at center, black 30%, transparent 80%)", WebkitMaskImage: "radial-gradient(ellipse at center, black 30%, transparent 80%)" }} />
+
+                      <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-indigo-500/10 to-transparent rounded-bl-full pointer-events-none" />
+                      
+                      <div className="relative flex items-center gap-4">
+                        <div className="p-3 bg-indigo-50/80 text-indigo-600 rounded-xl shadow-xs border border-indigo-100 shrink-0">
+                          <User className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Engineering Name</span>
+                          <span className="block text-sm font-bold text-slate-800 mt-0.5 font-display">{activeDirectoryEmployee.name}</span>
+                        </div>
                       </div>
-                      <div>
-                        <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono">Corporate Email</span>
-                        <span className="block text-xs font-bold text-slate-800 mt-1 font-mono">{activeDirectoryEmployee.email}</span>
+                      
+                      <div className="relative flex items-center gap-4">
+                        <div className="p-3 bg-emerald-50/80 text-emerald-600 rounded-xl shadow-xs border border-emerald-100 shrink-0">
+                          <Mail className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Corporate Email</span>
+                          <span className="block text-sm font-bold text-slate-800 mt-0.5 font-mono truncate" title={activeDirectoryEmployee.email}>{activeDirectoryEmployee.email}</span>
+                        </div>
                       </div>
-                      <div>
-                        <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono">Employee UID</span>
-                        <span className="block text-xs font-bold text-slate-700 mt-1 font-mono">{activeDirectoryEmployee.id}</span>
+                      
+                      <div className="relative flex items-center gap-4">
+                        <div className="p-3 bg-blue-50/80 text-blue-600 rounded-xl shadow-xs border border-blue-100 shrink-0">
+                          <Terminal className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Employee UID</span>
+                          <span className="block text-sm font-bold text-slate-800 mt-0.5 font-mono">{activeDirectoryEmployee.id}</span>
+                        </div>
                       </div>
-                      <div>
-                        <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono">Contact Phone</span>
-                        <span className="block text-xs font-bold text-slate-800 mt-1 font-mono">{activeDirectoryEmployee.phone || "+880178320274"}</span>
+                      
+                      <div className="relative flex items-center gap-4">
+                        <div className="p-3 bg-amber-50/80 text-amber-600 rounded-xl shadow-xs border border-amber-100 shrink-0">
+                          <Phone className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Contact Phone</span>
+                          <span className="block text-sm font-bold text-slate-800 mt-0.5 font-mono">{activeDirectoryEmployee.phone || "+880 178 320 274"}</span>
+                        </div>
                       </div>
-                      <div>
-                        <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono">Slack Direct Address</span>
-                        <span className="block text-xs font-semibold text-slate-900 mt-1 font-mono">U05{activeDirectoryEmployee.id.toUpperCase()}L9K</span>
+                      
+                      <div className="relative flex items-center gap-4">
+                        <div className="p-3 bg-purple-50/80 text-purple-600 rounded-xl shadow-xs border border-purple-100 shrink-0">
+                          <MessageSquare className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Slack Direct Address</span>
+                          <span className="block text-sm font-bold text-slate-800 mt-0.5 font-mono">U05{activeDirectoryEmployee.id.toUpperCase()}L9K</span>
+                        </div>
                       </div>
-                      <div>
-                        <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono">Company Join Date</span>
-                        <span className="block text-xs font-bold text-slate-800 mt-1 font-mono">{activeDirectoryEmployee.joiningDate || "12-Jan-2025"}</span>
+                      
+                      <div className="relative flex items-center gap-4">
+                        <div className="p-3 bg-rose-50/80 text-rose-600 rounded-xl shadow-xs border border-rose-100 shrink-0">
+                          <Calendar className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Company Join Date</span>
+                          <span className="block text-sm font-bold text-slate-800 mt-0.5 font-mono">{activeDirectoryEmployee.joiningDate || "2025-01-12"}</span>
+                        </div>
                       </div>
-                      <div className="sm:col-span-2 pt-2 border-t border-slate-200">
-                        <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-mono mb-1">R&D Core Focus Summary</span>
-                        <p className="text-xs text-slate-600 italic leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200/60">
-                          "{activeDirectoryEmployee.notes || "Core software development contributor active in microservices architecture cycles."}"
-                        </p>
+                      
+                      <div className="relative sm:col-span-2 pt-5 mt-2 border-t border-slate-200/60">
+                        <div className="flex gap-4">
+                          <div className="p-3 bg-slate-50/80 text-slate-600 rounded-xl shadow-xs border border-slate-200 shrink-0 h-fit">
+                            <Briefcase className="h-5 w-5" />
+                          </div>
+                          <div className="flex-1">
+                            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-2">R&D Core Focus Summary</span>
+                            <p className="text-sm text-slate-700 leading-relaxed font-medium bg-white/80 backdrop-blur p-4 rounded-xl border border-slate-200/60 shadow-xs relative">
+                              {activeDirectoryEmployee.notes || "Core software development contributor active in microservices architecture cycles."}
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
