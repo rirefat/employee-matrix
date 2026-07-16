@@ -10,6 +10,7 @@ export interface Manager {
   name: string;
   email: string;
   role: string;
+  roleType?: "manager" | "user";
   teams: string[];
   employeeId?: string;
   department?: string;
@@ -54,6 +55,7 @@ export interface Employee {
   id: string;
   name: string;
   role: string;
+  roleType?: "manager" | "user";
   department: string;
   team: string;
   email: string;

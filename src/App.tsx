@@ -50,7 +50,8 @@ import {
   Paperclip,
   Upload,
   Link as LinkIcon,
-  Terminal
+  Terminal,
+  Database
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -72,7 +73,7 @@ import {
   Pie,
   Cell
 } from "recharts";
-import { Employee, PerformanceRecord, MonthlyReport, MonthlyTarget, LeaveRequest, Manager } from "./types";
+import { Employee, PerformanceRecord, MonthlyReport, MonthlyTarget, LeaveRequest, Manager, DBStatus } from "./types";
 import { ReportViewer } from "./components/ReportViewer";
 import { DashboardTab } from "./components/DashboardTab";
 import { EmployeeCard } from "./components/EmployeeCard";
@@ -80,6 +81,8 @@ import { LoginPage } from "./components/LoginPage";
 import { MonthPicker } from "./components/MonthPicker";
 import { EmployeeDossier } from "./components/EmployeeDossier";
 import { ManagerProfile } from "./components/ManagerProfile";
+import { GeneralUserDashboard } from "./components/GeneralUserDashboard";
+import { GeneralUserLeaves } from "./components/GeneralUserLeaves";
 import { motion, AnimatePresence } from "motion/react";
 
 const DEPARTMENTS = ["Sales", "Operations"];
@@ -163,6 +166,20 @@ export default function App() {
   const [calendarViewMode, setCalendarViewMode] = useState<"timeline" | "grid">("timeline");
   const [calendarMonth, setCalendarMonth] = useState<string>("2026-06");
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<string | null>(null);
+
+  const [dbStatus, setDbStatus] = useState<DBStatus | null>(null);
+
+  useEffect(() => {
+    fetch("/api/db-status")
+      .then(res => res.json())
+      .then(data => setDbStatus(data))
+      .catch(err => console.error("Failed to fetch DB status", err));
+  }, []);
+
+  const isGeneralUser = loggedInManager?.roleType === 'user';
+  const currentUserEmployee = useMemo(() => {
+    return employees.find(e => e.email === loggedInManager?.email) || null;
+  }, [employees, loggedInManager]);
 
   const myEmployees = useMemo(() => employees.filter(emp => loggedInManager?.teams.includes(emp.team)), [employees, loggedInManager]);
 
@@ -1509,9 +1526,9 @@ export default function App() {
                 <LayoutDashboard className="h-4 w-4" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-bold tracking-tight">Dashboard</div>
+                <div className="text-xs font-bold tracking-tight">{isGeneralUser ? "My Performance" : "Dashboard"}</div>
                 <div className={`text-[11px] font-mono leading-none mt-0.5 truncate ${activePortal === "performance" ? "text-indigo-600" : "text-slate-500 group-hover:text-slate-500"}`}>
-                  KPI metrics & reports
+                  {isGeneralUser ? "KPI metrics & projects" : "KPI metrics & reports"}
                 </div>
               </div>
               {activePortal === "performance" && (
@@ -1546,30 +1563,32 @@ export default function App() {
             </button>
             
             {/* LINK 3 */}
-            <button
-              onClick={() => {
-                setActivePortal("employees");
-                setIsSidebarOpen(false);
-              }}
-              className={`w-full text-left rounded-xl transition-all group relative border p-2.5 flex items-center gap-3 cursor-pointer ${
-                activePortal === "employees" 
-                  ? "bg-indigo-50/80 text-slate-900 font-bold shadow-3xs shadow-indigo-100/30 border-indigo-100" 
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent hover:translate-x-1"
-              }`}
-            >
-              <div className={`p-1.5 rounded-lg shrink-0 ${activePortal === "employees" ? "bg-indigo-600 text-white shadow-3xs shadow-indigo-500/10" : "bg-slate-50 text-slate-450 border border-slate-200/60 group-hover:bg-slate-100 group-hover:text-slate-700"} transition-colors`}>
-                <Users className="h-4 w-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-bold tracking-tight">Teammate Directory</div>
-                <div className={`text-[11px] font-mono leading-none mt-0.5 truncate ${activePortal === "employees" ? "text-indigo-600" : "text-slate-500 group-hover:text-slate-500"}`}>
-                  Profiles & responsibilities
+            {!isGeneralUser && (
+              <button
+                onClick={() => {
+                  setActivePortal("employees");
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full text-left rounded-xl transition-all group relative border p-2.5 flex items-center gap-3 cursor-pointer ${
+                  activePortal === "employees" 
+                    ? "bg-indigo-50/80 text-slate-900 font-bold shadow-3xs shadow-indigo-100/30 border-indigo-100" 
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent hover:translate-x-1"
+                }`}
+              >
+                <div className={`p-1.5 rounded-lg shrink-0 ${activePortal === "employees" ? "bg-indigo-600 text-white shadow-3xs shadow-indigo-500/10" : "bg-slate-50 text-slate-450 border border-slate-200/60 group-hover:bg-slate-100 group-hover:text-slate-700"} transition-colors`}>
+                  <Users className="h-4 w-4" />
                 </div>
-              </div>
-              {activePortal === "employees" && (
-                <div className="w-1.5 h-6 rounded-full bg-indigo-600 absolute left-0 top-1/2 -translate-y-1/2 -translate-x-0.5 shadow-md shadow-indigo-500/80" />
-              )}
-            </button>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-bold tracking-tight">Teammate Directory</div>
+                  <div className={`text-[11px] font-mono leading-none mt-0.5 truncate ${activePortal === "employees" ? "text-indigo-600" : "text-slate-500 group-hover:text-slate-500"}`}>
+                    Profiles & responsibilities
+                  </div>
+                </div>
+                {activePortal === "employees" && (
+                  <div className="w-1.5 h-6 rounded-full bg-indigo-600 absolute left-0 top-1/2 -translate-y-1/2 -translate-x-0.5 shadow-md shadow-indigo-500/80" />
+                )}
+              </button>
+            )}
 
             {/* LINK 4: MY PROFILE */}
             <button
@@ -1605,10 +1624,21 @@ export default function App() {
           <div className="pt-2 border-t border-slate-100 space-y-2.5">
             <div className="flex items-center justify-between px-1">
               <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500 font-mono">RESOURCES</span>
-              <span className="flex items-center gap-1 text-[8.5px] font-bold text-emerald-700 font-mono tracking-wider bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded-md">
-                <span className="h-1 w-1 rounded-full bg-emerald-500 animate-ping shrink-0" />
-                SYSTEM LIVE
-              </span>
+              {dbStatus ? (
+                <span className={`flex items-center gap-1 text-[8.5px] font-bold font-mono tracking-wider px-1.5 py-0.5 rounded-md border ${
+                  dbStatus.connectionType === 'mongodb' 
+                    ? "text-emerald-700 bg-emerald-50 border-emerald-100" 
+                    : "text-amber-700 bg-amber-50 border-amber-100"
+                }`}>
+                  <span className={`h-1 w-1 rounded-full shrink-0 ${dbStatus.connectionType === 'mongodb' ? 'bg-emerald-500 animate-ping' : 'bg-amber-500'}`} />
+                  {dbStatus.connectionType === 'mongodb' ? 'CLOUD SYNC' : 'LOCAL CACHE'}
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-[8.5px] font-bold text-slate-500 font-mono tracking-wider bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded-md">
+                  <span className="h-1 w-1 rounded-full bg-slate-400 shrink-0" />
+                  CONNECTING...
+                </span>
+              )}
             </div>
             
             <div className="grid grid-cols-2 gap-1.5">
@@ -1685,7 +1715,7 @@ export default function App() {
             </button>
             <div className="flex flex-col">
               <h1 className="text-lg font-bold text-slate-800 tracking-tight">
-                {activePortal === "performance" && "Performance & KPIs"}
+                {activePortal === "performance" && (isGeneralUser ? "My Dashboard" : "Performance & KPIs")}
                 {activePortal === "leaves" && "Time Off & Leave Calendar"}
                 {activePortal === "employees" && "Teammates & Roles"}
                 {activePortal === "profile" && "Profile & Employment Details"}
@@ -1708,13 +1738,15 @@ export default function App() {
             />
 
             {/* Set Monthly Targets Button */}
-            <button
-              onClick={() => setIsTargetsModalOpen(true)}
-              className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-full text-xs font-medium transition-all shadow-sm shadow-slate-900/10 cursor-pointer group"
-            >
-              <TrendingUp className="h-3.5 w-3.5 text-slate-300 group-hover:text-white transition-colors" />
-              <span className="hidden sm:inline">Set Targets</span>
-            </button>
+            {!isGeneralUser && (
+              <button
+                onClick={() => setIsTargetsModalOpen(true)}
+                className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-full text-xs font-medium transition-all shadow-sm shadow-slate-900/10 cursor-pointer group"
+              >
+                <TrendingUp className="h-3.5 w-3.5 text-slate-300 group-hover:text-white transition-colors" />
+                <span className="hidden sm:inline">Set Targets</span>
+              </button>
+            )}
 
             {/* Profile area */}
             <div className="flex items-center gap-4 relative group ml-2">
@@ -1762,8 +1794,14 @@ export default function App() {
 
       {activePortal === "performance" && (
         <>
-      <main className="flex-1 w-full px-6 lg:px-10 xl:px-12 py-8 flex flex-col gap-8 overflow-y-auto overflow-x-hidden">
-          {/* Automated System Alerts for High Leave Consumption */}
+          {isGeneralUser ? (
+            <GeneralUserDashboard 
+              employee={currentUserEmployee}
+              performanceRecord={performance.find(r => r.employeeId === currentUserEmployee?.id && r.month === selectedMonth)}
+            />
+          ) : (
+            <main className="flex-1 w-full px-6 lg:px-10 xl:px-12 py-8 flex flex-col gap-8 overflow-y-auto overflow-x-hidden">
+              {/* Automated System Alerts for High Leave Consumption */}
           {leaveAlerts.length > 0 && (
             <div className="bg-amber-50/75 border border-amber-200/80 rounded-3xl p-6 relative overflow-hidden shadow-3xs flex flex-col gap-4 animate-fade-in">
               <div className="absolute right-0 top-0 w-32 h-32 bg-gradient-to-bl from-amber-500/5 to-amber-600/5 blur-2xl pointer-events-none" />
@@ -3801,10 +3839,20 @@ export default function App() {
             </div>
           )}
       </main>
+          )}
       </>
       )}
 
       {activePortal === "leaves" && (() => {
+        if (isGeneralUser) {
+          return (
+            <GeneralUserLeaves 
+              employee={currentUserEmployee}
+              onAddLeave={handleAddTeammateLeaveOnBehalf}
+            />
+          );
+        }
+        
         // Compute statistics
         const totalApprovedDays = myEmployees.reduce((acc, emp) => {
           const balance = emp.leaveBalance || { sickLeaveUsed: 0, casualLeaveUsed: 0, govFestHolidaysUsed: 0 };
@@ -4322,9 +4370,9 @@ export default function App() {
               </div>
 
               {/* --- TEAM LEAVE CALENDAR & OVERLAPS VIEW --- */}
-              <div id="team-leave-calendar-panel" className="bg-white border border-slate-100 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.015)] overflow-hidden transition-all duration-300 hover:shadow-[0_12px_40px_rgb(0,0,0,0.03)]">
+              <div id="team-leave-calendar-panel" className="bg-white border border-slate-100 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.015)] overflow-visible relative transition-all duration-300 hover:shadow-[0_12px_40px_rgb(0,0,0,0.03)]">
                 {/* Header */}
-                <div className="p-6 border-b border-slate-100/80 bg-slate-50/20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-5">
+                <div className="relative z-30 p-6 border-b border-slate-100/80 bg-slate-50/20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-5 rounded-t-[32px]">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 bg-indigo-50/60 rounded-2xl text-indigo-600 border border-indigo-100/40 shadow-4xs">
                       <Calendar className="w-5 h-5" />
@@ -5819,9 +5867,9 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col border border-slate-100"
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col border border-slate-100 relative overflow-visible"
             >
-              <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-indigo-50/40">
+              <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-indigo-50/40 rounded-t-2xl">
                 <div>
                   <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
                     <TrendingUp className="h-4 w-4 text-indigo-600 animate-pulse" />
@@ -5986,9 +6034,9 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col border border-slate-100"
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col border border-slate-100 relative overflow-visible"
             >
-              <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 rounded-t-2xl">
                 <div>
                   <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
                     <SlidersHorizontal className="h-4 w-4 text-slate-700" />
