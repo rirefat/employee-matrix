@@ -217,7 +217,7 @@ export function GeneralUserLeaves({ employee, onAddLeave }: GeneralUserLeavesPro
                     </button>
                     <button
                       type="submit"
-                      className="px-8 py-3 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all shadow-md shadow-indigo-500/20 active:scale-95 flex items-center gap-2"
+                      className="px-8 py-3 text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-all shadow-md shadow-slate-900/20 active:scale-95 flex items-center gap-2"
                     >
                       Submit Request <ChevronRight className="w-4 h-4" />
                     </button>

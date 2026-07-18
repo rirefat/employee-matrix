@@ -817,7 +817,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 min-w-[120px] h-10 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                  className="flex-1 min-w-[120px] h-10 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-colors shadow-md shadow-slate-900/20 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Save className="w-3.5 h-3.5" /> Save Changes
                 </button>
@@ -876,7 +876,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                 />
                 <button 
                   type="submit"
-                  className="w-9 h-9 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors flex items-center justify-center shrink-0 cursor-pointer shadow-sm"
+                  className="w-9 h-9 bg-slate-900 hover:bg-slate-800 text-white rounded-xl transition-colors flex items-center justify-center shrink-0 cursor-pointer shadow-md shadow-slate-900/20"
                   title="Add Hub"
                 >
                   <Plus className="w-4 h-4" />

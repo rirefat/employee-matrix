@@ -195,7 +195,7 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({
                     onClick={() => handleMonthSelect(idx)}
                     className={`py-2 px-1 text-xs font-bold rounded-xl transition-all duration-200 cursor-pointer select-none font-mono ${
                       isSelected
-                        ? "bg-indigo-50 border border-indigo-100 text-indigo-600 font-extrabold shadow-4xs"
+                        ? "bg-slate-900 text-white font-extrabold shadow-md shadow-slate-900/20"
                         : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 active:bg-slate-100/60"
                     }`}
                   >
