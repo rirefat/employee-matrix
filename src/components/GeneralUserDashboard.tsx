@@ -30,11 +30,30 @@ export function GeneralUserDashboard({ employee, userName, performanceRecord, on
   const [dailyFocus, setDailyFocus] = useState(() => {
     return localStorage.getItem("nexus_daily_focus") || "";
   });
+  
+  const [isFocusCompleted, setIsFocusCompleted] = useState(() => {
+    return localStorage.getItem("nexus_focus_completed") === "true";
+  });
+
+  const MAX_FOCUS_LENGTH = 45;
 
   const handleFocusChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    setDailyFocus(val);
-    localStorage.setItem("nexus_daily_focus", val);
+    if (val.length <= MAX_FOCUS_LENGTH) {
+      setDailyFocus(val);
+      localStorage.setItem("nexus_daily_focus", val);
+      if (isFocusCompleted) {
+        setIsFocusCompleted(false);
+        localStorage.setItem("nexus_focus_completed", "false");
+      }
+    }
+  };
+
+  const toggleFocusCompleted = () => {
+    if (!dailyFocus) return;
+    const newVal = !isFocusCompleted;
+    setIsFocusCompleted(newVal);
+    localStorage.setItem("nexus_focus_completed", String(newVal));
   };
 
   const displayUser = userName || employee?.name || "General User";
@@ -119,11 +138,11 @@ export function GeneralUserDashboard({ employee, userName, performanceRecord, on
           <div className="space-y-2">
             <motion.h1
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-              className="text-4xl md:text-5xl text-slate-800 tracking-normal leading-tight"
-              style={{ fontFamily: 'var(--font-serif)' }}
+              className="text-4xl md:text-5xl text-slate-800 tracking-tight leading-tight"
+              style={{ fontFamily: 'var(--font-mono)' }}
             >
-              <span className="italic font-light text-slate-600">{greeting},</span>{' '}
-              <span className="font-semibold text-transparent bg-clip-text bg-gradient-to-br from-indigo-600 to-violet-500">{displayUser.split(' ')[0]}</span>.
+              <span className="font-light text-slate-600">{greeting},</span>{' '}
+              <span className="font-bold text-transparent bg-clip-text bg-gradient-to-br from-indigo-600 to-violet-500">{displayUser.split(' ')[0]}</span><span className="text-indigo-600 font-bold animate-pulse">_</span>
             </motion.h1>
             
             <motion.div
@@ -136,23 +155,87 @@ export function GeneralUserDashboard({ employee, userName, performanceRecord, on
             <motion.p 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
               className="text-sm md:text-base text-slate-500 max-w-lg font-medium leading-relaxed"
+              style={{ fontFamily: 'var(--font-mono)' }}
             >
               {motivationalQuote}
             </motion.p>
             
             <motion.div 
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-              className="pt-1"
+              className="pt-3"
             >
-              <div className="inline-flex items-center gap-3 px-4 py-2 bg-slate-50/80 border border-slate-200/60 rounded-xl max-w-sm w-full shadow-2xs backdrop-blur-sm transition-all focus-within:border-indigo-300 focus-within:ring-2 focus-within:ring-indigo-100 focus-within:bg-white">
-                <Target className="w-4 h-4 text-indigo-400 shrink-0" />
-                <input 
-                  type="text" 
-                  value={dailyFocus}
-                  onChange={handleFocusChange}
-                  placeholder="Set your main focus for today..." 
-                  className="bg-transparent border-none outline-none text-sm text-slate-700 placeholder:text-slate-400 font-medium w-full"
-                />
+              <div className="group relative max-w-md w-full">
+                <div className={`absolute -inset-0.5 rounded-xl blur transition duration-500 ${isFocusCompleted ? 'bg-emerald-400 opacity-30' : 'bg-gradient-to-r from-indigo-400 to-violet-400 opacity-20 group-hover:opacity-40 group-focus-within:opacity-100 group-focus-within:duration-200'}`}></div>
+                <div className={`relative flex items-center gap-3 px-4 py-2.5 bg-white border rounded-xl w-full shadow-sm transition-all overflow-hidden ${isFocusCompleted ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 focus-within:border-indigo-300'}`}>
+                  
+                  {isFocusCompleted && (
+                    <motion.div 
+                      layoutId="focus-bg"
+                      className="absolute inset-0 bg-emerald-50/50 backdrop-blur-[2px]"
+                    />
+                  )}
+
+                  <div className="font-mono text-sm shrink-0 flex items-center gap-2 relative z-10">
+                    <span className={isFocusCompleted ? "text-emerald-400" : "text-slate-400"}>~</span>
+                    <span className={isFocusCompleted ? "text-emerald-500 font-bold" : "text-indigo-500 font-bold"}>
+                      <motion.span
+                        key={isFocusCompleted ? "done" : "focus"}
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="inline-block"
+                      >
+                        {isFocusCompleted ? "/mission_accomplished" : "/focus"}
+                      </motion.span>
+                    </span>
+                    <span className={`transition-colors ${isFocusCompleted ? "text-emerald-400 animate-pulse" : "text-slate-400 group-focus-within:text-indigo-400"}`}>❯</span>
+                  </div>
+                  <div className="relative w-full flex items-center min-w-0">
+                    <input 
+                      type="text" 
+                      value={dailyFocus}
+                      onChange={handleFocusChange}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') toggleFocusCompleted();
+                      }}
+                      placeholder="initialize objective..." 
+                      className={`bg-transparent border-none outline-none text-sm font-mono w-full min-w-0 relative z-10 transition-all duration-500 whitespace-nowrap overflow-hidden text-ellipsis pr-2 ${
+                        isFocusCompleted 
+                          ? 'text-emerald-800 font-medium tracking-wide drop-shadow-sm' 
+                          : 'text-slate-800 placeholder:text-slate-400'
+                      }`}
+                      spellCheck={false}
+                    />
+                    <div className={`absolute -bottom-6 right-0 text-[10px] font-mono transition-opacity ${dailyFocus.length > MAX_FOCUS_LENGTH - 10 ? (dailyFocus.length === MAX_FOCUS_LENGTH ? 'text-red-500 font-bold opacity-100' : 'text-amber-500 opacity-100') : 'text-slate-400 opacity-0 group-focus-within:opacity-100'}`}>
+                      {MAX_FOCUS_LENGTH - dailyFocus.length}
+                    </div>
+                    {isFocusCompleted && (
+                      <motion.div
+                        initial={{ scaleX: 0, opacity: 0 }}
+                        animate={{ scaleX: 1, opacity: 1 }}
+                        transition={{ duration: 0.5, ease: "easeOut" }}
+                        className="absolute left-0 right-0 h-[1px] bg-emerald-400/50 bottom-1 pointer-events-none origin-left"
+                      />
+                    )}
+                  </div>
+                  <motion.div 
+                    initial={false}
+                    animate={{ opacity: dailyFocus ? 1 : 0, scale: dailyFocus ? 1 : 0.8 }} 
+                    className="flex items-center justify-center shrink-0 ml-2 relative z-10"
+                  >
+                     <button 
+                       onClick={toggleFocusCompleted}
+                       className={`relative flex h-5 w-5 items-center justify-center rounded-md transition-all ${
+                         isFocusCompleted ? 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200' : 'bg-slate-100 text-slate-400 hover:bg-indigo-100 hover:text-indigo-600'
+                       }`}
+                     >
+                       {isFocusCompleted ? (
+                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
+                       ) : (
+                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                       )}
+                     </button>
+                  </motion.div>
+                </div>
               </div>
             </motion.div>
           </div>

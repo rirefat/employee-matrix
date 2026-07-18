@@ -170,10 +170,20 @@ export default function App() {
   const [dbStatus, setDbStatus] = useState<DBStatus | null>(null);
 
   useEffect(() => {
-    fetch("/api/db-status")
-      .then(res => res.json())
-      .then(data => setDbStatus(data))
-      .catch(err => console.error("Failed to fetch DB status", err));
+    const fetchDbStatus = async (retries = 3) => {
+      try {
+        const res = await fetch("/api/db-status");
+        const data = await res.json();
+        setDbStatus(data);
+      } catch (err) {
+        if (retries > 0) {
+          setTimeout(() => fetchDbStatus(retries - 1), 1000);
+        } else {
+          console.error("Failed to fetch DB status", err);
+        }
+      }
+    };
+    fetchDbStatus();
   }, []);
 
   const isGeneralUser = loggedInManager?.roleType === 'user';
@@ -556,7 +566,7 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (retries = 3) => {
     try {
       const [empRes, perfRes, repRes, targetsRes] = await Promise.all([
         fetch("/api/employees"),
@@ -605,8 +615,13 @@ export default function App() {
         }
       }
     } catch (err) {
-      console.error("Error fetching data:", err);
-      showToast("Could not load backend data. Refresh page to try again.", "error");
+      if (retries > 0) {
+        console.warn("Retrying fetch due to error:", err);
+        setTimeout(() => fetchData(retries - 1), 1000);
+      } else {
+        console.error("Error fetching data:", err);
+        showToast("Could not load backend data. Refresh page to try again.", "error");
+      }
     }
   };
 
