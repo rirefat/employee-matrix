@@ -164,9 +164,9 @@ export function GeneralUserDashboard({ employee, userName, performanceRecord, on
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
               className="pt-3"
             >
-              <div className="group relative max-w-md w-full">
+              <div className="group relative max-w-md w-full transition-transform duration-300 focus-within:scale-[1.02]">
                 <div className={`absolute -inset-0.5 rounded-xl blur transition duration-500 ${isFocusCompleted ? 'bg-emerald-400 opacity-30' : 'bg-gradient-to-r from-indigo-400 to-violet-400 opacity-20 group-hover:opacity-40 group-focus-within:opacity-100 group-focus-within:duration-200'}`}></div>
-                <div className={`relative flex items-center gap-3 px-4 py-2.5 bg-white border rounded-xl w-full shadow-sm transition-all overflow-hidden ${isFocusCompleted ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 focus-within:border-indigo-300'}`}>
+                <div className={`relative flex items-center gap-3 px-4 py-2.5 bg-white border rounded-xl w-full shadow-sm transition-all duration-300 overflow-hidden ${isFocusCompleted ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 focus-within:border-indigo-400 focus-within:shadow-[inset_0_0_15px_rgba(99,102,241,0.15)] focus-within:ring-2 focus-within:ring-indigo-100'}`}>
                   
                   {isFocusCompleted && (
                     <motion.div 
