@@ -154,7 +154,7 @@ export default function App() {
   const [reports, setReports] = useState<MonthlyReport[]>([]);
   const [targets, setTargets] = useState<MonthlyTarget[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
-  const [selectedMonth, setSelectedMonth] = useState<string>("2026-06");
+  const [selectedMonth, setSelectedMonth] = useState<string>((() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; })());
   const [behalfEmpId, setBehalfEmpId] = useState("");
   const [behalfType, setBehalfType] = useState<"Sick" | "Casual" | "Gov/Fest">("Casual");
   const [behalfStart, setBehalfStart] = useState("");
@@ -164,7 +164,7 @@ export default function App() {
   const [isSuggestingNotes, setIsSuggestingNotes] = useState(false);
   const [leaveLedgerSearch, setLeaveLedgerSearch] = useState("");
   const [calendarViewMode, setCalendarViewMode] = useState<"timeline" | "grid">("timeline");
-  const [calendarMonth, setCalendarMonth] = useState<string>("2026-06");
+  const [calendarMonth, setCalendarMonth] = useState<string>((() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; })());
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<string | null>(null);
 
   const [dbStatus, setDbStatus] = useState<DBStatus | null>(null);
@@ -1499,7 +1499,7 @@ export default function App() {
         isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       } transition-transform duration-300 ease-in-out`}>
         {/* SIDEBAR HEADER */}
-        <div className="h-24 flex items-center px-6 border-b border-slate-100 bg-white relative overflow-hidden shrink-0">
+        <div className="h-20 flex items-center px-5 border-b border-slate-100 bg-white relative overflow-hidden shrink-0">
           {/* Ambient subtle light source */}
           <div className="absolute top-0 left-10 w-24 h-24 bg-indigo-50/60 rounded-full blur-3xl pointer-events-none" />
           
@@ -1520,9 +1520,9 @@ export default function App() {
         </div>
         
         {/* SIDEBAR BODY LINKS */}
-        <div className="flex-1 overflow-y-auto py-6 px-3.5 space-y-6 relative">
-          <div className="space-y-2">
-            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.25em] mb-3 px-2 font-mono">
+        <div className="flex-1 overflow-y-auto py-3 px-3 space-y-1 relative">
+          <div className="space-y-0.5">
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.25em] mb-1 px-2 font-mono">
               Portals
             </div>
               
@@ -1532,7 +1532,7 @@ export default function App() {
                 setActivePortal("performance");
                 setIsSidebarOpen(false);
               }}
-              className={`w-full text-left rounded-xl transition-all group relative border p-2.5 flex items-center gap-3 cursor-pointer ${
+              className={`w-full text-left rounded-[10px] transition-all group relative border py-1 px-2 flex items-center gap-2.5 cursor-pointer ${
                 activePortal === "performance" 
                   ? "bg-indigo-50/80 text-slate-900 font-bold shadow-3xs shadow-indigo-100/30 border-indigo-100" 
                   : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent hover:translate-x-1"
@@ -1556,7 +1556,7 @@ export default function App() {
                 setActivePortal("leaves");
                 setIsSidebarOpen(false);
               }}
-              className={`w-full text-left rounded-xl transition-all group relative border p-2.5 flex items-center gap-3 cursor-pointer ${
+              className={`w-full text-left rounded-[10px] transition-all group relative border py-1 px-2 flex items-center gap-2.5 cursor-pointer ${
                 activePortal === "leaves" 
                   ? "bg-indigo-50/80 text-slate-900 font-bold shadow-3xs shadow-indigo-100/30 border-indigo-100" 
                   : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent hover:translate-x-1"
@@ -1581,7 +1581,7 @@ export default function App() {
                   setActivePortal("employees");
                   setIsSidebarOpen(false);
                 }}
-                className={`w-full text-left rounded-xl transition-all group relative border p-2.5 flex items-center gap-3 cursor-pointer ${
+                className={`w-full text-left rounded-[10px] transition-all group relative border py-1 px-2 flex items-center gap-2.5 cursor-pointer ${
                   activePortal === "employees" 
                     ? "bg-indigo-50/80 text-slate-900 font-bold shadow-3xs shadow-indigo-100/30 border-indigo-100" 
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent hover:translate-x-1"
@@ -1606,7 +1606,7 @@ export default function App() {
                 setActivePortal("profile");
                 setIsSidebarOpen(false);
               }}
-              className={`w-full text-left rounded-xl transition-all group relative border p-2.5 flex items-center gap-3 cursor-pointer ${
+              className={`w-full text-left rounded-[10px] transition-all group relative border py-1 px-2 flex items-center gap-2.5 cursor-pointer ${
                 activePortal === "profile" 
                   ? "bg-indigo-50/80 text-slate-900 font-bold shadow-3xs shadow-indigo-100/30 border-indigo-100" 
                   : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent hover:translate-x-1"
