@@ -35,6 +35,18 @@ export function GeneralUserDashboard({ employee, userName, performanceRecord, on
     return localStorage.getItem("nexus_focus_completed") === "true";
   });
 
+  React.useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "nexus_daily_focus") {
+        setDailyFocus(e.newValue || "");
+      } else if (e.key === "nexus_focus_completed") {
+        setIsFocusCompleted(e.newValue === "true");
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   const MAX_FOCUS_LENGTH = 45;
 
   const handleFocusChange = (e: React.ChangeEvent<HTMLInputElement>) => {

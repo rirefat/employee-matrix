@@ -1140,41 +1140,42 @@ export default function App() {
 
   const handleAddTeammateLeaveOnBehalf = async (
     employeeId: string,
-    type: "Sick" | "Casual" | "Gov/Fest",
+    type: "Sick" | "Casual" | "Gov/Fest" | "Unpaid",
     start: string,
     end: string,
     notes: string,
     status: "Approved" | "Pending"
   ) => {
     const emp = employees.find(e => e.id === employeeId);
-    if (!emp) return;
-
+    if (!emp) return false;
     const days = Math.max(1, Math.ceil((new Date(end).getTime() - new Date(start).getTime()) / (1000 * 3600 * 24)) + 1);
 
-    // Validate 28 days total allowance
+    // Validate 28 days total allowance (skip for Unpaid)
     const currentBalance = emp.leaveBalance || { sickLeaveUsed: 0, casualLeaveUsed: 0, govFestHolidaysUsed: 0 };
     const sickRemain = 7 - (currentBalance.sickLeaveUsed || 0);
     const casRemain = 7 - (currentBalance.casualLeaveUsed || 0);
     const govRemain = 14 - (currentBalance.govFestHolidaysUsed || 0);
     const currentRemaining = sickRemain + casRemain + govRemain;
 
-    if (days > currentRemaining) {
-      showToast(`Cannot log leave: Employee only has ${currentRemaining} days of leave remaining out of their 28-day annual allowance.`, "error");
-      return false;
-    }
-
-    // Check category limit
-    if (type === "Sick" && days > sickRemain) {
-      showToast(`Cannot log Sick Leave: Exceeds remaining Sick Leave allowance of ${sickRemain} days.`, "error");
-      return false;
-    }
-    if (type === "Casual" && days > casRemain) {
-      showToast(`Cannot log Casual Leave: Exceeds remaining Casual Leave allowance of ${casRemain} days.`, "error");
-      return false;
-    }
-    if (type === "Gov/Fest" && days > govRemain) {
-      showToast(`Cannot log Gov/Fest Leave: Exceeds remaining Gov/Fest allowance of ${govRemain} days.`, "error");
-      return false;
+    if (type !== "Unpaid") {
+      if (days > currentRemaining) {
+        showToast(`Cannot log leave: Employee only has ${currentRemaining} days of leave remaining out of their 28-day annual allowance.`, "error");
+        return false;
+      }
+      
+      // Check category limit
+      if (type === "Sick" && days > sickRemain) {
+        showToast(`Cannot log Sick Leave: Exceeds remaining Sick Leave allowance of ${sickRemain} days.`, "error");
+        return false;
+      }
+      if (type === "Casual" && days > casRemain) {
+        showToast(`Cannot log Casual Leave: Exceeds remaining Casual Leave allowance of ${casRemain} days.`, "error");
+        return false;
+      }
+      if (type === "Gov/Fest" && days > govRemain) {
+        showToast(`Cannot log Gov/Fest Leave: Exceeds remaining Gov/Fest allowance of ${govRemain} days.`, "error");
+        return false;
+      }
     }
 
     const newRequest = {
@@ -1542,9 +1543,7 @@ export default function App() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-bold tracking-tight">{isGeneralUser ? "My Performance" : "Dashboard"}</div>
-                <div className={`text-[11px] font-mono leading-none mt-0.5 truncate ${activePortal === "performance" ? "text-indigo-600" : "text-slate-500 group-hover:text-slate-500"}`}>
-                  {isGeneralUser ? "KPI metrics & projects" : "KPI metrics & reports"}
-                </div>
+                
               </div>
               {activePortal === "performance" && (
                 <div className="w-1.5 h-6 rounded-full bg-indigo-600 absolute left-0 top-1/2 -translate-y-1/2 -translate-x-0.5 shadow-md shadow-indigo-500/80" />
@@ -1568,9 +1567,7 @@ export default function App() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-bold tracking-tight">Leave Planner</div>
-                <div className={`text-[11px] font-mono leading-none mt-0.5 truncate ${activePortal === "leaves" ? "text-indigo-600" : "text-slate-500 group-hover:text-slate-500"}`}>
-                  Time off & calendar
-                </div>
+                
               </div>
               {activePortal === "leaves" && (
                 <div className="w-1.5 h-6 rounded-full bg-indigo-600 absolute left-0 top-1/2 -translate-y-1/2 -translate-x-0.5 shadow-md shadow-indigo-500/80" />
@@ -1595,9 +1592,7 @@ export default function App() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-bold tracking-tight">Teammate Directory</div>
-                  <div className={`text-[11px] font-mono leading-none mt-0.5 truncate ${activePortal === "employees" ? "text-indigo-600" : "text-slate-500 group-hover:text-slate-500"}`}>
-                    Profiles & responsibilities
-                  </div>
+                  
                 </div>
                 {activePortal === "employees" && (
                   <div className="w-1.5 h-6 rounded-full bg-indigo-600 absolute left-0 top-1/2 -translate-y-1/2 -translate-x-0.5 shadow-md shadow-indigo-500/80" />
@@ -1622,9 +1617,7 @@ export default function App() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-bold tracking-tight">My Profile Info</div>
-                <div className={`text-[11px] font-mono leading-none mt-0.5 truncate ${activePortal === "profile" ? "text-indigo-600" : "text-slate-500 group-hover:text-slate-500"}`}>
-                  View & edit my details
-                </div>
+                
               </div>
               {activePortal === "profile" && (
                 <div className="w-1.5 h-6 rounded-full bg-indigo-600 absolute left-0 top-1/2 -translate-y-1/2 -translate-x-0.5 shadow-md shadow-indigo-500/80" />
@@ -4346,22 +4339,22 @@ export default function App() {
                           <span className="text-slate-500 font-bold font-mono">
                             Span: {request.start} to {request.end}
                           </span>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleUpdateTeammateLeaveStatus(employee.id, request.id, "Approved")}
-                              className="px-2.5 py-1 bg-emerald-650 hover:bg-emerald-600 text-white font-bold rounded-lg cursor-pointer transition-colors shadow-3xs text-[11px]"
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-500 hover:text-white border border-emerald-200/50 hover:border-emerald-500 font-bold rounded-lg cursor-pointer transition-all shadow-sm text-[11px] active:scale-95"
                             >
-                              Approve
+                              <Check className="w-3.5 h-3.5" /> Approve
                             </button>
                             <button
                               onClick={() => handleUpdateTeammateLeaveStatus(employee.id, request.id, "Rejected")}
-                              className="px-2.5 py-1 bg-rose-650 hover:bg-rose-600 text-white font-bold rounded-lg cursor-pointer transition-colors shadow-3xs text-[11px]"
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-700 hover:bg-rose-500 hover:text-white border border-rose-200/50 hover:border-rose-500 font-bold rounded-lg cursor-pointer transition-all shadow-sm text-[11px] active:scale-95"
                             >
-                              Reject
+                              <X className="w-3.5 h-3.5" /> Reject
                             </button>
                             <button
                               onClick={() => handleDeleteTeammateLeaveRequest(employee.id, request.id)}
-                              className="p-1.5 bg-white hover:bg-rose-50 border border-slate-200 rounded-lg text-slate-450 hover:text-rose-600 cursor-pointer transition-colors shadow-3xs"
+                              className="p-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer transition-colors shadow-sm ml-1"
                               title="Delete request record"
                             >
                               <Trash2 className="w-3.5 h-3.5" />

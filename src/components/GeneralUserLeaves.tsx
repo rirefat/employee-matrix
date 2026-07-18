@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Employee, LeaveRequest } from '../types';
 import { Calendar, Plus, CheckCircle, Clock, XCircle, AlertTriangle, ChevronRight, CalendarDays, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -30,13 +30,26 @@ export function GeneralUserLeaves({ employee, onAddLeave }: GeneralUserLeavesPro
     );
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      if (end >= start) {
+        const diffDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24)) + 1);
+        setDays(diffDays.toString());
+      }
+    }
+  }, [startDate, endDate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onAddLeave(employee.id, leaveType as any, startDate, endDate, notes, "Pending");
-    setShowAddForm(false);
-    setStartDate('');
-    setEndDate('');
-    setNotes('');
+    const success = await onAddLeave(employee.id, leaveType as any, startDate, endDate, notes, "Pending");
+    if (success !== false) {
+      setShowAddForm(false);
+      setStartDate('');
+      setEndDate('');
+      setNotes('');
+    }
   };
 
   const requests = employee.leaveRequests || [];
@@ -61,7 +74,7 @@ export function GeneralUserLeaves({ employee, onAddLeave }: GeneralUserLeavesPro
   };
 
   return (
-    <main className="flex-1 w-full px-6 lg:px-10 xl:px-12 py-8 pt-24 overflow-y-auto overflow-x-hidden">
+    <main className="flex-1 w-full px-6 lg:px-10 xl:px-12 py-6 pt-8 overflow-y-auto overflow-x-hidden">
       <motion.div 
         variants={containerVariants}
         initial="hidden"
@@ -240,45 +253,61 @@ export function GeneralUserLeaves({ employee, onAddLeave }: GeneralUserLeavesPro
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05, ...springTransition }}
-                  className="group flex flex-col md:flex-row items-start md:items-center justify-between p-5 bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl gap-5 transition-all duration-300 hover:shadow-md hover:border-slate-300"
+                  className="group relative overflow-hidden bg-white hover:bg-slate-50/50 border border-slate-200/60 rounded-2xl transition-all duration-300 hover:shadow-lg hover:shadow-slate-200/40 hover:border-slate-300/60"
                 >
-                  <div className="flex items-start gap-4 flex-1">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border ${
-                      req.status === 'Approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                      req.status === 'Rejected' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                      'bg-amber-50 text-amber-600 border-amber-100'
-                    }`}>
-                      {req.status === 'Approved' ? <CheckCircle className="w-6 h-6" /> :
-                       req.status === 'Rejected' ? <XCircle className="w-6 h-6" /> :
-                       <Clock className="w-6 h-6" />}
-                    </div>
-                    
-                    <div>
-                      <div className="flex items-center gap-3 mb-1.5">
-                        <span className="text-xs font-bold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md font-mono tracking-wide">{req.type}</span>
-                        <span className="text-sm font-black text-slate-900">{req.days} Day{req.days > 1 ? 's' : ''}</span>
+                  <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-0 group-hover:opacity-20 transition-opacity duration-500 pointer-events-none ${
+                    req.status === 'Approved' ? 'bg-emerald-500' :
+                    req.status === 'Rejected' ? 'bg-rose-500' :
+                    'bg-amber-500'
+                  }`} />
+
+                  <div className="p-5 md:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 relative z-10">
+                    <div className="flex items-start gap-5 flex-1">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border transition-transform duration-300 group-hover:scale-110 ${
+                        req.status === 'Approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100/50' :
+                        req.status === 'Rejected' ? 'bg-rose-50 text-rose-600 border-rose-100/50' :
+                        'bg-amber-50 text-amber-600 border-amber-100/50'
+                      }`}>
+                        {req.status === 'Approved' ? <CheckCircle className="w-4 h-4" /> :
+                         req.status === 'Rejected' ? <XCircle className="w-4 h-4" /> :
+                         <Clock className="w-4 h-4" />}
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-slate-500 font-medium font-mono">
-                        <Calendar className="w-3.5 h-3.5" />
-                        {new Date(req.start).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} 
-                        <span className="text-slate-300">→</span> 
-                        {new Date(req.end).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-bold text-slate-500 px-2 py-0.5 rounded border border-slate-200/60 bg-slate-50 font-mono tracking-wide group-hover:bg-white group-hover:border-slate-300 transition-colors">
+                            {req.type}
+                          </span>
+                          <span className="text-sm font-black text-slate-900 tracking-tight">
+                            {req.days} Day{req.days > 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-slate-500 font-medium font-mono">
+                          <Calendar className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-400 transition-colors" />
+                          {new Date(req.start).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} 
+                          <span className="text-slate-300">→</span> 
+                          {new Date(req.end).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </div>
+                        
+                        {req.notes && (
+                          <div className="mt-3 overflow-hidden">
+                            <p className="text-sm text-slate-600 leading-relaxed italic border-l-2 border-slate-200 pl-3 group-hover:border-indigo-300 transition-colors">
+                              "{req.notes}"
+                            </p>
+                          </div>
+                        )}
                       </div>
-                      {req.notes && (
-                        <p className="text-sm text-slate-600 mt-2.5 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100 italic group-hover:bg-white transition-colors">
-                          "{req.notes}"
-                        </p>
-                      )}
                     </div>
-                  </div>
-                  <div className="flex items-center self-end md:self-center ml-16 md:ml-0">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                      req.status === 'Approved' ? 'text-emerald-700 bg-emerald-50' :
-                      req.status === 'Rejected' ? 'text-rose-700 bg-rose-50' :
-                      'text-amber-700 bg-amber-50'
-                    }`}>
-                      {req.status}
-                    </span>
+
+                    <div className="flex items-center self-end md:self-center">
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${
+                        req.status === 'Approved' ? 'text-emerald-700 bg-emerald-50 group-hover:bg-emerald-100' :
+                        req.status === 'Rejected' ? 'text-rose-700 bg-rose-50 group-hover:bg-rose-100' :
+                        'text-amber-700 bg-amber-50 group-hover:bg-amber-100'
+                      }`}>
+                        {req.status}
+                      </span>
+                    </div>
                   </div>
                 </motion.div>
               ))}
