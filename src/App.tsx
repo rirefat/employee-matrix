@@ -1797,6 +1797,7 @@ export default function App() {
           {isGeneralUser ? (
             <GeneralUserDashboard 
               employee={currentUserEmployee}
+              userName={loggedInManager?.name}
               performanceRecord={performance.find(r => r.employeeId === currentUserEmployee?.id && r.month === selectedMonth)}
             />
           ) : (

@@ -94,7 +94,7 @@ export const dummyManagers: Manager[] = [
   },
   {
     id: 'u1',
-    name: 'General User',
+    name: 'Rafiul Refat',
     email: 'user@nexus.com',
     role: 'UI/UX Designer',
     roleType: 'user',
@@ -110,7 +110,7 @@ export const dummyManagers: Manager[] = [
     jobConfirmed: 'Confirmed on 2024-05-15',
     phone: '+1 (555) 019-1111',
     location: 'Remote',
-    bio: 'General User dummy profile for testing.',
+    bio: 'Product Designer at Nexus.',
     workHours: '9:00 AM - 5:00 PM EST',
     workStyle: 'Remote',
     costCenter: 'CC-600-USR',

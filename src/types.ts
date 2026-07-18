@@ -73,6 +73,7 @@ export interface Employee {
   emergencyContact?: string;
   notes?: string;
   managerNotes?: ManagerNote[];
+  kudos?: Record<string, number>;
 
   // Extensive Personal & HR Details
   bloodGroup?: string;

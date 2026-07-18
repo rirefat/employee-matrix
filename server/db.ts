@@ -526,7 +526,7 @@ const initialEmployees: Employee[] = [
   },
   {
     "id": "NEX-2024-100",
-    "name": "General User",
+    "name": "Rafiul Refat",
     "role": "UI/UX Designer",
     "department": "Design",
     "team": "Design",
