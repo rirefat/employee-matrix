@@ -54,7 +54,8 @@ import {
   Database,
   Briefcase,
   CheckSquare,
-  Settings
+  Settings,
+  Settings2
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -87,8 +88,8 @@ import { ManagerProfile } from "./components/ManagerProfile";
 import { GeneralUserDashboard } from "./components/GeneralUserDashboard";
 import { GeneralUserLeaves } from "./components/GeneralUserLeaves";
 import { RecruitmentPipeline } from "./components/RecruitmentPipeline";
-import { LeaveApprovals } from "./components/LeaveApprovals";
-import { CompanyPolicies } from "./components/CompanyPolicies";
+import { HRSettings } from "./components/HRSettings";
+import { OpsSettings } from "./components/OpsSettings";
 import { motion, AnimatePresence } from "motion/react";
 
 const DEPARTMENTS = ["Sales", "Operations"];
@@ -116,7 +117,7 @@ const getTeamIcon = (team: string) => {
 import { get3DAvatarUrl } from "./utils";
 
 export default function App() {
-  const [activePortal, setActivePortal] = useState<"performance" | "leaves" | "employees" | "profile">("performance");
+  const [activePortal, setActivePortal] = useState<string>("performance");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [profileSubTab, setProfileSubTab] = useState<"overview" | "performance" | "progression" | "leaves" | "copilot">("overview");
   const [activeTab, setActiveTab] = useState<"profile" | "team" | "roster" | "compare" | "projects">("profile");
@@ -193,6 +194,9 @@ export default function App() {
   }, []);
 
   const isGeneralUser = loggedInManager?.roleType === 'user';
+  const isHR = loggedInManager?.role === 'HR Manager' || loggedInManager?.department === 'Human Resources';
+  const isOps = !isGeneralUser && !isHR;
+
   const currentUserEmployee = useMemo(() => {
     return employees.find(e => e.email === loggedInManager?.email) || null;
   }, [employees, loggedInManager]);
@@ -1618,86 +1622,92 @@ export default function App() {
                 )}
               </button>
 
-              {/* LINK: LEAVE APPROVALS */}
-              <button
-                onClick={() => {
-                  setActivePortal("approvals");
-                  setIsSidebarOpen(false);
-                }}
-                className={`w-full text-left rounded-[10px] transition-all group relative border py-1 px-2 flex items-center gap-2.5 cursor-pointer ${
-                  activePortal === "approvals" 
-                    ? "bg-slate-900 text-white font-bold shadow-md shadow-slate-900/20 border-slate-800 overflow-hidden" 
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent hover:translate-x-1"
-                }`}
-              >
-                <div className={`p-1.5 rounded-lg shrink-0 ${activePortal === "approvals" ? "bg-white/10 text-white shadow-inner shadow-white/10 backdrop-blur-sm z-10 border border-white/5" : "bg-slate-50 text-slate-450 border border-slate-200/60 group-hover:bg-slate-100 group-hover:text-slate-700"} transition-colors`}>
-                  <CheckSquare className="h-4 w-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-bold tracking-tight">Leave Approvals</div>
-                </div>
-                {activePortal === "approvals" && (
-                  <>
-                  <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-500/30 rounded-full blur-[16px] pointer-events-none" />
-                  <div className="absolute bottom-0 left-0 w-12 h-12 bg-violet-500/30 rounded-full blur-[12px] pointer-events-none" />
-                  <div className="w-1 h-5 rounded-full bg-indigo-400 absolute left-0 top-1/2 -translate-y-1/2 shadow-md shadow-indigo-500/50 z-10" />
-                </>
-                )}
-              </button>
-
               {/* LINK: RECRUITMENT */}
-              <button
-                onClick={() => {
-                  setActivePortal("recruitment");
-                  setIsSidebarOpen(false);
-                }}
-                className={`w-full text-left rounded-[10px] transition-all group relative border py-1 px-2 flex items-center gap-2.5 cursor-pointer ${
-                  activePortal === "recruitment" 
-                    ? "bg-slate-900 text-white font-bold shadow-md shadow-slate-900/20 border-slate-800 overflow-hidden" 
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent hover:translate-x-1"
-                }`}
-              >
-                <div className={`p-1.5 rounded-lg shrink-0 ${activePortal === "recruitment" ? "bg-white/10 text-white shadow-inner shadow-white/10 backdrop-blur-sm z-10 border border-white/5" : "bg-slate-50 text-slate-450 border border-slate-200/60 group-hover:bg-slate-100 group-hover:text-slate-700"} transition-colors`}>
-                  <Briefcase className="h-4 w-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-bold tracking-tight">Recruitment ATS</div>
-                </div>
-                {activePortal === "recruitment" && (
-                  <>
-                  <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-500/30 rounded-full blur-[16px] pointer-events-none" />
-                  <div className="absolute bottom-0 left-0 w-12 h-12 bg-violet-500/30 rounded-full blur-[12px] pointer-events-none" />
-                  <div className="w-1 h-5 rounded-full bg-indigo-400 absolute left-0 top-1/2 -translate-y-1/2 shadow-md shadow-indigo-500/50 z-10" />
-                </>
-                )}
-              </button>
+              {isHR && (
+                <button
+                  onClick={() => {
+                    setActivePortal("recruitment");
+                    setIsSidebarOpen(false);
+                  }}
+                  className={`w-full text-left rounded-[10px] transition-all group relative border py-1 px-2 flex items-center gap-2.5 cursor-pointer ${
+                    activePortal === "recruitment" 
+                      ? "bg-slate-900 text-white font-bold shadow-md shadow-slate-900/20 border-slate-800 overflow-hidden" 
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent hover:translate-x-1"
+                  }`}
+                >
+                  <div className={`p-1.5 rounded-lg shrink-0 ${activePortal === "recruitment" ? "bg-white/10 text-white shadow-inner shadow-white/10 backdrop-blur-sm z-10 border border-white/5" : "bg-slate-50 text-slate-450 border border-slate-200/60 group-hover:bg-slate-100 group-hover:text-slate-700"} transition-colors`}>
+                    <Briefcase className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold tracking-tight">Recruitment ATS</div>
+                  </div>
+                  {activePortal === "recruitment" && (
+                    <>
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-500/30 rounded-full blur-[16px] pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 w-12 h-12 bg-violet-500/30 rounded-full blur-[12px] pointer-events-none" />
+                    <div className="w-1 h-5 rounded-full bg-indigo-400 absolute left-0 top-1/2 -translate-y-1/2 shadow-md shadow-indigo-500/50 z-10" />
+                  </>
+                  )}
+                </button>
+              )}
 
-              {/* LINK: COMPANY POLICIES */}
-              <button
-                onClick={() => {
-                  setActivePortal("settings");
-                  setIsSidebarOpen(false);
-                }}
-                className={`w-full text-left rounded-[10px] transition-all group relative border py-1 px-2 flex items-center gap-2.5 cursor-pointer ${
-                  activePortal === "settings" 
-                    ? "bg-slate-900 text-white font-bold shadow-md shadow-slate-900/20 border-slate-800 overflow-hidden" 
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent hover:translate-x-1"
-                }`}
-              >
-                <div className={`p-1.5 rounded-lg shrink-0 ${activePortal === "settings" ? "bg-white/10 text-white shadow-inner shadow-white/10 backdrop-blur-sm z-10 border border-white/5" : "bg-slate-50 text-slate-450 border border-slate-200/60 group-hover:bg-slate-100 group-hover:text-slate-700"} transition-colors`}>
-                  <Settings className="h-4 w-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-bold tracking-tight">Company Settings</div>
-                </div>
-                {activePortal === "settings" && (
-                  <>
-                  <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-500/30 rounded-full blur-[16px] pointer-events-none" />
-                  <div className="absolute bottom-0 left-0 w-12 h-12 bg-violet-500/30 rounded-full blur-[12px] pointer-events-none" />
-                  <div className="w-1 h-5 rounded-full bg-indigo-400 absolute left-0 top-1/2 -translate-y-1/2 shadow-md shadow-indigo-500/50 z-10" />
-                </>
-                )}
-              </button>
+              {/* LINK: HR SETTINGS */}
+              {isHR && (
+                <button
+                  onClick={() => {
+                    setActivePortal("hr-settings");
+                    setIsSidebarOpen(false);
+                  }}
+                  className={`w-full text-left rounded-[10px] transition-all group relative border py-1 px-2 flex items-center gap-2.5 cursor-pointer ${
+                    activePortal === "hr-settings" 
+                      ? "bg-slate-900 text-white font-bold shadow-md shadow-slate-900/20 border-slate-800 overflow-hidden" 
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent hover:translate-x-1"
+                  }`}
+                >
+                  <div className={`p-1.5 rounded-lg shrink-0 ${activePortal === "hr-settings" ? "bg-white/10 text-white shadow-inner shadow-white/10 backdrop-blur-sm z-10 border border-white/5" : "bg-slate-50 text-slate-450 border border-slate-200/60 group-hover:bg-slate-100 group-hover:text-slate-700"} transition-colors`}>
+                    <Settings2 className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold tracking-tight">Global HR Settings</div>
+                  </div>
+                  {activePortal === "hr-settings" && (
+                    <>
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-rose-500/30 rounded-full blur-[16px] pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 w-12 h-12 bg-rose-500/30 rounded-full blur-[12px] pointer-events-none" />
+                    <div className="w-1 h-5 rounded-full bg-rose-400 absolute left-0 top-1/2 -translate-y-1/2 shadow-md shadow-rose-500/50 z-10" />
+                  </>
+                  )}
+                </button>
+              )}
+
+              {/* LINK: OPS SETTINGS */}
+              {isOps && (
+                <button
+                  onClick={() => {
+                    setActivePortal("ops-settings");
+                    setIsSidebarOpen(false);
+                  }}
+                  className={`w-full text-left rounded-[10px] transition-all group relative border py-1 px-2 flex items-center gap-2.5 cursor-pointer ${
+                    activePortal === "ops-settings" 
+                      ? "bg-slate-900 text-white font-bold shadow-md shadow-slate-900/20 border-slate-800 overflow-hidden" 
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent hover:translate-x-1"
+                  }`}
+                >
+                  <div className={`p-1.5 rounded-lg shrink-0 ${activePortal === "ops-settings" ? "bg-white/10 text-white shadow-inner shadow-white/10 backdrop-blur-sm z-10 border border-white/5" : "bg-slate-50 text-slate-450 border border-slate-200/60 group-hover:bg-slate-100 group-hover:text-slate-700"} transition-colors`}>
+                    <Settings2 className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold tracking-tight">Ops Settings</div>
+                  </div>
+                  {activePortal === "ops-settings" && (
+                    <>
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-500/30 rounded-full blur-[16px] pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 w-12 h-12 bg-indigo-500/30 rounded-full blur-[12px] pointer-events-none" />
+                    <div className="w-1 h-5 rounded-full bg-indigo-400 absolute left-0 top-1/2 -translate-y-1/2 shadow-md shadow-indigo-500/50 z-10" />
+                  </>
+                  )}
+                </button>
+              )}
               </>
             )}
 
@@ -1830,11 +1840,11 @@ export default function App() {
               <h1 className="text-lg font-bold text-slate-800 tracking-tight">
                 {activePortal === "performance" && (isGeneralUser ? "My Dashboard" : "Performance & KPIs")}
                 {activePortal === "leaves" && "Time Off & Leave Calendar"}
-                {activePortal === "employees" && "Teammates & Roles"}
+                {activePortal === "employees" && (isHR ? "All Employees & Roles" : "Teammates & Roles")}
                 {activePortal === "profile" && "Profile & Employment Details"}
-                {activePortal === "approvals" && "Time Off Approvals"}
                 {activePortal === "recruitment" && "Recruitment & ATS"}
-                {activePortal === "settings" && "Company Settings"}
+                {activePortal === "hr-settings" && "Global HR Settings"}
+                {activePortal === "ops-settings" && "Operations Manager Settings"}
               </h1>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500">
@@ -5224,9 +5234,9 @@ export default function App() {
         );
       })()}
 
-      {activePortal === "approvals" && <LeaveApprovals />}
       {activePortal === "recruitment" && <RecruitmentPipeline />}
-      {activePortal === "settings" && <CompanyPolicies />}
+      {activePortal === "hr-settings" && <HRSettings />}
+      {activePortal === "ops-settings" && <OpsSettings />}
       
       {activePortal === "employees" && (
         <EmployeeDossier
