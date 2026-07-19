@@ -1445,6 +1445,34 @@ const initialReports: MonthlyReport[] = [
 ];
 
 const initialManagers: Manager[] = [
+  {
+    id: 'a1',
+    name: 'Super Admin',
+    email: 'admin@nexus.com',
+    role: 'System Administrator',
+    roleType: 'admin',
+    teams: ['All Teams'],
+    employeeId: 'NEX-9999',
+    department: 'Administration',
+    joinDate: '2019-01-01',
+    reportingTo: 'Board of Directors',
+    employeeType: 'Full-Time',
+    skills: ['System Administration', 'Access Control'],
+    jobConfirmed: 'Confirmed on 2019-01-01',
+    phone: '+1 (555) 000-0000',
+    location: 'Remote',
+    bio: 'System Administrator with full access to Nexus Portal.',
+    workHours: '24/7',
+    workStyle: 'Remote',
+    costCenter: 'CC-000-ADM',
+    allocatedEquipment: 'Custom Server Rig',
+    education: 'Ph.D. in Computer Science',
+    certifications: 'CISSP, AWS Certified Solutions Architect Professional',
+    linkedinLink: 'https://linkedin.com/in/nexusadmin',
+    githubLink: 'https://github.com/nexusadmin',
+    preferredLanguage: 'English (US)',
+    timezone: 'UTC'
+  },
   { 
     id: 'm1', 
     name: 'Rafiul Refat', 

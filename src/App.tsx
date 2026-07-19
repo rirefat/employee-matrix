@@ -55,7 +55,8 @@ import {
   Briefcase,
   CheckSquare,
   Settings,
-  Settings2
+  Settings2,
+  ShieldCheck
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -88,8 +89,7 @@ import { ManagerProfile } from "./components/ManagerProfile";
 import { GeneralUserDashboard } from "./components/GeneralUserDashboard";
 import { GeneralUserLeaves } from "./components/GeneralUserLeaves";
 import { RecruitmentPipeline } from "./components/RecruitmentPipeline";
-import { HRSettings } from "./components/HRSettings";
-import { OpsSettings } from "./components/OpsSettings";
+import { AdminDashboard } from "./components/AdminDashboard";
 import { motion, AnimatePresence } from "motion/react";
 
 const DEPARTMENTS = ["Sales", "Operations"];
@@ -194,8 +194,8 @@ export default function App() {
   }, []);
 
   const isGeneralUser = loggedInManager?.roleType === 'user';
-  const isHR = loggedInManager?.role === 'HR Manager' || loggedInManager?.department === 'Human Resources';
-  const isOps = !isGeneralUser && !isHR;
+  const isAdmin = loggedInManager?.roleType === 'admin';
+  const isHR = loggedInManager?.role === 'HR Manager' || loggedInManager?.department === 'Human Resources' || isAdmin;
 
   const currentUserEmployee = useMemo(() => {
     return employees.find(e => e.email === loggedInManager?.email) || null;
@@ -1650,65 +1650,36 @@ export default function App() {
                   )}
                 </button>
               )}
-
-              {/* LINK: HR SETTINGS */}
-              {isHR && (
-                <button
-                  onClick={() => {
-                    setActivePortal("hr-settings");
-                    setIsSidebarOpen(false);
-                  }}
-                  className={`w-full text-left rounded-[10px] transition-all group relative border py-1 px-2 flex items-center gap-2.5 cursor-pointer ${
-                    activePortal === "hr-settings" 
-                      ? "bg-slate-900 text-white font-bold shadow-md shadow-slate-900/20 border-slate-800 overflow-hidden" 
-                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent hover:translate-x-1"
-                  }`}
-                >
-                  <div className={`p-1.5 rounded-lg shrink-0 ${activePortal === "hr-settings" ? "bg-white/10 text-white shadow-inner shadow-white/10 backdrop-blur-sm z-10 border border-white/5" : "bg-slate-50 text-slate-450 border border-slate-200/60 group-hover:bg-slate-100 group-hover:text-slate-700"} transition-colors`}>
-                    <Settings2 className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold tracking-tight">Global HR Settings</div>
-                  </div>
-                  {activePortal === "hr-settings" && (
-                    <>
-                    <div className="absolute top-0 right-0 w-16 h-16 bg-rose-500/30 rounded-full blur-[16px] pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 w-12 h-12 bg-rose-500/30 rounded-full blur-[12px] pointer-events-none" />
-                    <div className="w-1 h-5 rounded-full bg-rose-400 absolute left-0 top-1/2 -translate-y-1/2 shadow-md shadow-rose-500/50 z-10" />
-                  </>
-                  )}
-                </button>
-              )}
-
-              {/* LINK: OPS SETTINGS */}
-              {isOps && (
-                <button
-                  onClick={() => {
-                    setActivePortal("ops-settings");
-                    setIsSidebarOpen(false);
-                  }}
-                  className={`w-full text-left rounded-[10px] transition-all group relative border py-1 px-2 flex items-center gap-2.5 cursor-pointer ${
-                    activePortal === "ops-settings" 
-                      ? "bg-slate-900 text-white font-bold shadow-md shadow-slate-900/20 border-slate-800 overflow-hidden" 
-                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent hover:translate-x-1"
-                  }`}
-                >
-                  <div className={`p-1.5 rounded-lg shrink-0 ${activePortal === "ops-settings" ? "bg-white/10 text-white shadow-inner shadow-white/10 backdrop-blur-sm z-10 border border-white/5" : "bg-slate-50 text-slate-450 border border-slate-200/60 group-hover:bg-slate-100 group-hover:text-slate-700"} transition-colors`}>
-                    <Settings2 className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-bold tracking-tight">Ops Settings</div>
-                  </div>
-                  {activePortal === "ops-settings" && (
-                    <>
-                    <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-500/30 rounded-full blur-[16px] pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 w-12 h-12 bg-indigo-500/30 rounded-full blur-[12px] pointer-events-none" />
-                    <div className="w-1 h-5 rounded-full bg-indigo-400 absolute left-0 top-1/2 -translate-y-1/2 shadow-md shadow-indigo-500/50 z-10" />
-                  </>
-                  )}
-                </button>
-              )}
               </>
+            )}
+
+            {/* LINK: ADMIN DASHBOARD */}
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  setActivePortal("admin");
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full text-left rounded-[10px] transition-all group relative border py-1 px-2 flex items-center gap-2.5 cursor-pointer ${
+                  activePortal === "admin" 
+                    ? "bg-slate-900 text-white font-bold shadow-md shadow-slate-900/20 border-slate-800 overflow-hidden" 
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent hover:translate-x-1"
+                }`}
+              >
+                <div className={`p-1.5 rounded-lg shrink-0 ${activePortal === "admin" ? "bg-white/10 text-white shadow-inner shadow-white/10 backdrop-blur-sm z-10 border border-white/5" : "bg-slate-50 text-slate-450 border border-slate-200/60 group-hover:bg-slate-100 group-hover:text-slate-700"} transition-colors`}>
+                  <ShieldCheck className="h-4 w-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-bold tracking-tight">Admin Dashboard</div>
+                </div>
+                {activePortal === "admin" && (
+                  <>
+                  <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/30 rounded-full blur-[16px] pointer-events-none" />
+                  <div className="absolute bottom-0 left-0 w-12 h-12 bg-blue-500/30 rounded-full blur-[12px] pointer-events-none" />
+                  <div className="w-1 h-5 rounded-full bg-blue-400 absolute left-0 top-1/2 -translate-y-1/2 shadow-md shadow-blue-500/50 z-10" />
+                </>
+                )}
+              </button>
             )}
 
             {/* LINK 4: MY PROFILE */}
@@ -1843,8 +1814,7 @@ export default function App() {
                 {activePortal === "employees" && (isHR ? "All Employees & Roles" : "Teammates & Roles")}
                 {activePortal === "profile" && "Profile & Employment Details"}
                 {activePortal === "recruitment" && "Recruitment & ATS"}
-                {activePortal === "hr-settings" && "Global HR Settings"}
-                {activePortal === "ops-settings" && "Operations Manager Settings"}
+                {activePortal === "admin" && "Platform Administration"}
               </h1>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500">
@@ -4288,9 +4258,9 @@ export default function App() {
               {/* 2. Operations Split Area */}
               <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                 
-                {/* Column Left: Register Form (2 Cols) */}
-                <div className="lg:col-span-2 bg-white border border-slate-200/60 p-5 rounded-3xl shadow-3xs space-y-4">
-                  <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                {loggedInManager?.roleType !== 'admin' && (
+                  <div className="lg:col-span-2 bg-white border border-slate-200/60 p-5 rounded-3xl shadow-3xs space-y-4">
+                    <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
                     <div className="p-1.5 bg-slate-100 rounded-lg text-slate-750">
                       <Plus className="w-4 h-4" />
                     </div>
@@ -4415,9 +4385,10 @@ export default function App() {
                     </button>
                   </form>
                 </div>
+                )}
 
                 {/* Column Right: Pending Approvals Hub (3 Cols) */}
-                <div className="lg:col-span-3 bg-white border border-slate-200/60 p-5 rounded-3xl shadow-3xs space-y-4">
+                <div className={`${loggedInManager?.roleType === 'admin' ? 'lg:col-span-5' : 'lg:col-span-3'} bg-white border border-slate-200/60 p-5 rounded-3xl shadow-3xs space-y-4`}>
                   <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                     <div className="flex items-center gap-2">
                       <div className="p-1.5 bg-amber-50 rounded-lg text-amber-600">
@@ -4460,25 +4431,33 @@ export default function App() {
                             Span: {request.start} to {request.end}
                           </span>
                           <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleUpdateTeammateLeaveStatus(employee.id, request.id, "Approved")}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-500 hover:text-white border border-emerald-200/50 hover:border-emerald-500 font-bold rounded-lg cursor-pointer transition-all shadow-sm text-[11px] active:scale-95"
-                            >
-                              <Check className="w-3.5 h-3.5" /> Approve
-                            </button>
-                            <button
-                              onClick={() => handleUpdateTeammateLeaveStatus(employee.id, request.id, "Rejected")}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-700 hover:bg-rose-500 hover:text-white border border-rose-200/50 hover:border-rose-500 font-bold rounded-lg cursor-pointer transition-all shadow-sm text-[11px] active:scale-95"
-                            >
-                              <X className="w-3.5 h-3.5" /> Reject
-                            </button>
-                            <button
-                              onClick={() => handleDeleteTeammateLeaveRequest(employee.id, request.id)}
-                              className="p-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer transition-colors shadow-sm ml-1"
-                              title="Delete request record"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {loggedInManager?.roleType !== 'admin' ? (
+                              <>
+                                <button
+                                  onClick={() => handleUpdateTeammateLeaveStatus(employee.id, request.id, "Approved")}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-500 hover:text-white border border-emerald-200/50 hover:border-emerald-500 font-bold rounded-lg cursor-pointer transition-all shadow-sm text-[11px] active:scale-95"
+                                >
+                                  <Check className="w-3.5 h-3.5" /> Approve
+                                </button>
+                                <button
+                                  onClick={() => handleUpdateTeammateLeaveStatus(employee.id, request.id, "Rejected")}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-700 hover:bg-rose-500 hover:text-white border border-rose-200/50 hover:border-rose-500 font-bold rounded-lg cursor-pointer transition-all shadow-sm text-[11px] active:scale-95"
+                                >
+                                  <X className="w-3.5 h-3.5" /> Reject
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteTeammateLeaveRequest(employee.id, request.id)}
+                                  className="p-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer transition-colors shadow-sm ml-1"
+                                  title="Delete request record"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-slate-500 font-medium italic text-[11px]">
+                                Pending {employee.reportingTo || "Manager"} approval
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -5235,8 +5214,10 @@ export default function App() {
       })()}
 
       {activePortal === "recruitment" && <RecruitmentPipeline />}
-      {activePortal === "hr-settings" && <HRSettings />}
-      {activePortal === "ops-settings" && <OpsSettings />}
+      
+      {activePortal === "admin" && loggedInManager && (
+        <AdminDashboard loggedInManager={loggedInManager} employees={employees} />
+      )}
       
       {activePortal === "employees" && (
         <EmployeeDossier

@@ -5,6 +5,34 @@ import { get3DAvatarUrl } from '../utils';
 import { Manager } from '../types';
 
 export const dummyManagers: Manager[] = [
+  {
+    id: 'a1',
+    name: 'Super Admin',
+    email: 'admin@nexus.com',
+    role: 'System Administrator',
+    roleType: 'admin',
+    teams: ['All Teams'],
+    employeeId: 'NEX-9999',
+    department: 'Administration',
+    joinDate: '2019-01-01',
+    reportingTo: 'Board of Directors',
+    employeeType: 'Full-Time',
+    skills: ['System Administration', 'Access Control'],
+    jobConfirmed: 'Confirmed on 2019-01-01',
+    phone: '+1 (555) 000-0000',
+    location: 'Remote',
+    bio: 'System Administrator with full access to Nexus Portal.',
+    workHours: '24/7',
+    workStyle: 'Remote',
+    costCenter: 'CC-000-ADM',
+    allocatedEquipment: 'Custom Server Rig',
+    education: 'Ph.D. in Computer Science',
+    certifications: 'CISSP, AWS Certified Solutions Architect Professional',
+    linkedinLink: 'https://linkedin.com/in/nexusadmin',
+    githubLink: 'https://github.com/nexusadmin',
+    preferredLanguage: 'English (US)',
+    timezone: 'UTC'
+  },
   { 
     id: 'm1', 
     name: 'Rafiul Refat', 
@@ -135,7 +163,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const [error, setError] = useState('');
 
   React.useEffect(() => {
-    fetch('/api/managers')
+    fetch('/api/managers', { cache: 'no-store' })
       .then(res => {
         if (res.ok) return res.json();
         throw new Error('Failed to fetch from backend');
@@ -264,8 +292,8 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                   <h4 className="text-xs font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{manager.name}</h4>
                   <p className="text-xs text-slate-500">{manager.email}</p>
                 </div>
-                <div className="px-2.5 py-1 bg-slate-100 text-slate-600 text-[11px] font-bold rounded-md uppercase tracking-wide group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                  {manager.role}
+                <div className={`px-2.5 py-1 text-[11px] font-bold rounded-md uppercase tracking-wide transition-colors ${manager.roleType === 'admin' ? 'bg-indigo-100 text-indigo-700 border border-indigo-200 group-hover:bg-indigo-200' : 'bg-slate-100 text-slate-600 group-hover:bg-blue-50 group-hover:text-blue-600'}`}>
+                  {manager.roleType === 'admin' ? 'Admin' : manager.role}
                 </div>
               </motion.div>
             ))}
