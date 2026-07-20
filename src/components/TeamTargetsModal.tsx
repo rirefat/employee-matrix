@@ -15,15 +15,42 @@ export function TeamTargetsModal({ onClose, employees }: TeamTargetsModalProps) 
   const [filterStatus, setFilterStatus] = useState<string>('All');
   const [filterTeam, setFilterTeam] = useState<string>('All');
 
-  // Hardcoded for now based on requirements, but could be dynamic
-  const TEAMS = ['Full Stack', 'WordPress', 'Shopify', 'Design', 'Marketing', 'QA'];
-  
+  // Dynamically extract all available teams from the employee database, plus defaults
+  const availableTeams = useMemo(() => {
+    const teams = new Set<string>();
+    employees.forEach(emp => {
+      if (emp.team) teams.add(emp.team);
+    });
+    // Ensure baseline teams are present
+    ['Full Stack', 'WordPress', 'Shopify', 'Design', 'Marketing', 'QA'].forEach(t => teams.add(t));
+    return Array.from(teams).sort();
+  }, [employees]);
+
+  // Helper function to automatically link a chosen team to its designated Operations Manager
   const getOperationsManager = (teamName: string) => {
-    // In a real app, this would find the manager from the employees array who manages this team
-    const managers = employees.filter(emp => emp.role === 'Manager' || emp.roleType === 'manager');
-    const teamManager = managers.find(m => m.team === teamName || (m.department && m.department.includes(teamName)));
+    // Look for a matching manager in the employee database
+    let manager = employees.find(emp => 
+      (emp.role?.includes('Manager') || emp.roleType === 'manager' || emp.role === 'Super Admin') && 
+      (emp.team?.toLowerCase() === teamName.toLowerCase() || (emp.department && emp.department.toLowerCase().includes(teamName.toLowerCase())))
+    );
+
+    // If not found by exact match, try structural aliases
+    if (!manager) {
+      const aliasMap: Record<string, string> = {
+        'Full Stack': 'Custom',
+        'Design': 'UI/UX'
+      };
+      
+      const alias = aliasMap[teamName];
+      if (alias) {
+        manager = employees.find(emp => 
+          (emp.role?.includes('Manager') || emp.roleType === 'manager') && 
+          emp.team?.toLowerCase() === alias.toLowerCase()
+        );
+      }
+    }
     
-    if (teamManager) return teamManager.name;
+    if (manager) return manager.name;
     return `Operations Manager (${teamName})`;
   };
 
@@ -196,35 +223,35 @@ export function TeamTargetsModal({ onClose, employees }: TeamTargetsModalProps) 
         <div className="flex-1 overflow-y-auto flex flex-col bg-slate-50/30">
           {isFormOpen ? (
             <div className="p-6 max-w-4xl mx-auto w-full">
-              <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+              <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col h-full">
+                <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
                   <h3 className="font-bold text-slate-800">{editingTarget ? 'Edit Team Target' : 'Configure New Team Target'}</h3>
                   <button onClick={() => setIsFormOpen(false)} className="text-sm font-medium text-slate-500 hover:text-slate-800">Cancel</button>
                 </div>
                 
-                <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                <form onSubmit={handleSubmit} className="p-5 flex-1 overflow-y-auto space-y-4">
                   {/* Team & Manager Selection */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-indigo-50/50 rounded-xl border border-indigo-100/50">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100/50">
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Target Team</label>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Target Team</label>
                       <div className="relative">
                         <select 
                           required
                           value={formData.team}
                           onChange={(e) => handleTeamChange(e.target.value)}
-                          className="w-full pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 appearance-none cursor-pointer shadow-sm"
+                          className="w-full pl-4 pr-10 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 appearance-none cursor-pointer shadow-sm"
                         >
-                          {TEAMS.map(team => (
+                          {availableTeams.map(team => (
                             <option key={team} value={team}>{team} Team</option>
                           ))}
                         </select>
-                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                       </div>
                     </div>
                     
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Operations Manager (Auto-Assigned)</label>
-                      <div className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm font-medium text-slate-500 flex items-center gap-2 cursor-not-allowed">
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Operations Manager</label>
+                      <div className="w-full px-4 py-2 bg-slate-100 border border-slate-200 rounded-lg text-sm font-medium text-slate-500 flex items-center gap-2 cursor-not-allowed">
                         <Briefcase className="w-4 h-4" />
                         {getOperationsManager(formData.team)}
                       </div>
@@ -232,40 +259,40 @@ export function TeamTargetsModal({ onClose, employees }: TeamTargetsModalProps) 
                   </div>
 
                   {/* Core Details */}
-                  <div className="space-y-4">
-                    <div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="md:col-span-1">
                       <label className="block text-xs font-bold text-slate-700 mb-1.5">Target Title</label>
                       <input 
                         required
                         type="text"
-                        placeholder="e.g., Q3 E-Commerce Platform Overhaul"
+                        placeholder="e.g., Q3 Overhaul"
                         value={formData.title}
                         onChange={(e) => setFormData({...formData, title: e.target.value})}
-                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm"
                       />
                     </div>
                     
-                    <div>
+                    <div className="md:col-span-2">
                       <label className="block text-xs font-bold text-slate-700 mb-1.5">Description & Strategic Objectives</label>
-                      <textarea 
+                      <input 
                         required
-                        rows={3}
+                        type="text"
                         placeholder="Define the specific goals and expectations for this team..."
                         value={formData.description}
                         onChange={(e) => setFormData({...formData, description: e.target.value})}
-                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm resize-none"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm"
                       />
                     </div>
                   </div>
 
-                  {/* Metrics & Timeline */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  {/* Metrics, Timeline, Status & Priority */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1.5">Measurement Type</label>
                       <select 
                         value={formData.targetType}
                         onChange={(e) => setFormData({...formData, targetType: e.target.value})}
-                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                       >
                         <option value="Revenue">Revenue / Sales ($)</option>
                         <option value="Delivery">Project Delivery (Count)</option>
@@ -282,7 +309,7 @@ export function TeamTargetsModal({ onClose, employees }: TeamTargetsModalProps) 
                         placeholder="e.g., $150,000"
                         value={formData.targetValue}
                         onChange={(e) => setFormData({...formData, targetValue: e.target.value})}
-                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                       />
                     </div>
                     
@@ -291,7 +318,7 @@ export function TeamTargetsModal({ onClose, employees }: TeamTargetsModalProps) 
                       <select 
                         value={formData.targetPeriod}
                         onChange={(e) => setFormData({...formData, targetPeriod: e.target.value})}
-                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                       >
                         <option value="daily">Daily</option>
                         <option value="weekly">Weekly</option>
@@ -309,19 +336,16 @@ export function TeamTargetsModal({ onClose, employees }: TeamTargetsModalProps) 
                         type="date"
                         value={formData.deadline}
                         onChange={(e) => setFormData({...formData, deadline: e.target.value})}
-                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                       />
                     </div>
-                  </div>
 
-                  {/* Status & Priority */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                     <div>
+                    <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1.5">Priority Level</label>
                       <select 
                         value={formData.priority}
                         onChange={(e) => setFormData({...formData, priority: e.target.value as any})}
-                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                       >
                         <option value="Low">Low Priority</option>
                         <option value="Medium">Medium Priority</option>
@@ -335,7 +359,7 @@ export function TeamTargetsModal({ onClose, employees }: TeamTargetsModalProps) 
                       <select 
                         value={formData.status}
                         onChange={(e) => setFormData({...formData, status: e.target.value as any})}
-                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                       >
                         <option value="Draft">Draft (Not visible to team)</option>
                         <option value="Active">Active (Assigned)</option>
@@ -346,19 +370,19 @@ export function TeamTargetsModal({ onClose, employees }: TeamTargetsModalProps) 
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
+                  <div className="pt-3 flex justify-end gap-3 mt-auto shrink-0">
                     <button 
                       type="button" 
                       onClick={() => setIsFormOpen(false)}
-                      className="px-5 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+                      className="px-5 py-2 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
                     >
                       Cancel
                     </button>
                     <button 
                       type="submit"
-                      className="px-6 py-2.5 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/20 rounded-xl transition-all"
+                      className="px-6 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/20 rounded-lg transition-all"
                     >
-                      {editingTarget ? 'Update Team Target' : 'Assign Target to Team'}
+                      {editingTarget ? 'Update Target' : 'Assign Target'}
                     </button>
                   </div>
                 </form>
@@ -376,7 +400,7 @@ export function TeamTargetsModal({ onClose, employees }: TeamTargetsModalProps) 
                       className="appearance-none pl-10 pr-8 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all cursor-pointer shadow-sm"
                     >
                       <option value="All">All Teams</option>
-                      {TEAMS.map(team => <option key={team} value={team}>{team}</option>)}
+                      {availableTeams.map(team => <option key={team} value={team}>{team}</option>)}
                     </select>
                     <Briefcase className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />

@@ -91,6 +91,7 @@ import { GeneralUserLeaves } from "./components/GeneralUserLeaves";
 import { RecruitmentPipeline } from "./components/RecruitmentPipeline";
 import { AdminDashboard } from "./components/AdminDashboard";
 import { TeamTargetsModal } from "./components/TeamTargetsModal";
+import { DocumentationCenter } from "./components/DocumentationCenter";
 import { motion, AnimatePresence } from "motion/react";
 
 const DEPARTMENTS = ["Sales", "Operations"];
@@ -342,6 +343,7 @@ export default function App() {
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
   const [modalTab, setModalTab] = useState<"corporate" | "personal" | "professional" | "banking">("corporate");
   const [isTargetsModalOpen, setIsTargetsModalOpen] = useState(false);
+  const [isDocsModalOpen, setIsDocsModalOpen] = useState(false);
   const [isTeamTargetsModalOpen, setIsTeamTargetsModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
@@ -526,7 +528,7 @@ export default function App() {
 
   // Lock body scroll when any modal is open to prevent background scrolling
   useEffect(() => {
-    const isAnyModalOpen = isEmployeeModalOpen || isTargetsModalOpen || isTeamTargetsModalOpen || isPerformanceModalOpen || isDeleteConfirmOpen || isIncrementModalOpen;
+    const isAnyModalOpen = isEmployeeModalOpen || isTargetsModalOpen || isTeamTargetsModalOpen || isDocsModalOpen || isPerformanceModalOpen || isDeleteConfirmOpen || isIncrementModalOpen;
     if (isAnyModalOpen) {
       document.body.classList.add("overflow-hidden");
     } else {
@@ -535,7 +537,7 @@ export default function App() {
     return () => {
       document.body.classList.remove("overflow-hidden");
     };
-  }, [isEmployeeModalOpen, isTargetsModalOpen, isTeamTargetsModalOpen, isPerformanceModalOpen, isDeleteConfirmOpen, isIncrementModalOpen]);
+  }, [isEmployeeModalOpen, isTargetsModalOpen, isTeamTargetsModalOpen, isDocsModalOpen, isPerformanceModalOpen, isDeleteConfirmOpen, isIncrementModalOpen]);
 
   const handleSaveTarget = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1752,14 +1754,14 @@ export default function App() {
             </div>
             
             <div className="grid grid-cols-2 gap-1.5">
-              <a 
-                href="#docs" 
+              <button 
+                onClick={() => setIsDocsModalOpen(true)}
                 className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200/60 hover:border-slate-300 text-[11px] text-slate-600 hover:text-slate-900 transition-all font-medium group shadow-3xs"
               >
                 <BookOpen className="w-3 h-3 text-indigo-500 group-hover:scale-110 transition-transform" />
                 <span>Docs</span>
                 <ExternalLink className="w-2.5 h-2.5 text-slate-500 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-              </a>
+              </button>
               <a 
                 href="#support" 
                 className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200/60 hover:border-slate-300 text-[11px] text-slate-600 hover:text-slate-900 transition-all font-medium group shadow-3xs"
@@ -6245,6 +6247,13 @@ export default function App() {
           <TeamTargetsModal 
             onClose={() => setIsTeamTargetsModalOpen(false)} 
             employees={employees} 
+          />
+        )}
+
+        {isDocsModalOpen && (
+          <DocumentationCenter 
+            onClose={() => setIsDocsModalOpen(false)} 
+            loggedInManager={loggedInManager} 
           />
         )}
       </AnimatePresence>

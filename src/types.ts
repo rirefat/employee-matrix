@@ -235,4 +235,5 @@ export interface TeamTarget {
   status: 'Draft' | 'Active' | 'Completed' | 'Overdue' | 'Archived';
   progress: number;
   createdAt: string;
+  updatedAt?: string;
 }
