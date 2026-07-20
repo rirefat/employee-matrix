@@ -5368,6 +5368,8 @@ export default function App() {
                           <label className="block text-xs font-bold text-slate-700">Corporate Email *</label>
                           <input 
                             type="email" 
+                            pattern="[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$"
+                            title="Please enter a valid email address"
                             className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 focus:bg-white transition-all outline-none" 
                             value={employeeFormData.email || ''} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, email: e.target.value})} 
@@ -5488,7 +5490,9 @@ export default function App() {
                         <div>
                           <label className="block text-xs font-bold text-slate-700">Mobile Phone</label>
                           <input 
-                            type="text" 
+                            type="tel" 
+                            pattern="^\+?[0-9\s\-\(\)]{7,20}$"
+                            title="Please enter a valid phone number (e.g., +1 555-123-4567)"
                             className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 focus:bg-white transition-all outline-none" 
                             value={employeeFormData.phone || ''} 
                             onChange={(e) => setEmployeeFormData({...employeeFormData, phone: e.target.value})} 

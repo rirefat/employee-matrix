@@ -269,7 +269,7 @@ export function AddUserModal({ isOpen, onClose, employees, setEmployees }: AddUs
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-slate-700">Work Email *</label>
-                      <input required type="email" value={employeeFormData.email || ''} onChange={(e) => setEmployeeFormData({...employeeFormData, email: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-all font-medium" placeholder="e.g. john@company.com" />
+                      <input required type="email" pattern="[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$" title="Please enter a valid email address" value={employeeFormData.email || ''} onChange={(e) => setEmployeeFormData({...employeeFormData, email: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-all font-medium" placeholder="e.g. john@company.com" />
                     </div>
                   
                     <div className="space-y-1.5">
@@ -356,11 +356,11 @@ export function AddUserModal({ isOpen, onClose, employees, setEmployees }: AddUs
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-slate-700">Mobile Phone</label>
-                      <input type="tel" value={employeeFormData.phone || ''} onChange={(e) => setEmployeeFormData({...employeeFormData, phone: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-all font-medium" placeholder="+1 (555) 019-2834" />
+                      <input type="tel" pattern="^\+?[0-9\s\-\(\)]{7,20}$" title="Please enter a valid phone number (e.g., +1 555-123-4567)" value={employeeFormData.phone || ''} onChange={(e) => setEmployeeFormData({...employeeFormData, phone: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-all font-medium" placeholder="+1 (555) 019-2834" />
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-slate-700">Personal Email</label>
-                      <input type="email" value={employeeFormData.personalEmail || ''} onChange={(e) => setEmployeeFormData({...employeeFormData, personalEmail: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-all font-medium" placeholder="jane.personal@gmail.com" />
+                      <input type="email" pattern="[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$" title="Please enter a valid email address" value={employeeFormData.personalEmail || ''} onChange={(e) => setEmployeeFormData({...employeeFormData, personalEmail: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-all font-medium" placeholder="jane.personal@gmail.com" />
                     </div>
                   
                     <div className="space-y-1.5">
@@ -510,7 +510,7 @@ export function AddUserModal({ isOpen, onClose, employees, setEmployees }: AddUs
                   <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-6">
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-slate-700">System Username *</label>
-                      <input required type="text" value={authData.username} onChange={(e) => setAuthData({...authData, username: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-all font-mono font-bold text-slate-900" placeholder="e.g. john.doe" />
+                      <input required type="text" pattern="^[a-zA-Z0-9_.-]{3,20}$" title="Username must be 3-20 characters long and can only contain letters, numbers, underscores, dots, and hyphens." value={authData.username} onChange={(e) => setAuthData({...authData, username: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-all font-mono font-bold text-slate-900" placeholder="e.g. john.doe" />
                     </div>
 
                     <div className="space-y-4">

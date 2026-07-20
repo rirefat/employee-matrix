@@ -80,7 +80,7 @@ export function AdminDashboard({ loggedInManager, employees, setEmployees }: Adm
 
   return (
     <main className="flex-1 w-full overflow-y-auto overflow-x-hidden">
-      <div className="p-8 max-w-7xl mx-auto space-y-8 pb-20">
+      <div className="px-6 lg:px-10 xl:px-12 py-8 space-y-8 pb-20">
         {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
         <div className="flex flex-col gap-1.5">
@@ -251,48 +251,7 @@ export function AdminDashboard({ loggedInManager, employees, setEmployees }: Adm
       </motion.div>
 
       {/* Advanced Global Settings & Danger Zone */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4">
-        {/* Global Security Policies */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="bg-white rounded-3xl border border-slate-200/60 shadow-sm overflow-hidden"
-        >
-          <div className="px-6 py-5 border-b border-slate-100 flex items-center gap-3 bg-slate-50/30">
-            <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100/50">
-              <Shield className="w-4 h-4" />
-            </div>
-            <h3 className="font-bold text-slate-800 tracking-tight">Global Security Policies</h3>
-          </div>
-          <div className="p-6 space-y-6">
-            <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:border-slate-300 transition-colors bg-white">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5"><Key className="w-4 h-4 text-slate-400" /></div>
-                <div>
-                  <div className="text-sm font-bold text-slate-900">Enforce Two-Factor Auth (2FA)</div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">Require all personnel to use authenticator apps.</div>
-                </div>
-              </div>
-              <div className="w-10 h-6 bg-emerald-500 rounded-full relative cursor-pointer shadow-inner">
-                <div className="w-4 h-4 bg-white rounded-full absolute right-1 top-1 shadow-sm" />
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:border-slate-300 transition-colors bg-white">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5"><Lock className="w-4 h-4 text-slate-400" /></div>
-                <div>
-                  <div className="text-sm font-bold text-slate-900">System Maintenance Lock</div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">Lock out all users except Super Admins.</div>
-                </div>
-              </div>
-              <div className="w-10 h-6 bg-slate-200 rounded-full relative cursor-pointer shadow-inner">
-                <div className="w-4 h-4 bg-white rounded-full absolute left-1 top-1 shadow-sm" />
-              </div>
-            </div>
-          </div>
-        </motion.div>
+      <div className="grid grid-cols-1 gap-6 pt-4">
 
         {/* Danger Zone */}
         <motion.div 
