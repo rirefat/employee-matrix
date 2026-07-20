@@ -4559,10 +4559,10 @@ export default function App() {
                   /* Timeline Row Layout */
                   <div className="p-6 space-y-4">
                     <div className="border border-slate-100 rounded-2xl overflow-hidden bg-slate-50/5 shadow-[inset_0_1px_4px_rgba(0,0,0,0.01)]">
-                      <div className="overflow-x-auto sleek-scrollbar">
+                      <div className="overflow-x-auto overflow-y-auto h-[540px] sleek-scrollbar">
                         <div className="min-w-[850px]">
                           {/* Timeline Header Row */}
-                          <div className="flex border-b border-slate-100 bg-slate-50/30 font-mono text-[10px] font-bold tracking-wider text-slate-500">
+                          <div className="flex border-b border-slate-100 bg-slate-50/30 font-mono text-[10px] font-bold tracking-wider text-slate-500 sticky top-0 z-20">
                             {/* Sticky Teammate header */}
                             <div className="w-48 sticky left-0 bg-slate-50/90 backdrop-blur-md border-r border-slate-100 shrink-0 px-4 py-3.5 z-10 flex items-center justify-between text-[11px] font-black text-slate-600">
                               <span>TEAM MEMBER</span>
