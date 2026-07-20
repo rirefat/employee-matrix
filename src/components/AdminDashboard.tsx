@@ -39,9 +39,9 @@ export function AdminDashboard({ loggedInManager, employees }: AdminDashboardPro
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, idx) => (
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.1 }}
+            transition={{ delay: idx * 0.1, duration: 0.4, ease: "easeOut" }}
             key={idx}
             className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center gap-4"
           >

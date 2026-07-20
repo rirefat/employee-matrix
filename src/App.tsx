@@ -201,7 +201,10 @@ export default function App() {
     return employees.find(e => e.email === loggedInManager?.email) || null;
   }, [employees, loggedInManager]);
 
-  const myEmployees = useMemo(() => employees.filter(emp => loggedInManager?.teams.includes(emp.team)), [employees, loggedInManager]);
+  const myEmployees = useMemo(() => {
+    if (loggedInManager?.roleType === 'admin' || loggedInManager?.teams.includes('All Teams')) return employees;
+    return employees.filter(emp => loggedInManager?.teams.includes(emp.team));
+  }, [employees, loggedInManager]);
 
   const allPendingRequests = useMemo(() => {
     const list: { employee: Employee; request: LeaveRequest }[] = [];
@@ -1610,7 +1613,7 @@ export default function App() {
                   <Users className="h-4 w-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-bold tracking-tight">Teammate Directory</div>
+                  <div className="text-xs font-bold tracking-tight">{loggedInManager?.roleType === 'admin' ? 'Employee Directory' : 'Teammate Directory'}</div>
                   
                 </div>
                 {activePortal === "employees" && (

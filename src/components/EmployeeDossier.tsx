@@ -1128,7 +1128,7 @@ export function EmployeeDossier({
               type="button"
               onClick={handleOpenAddEmployee}
               className="w-11 h-11 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl flex items-center justify-center cursor-pointer transition-all shadow-[0_8px_24px_rgba(15,23,42,0.1)] shrink-0 border border-slate-250"
-              title="Enroll New Developer"
+              title="Enroll New Member"
             >
               <UserPlus className="h-4 w-4" />
             </button>
