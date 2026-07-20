@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Employee, Manager } from '../types';
 import { get3DAvatarUrl } from '../utils';
+import { AddUserModal } from './AddUserModal';
 
 interface AdminDashboardProps {
   loggedInManager: Manager;
@@ -29,6 +30,7 @@ export function AdminDashboard({ loggedInManager, employees, setEmployees }: Adm
   const [roleFilter, setRoleFilter] = useState<string>('All');
   const [selectedUser, setSelectedUser] = useState<Employee | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
 
   const stats = useMemo(() => {
     return [
@@ -93,7 +95,10 @@ export function AdminDashboard({ loggedInManager, employees, setEmployees }: Adm
           </p>
         </div>
         
-        <button className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-indigo-500/20 transition-all active:scale-95 group">
+        <button 
+          onClick={() => setIsAddUserModalOpen(true)}
+          className="flex items-center gap-2 bg-slate-900 hover:bg-black text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-slate-900/20 transition-all active:scale-95 group"
+        >
           <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" />
           Provision New User
         </button>
@@ -440,6 +445,14 @@ export function AdminDashboard({ loggedInManager, employees, setEmployees }: Adm
           </div>
         )}
       </AnimatePresence>
+      
+      <AddUserModal 
+        isOpen={isAddUserModalOpen} 
+        onClose={() => setIsAddUserModalOpen(false)} 
+        employees={employees} 
+        setEmployees={setEmployees} 
+      />
+      
       </div>
     </main>
   );
