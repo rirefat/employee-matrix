@@ -90,6 +90,7 @@ import { GeneralUserDashboard } from "./components/GeneralUserDashboard";
 import { GeneralUserLeaves } from "./components/GeneralUserLeaves";
 import { RecruitmentPipeline } from "./components/RecruitmentPipeline";
 import { AdminDashboard } from "./components/AdminDashboard";
+import { TeamTargetsModal } from "./components/TeamTargetsModal";
 import { motion, AnimatePresence } from "motion/react";
 
 const DEPARTMENTS = ["Sales", "Operations"];
@@ -341,6 +342,7 @@ export default function App() {
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
   const [modalTab, setModalTab] = useState<"corporate" | "personal" | "professional" | "banking">("corporate");
   const [isTargetsModalOpen, setIsTargetsModalOpen] = useState(false);
+  const [isTeamTargetsModalOpen, setIsTeamTargetsModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
@@ -511,9 +513,20 @@ export default function App() {
     }
   }, [isTargetsModalOpen, currentTarget]);
 
+  // Event listener for opening team targets modal from anywhere
+  useEffect(() => {
+    const handleOpenTeamTargets = () => {
+      setIsTeamTargetsModalOpen(true);
+    };
+    document.addEventListener('open-team-targets', handleOpenTeamTargets);
+    return () => {
+      document.removeEventListener('open-team-targets', handleOpenTeamTargets);
+    };
+  }, []);
+
   // Lock body scroll when any modal is open to prevent background scrolling
   useEffect(() => {
-    const isAnyModalOpen = isEmployeeModalOpen || isTargetsModalOpen || isPerformanceModalOpen || isDeleteConfirmOpen || isIncrementModalOpen;
+    const isAnyModalOpen = isEmployeeModalOpen || isTargetsModalOpen || isTeamTargetsModalOpen || isPerformanceModalOpen || isDeleteConfirmOpen || isIncrementModalOpen;
     if (isAnyModalOpen) {
       document.body.classList.add("overflow-hidden");
     } else {
@@ -522,7 +535,7 @@ export default function App() {
     return () => {
       document.body.classList.remove("overflow-hidden");
     };
-  }, [isEmployeeModalOpen, isTargetsModalOpen, isPerformanceModalOpen, isDeleteConfirmOpen, isIncrementModalOpen]);
+  }, [isEmployeeModalOpen, isTargetsModalOpen, isTeamTargetsModalOpen, isPerformanceModalOpen, isDeleteConfirmOpen, isIncrementModalOpen]);
 
   const handleSaveTarget = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1840,7 +1853,13 @@ export default function App() {
             {!isGeneralUser && (
               <>
               <button
-                onClick={() => setIsTargetsModalOpen(true)}
+                onClick={() => {
+                  if (loggedInManager?.role === 'Super Admin' || loggedInManager?.roleType === 'admin') {
+                    setIsTeamTargetsModalOpen(true);
+                  } else {
+                    setIsTargetsModalOpen(true);
+                  }
+                }}
                 className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-full text-xs font-medium transition-all shadow-sm shadow-slate-900/10 cursor-pointer group"
               >
                 <TrendingUp className="h-3.5 w-3.5 text-slate-300 group-hover:text-white transition-colors" />
@@ -6220,6 +6239,13 @@ export default function App() {
               </form>
             </motion.div>
           </div>
+        )}
+
+        {isTeamTargetsModalOpen && (
+          <TeamTargetsModal 
+            onClose={() => setIsTeamTargetsModalOpen(false)} 
+            employees={employees} 
+          />
         )}
       </AnimatePresence>
 

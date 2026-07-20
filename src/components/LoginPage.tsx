@@ -9,7 +9,7 @@ export const dummyManagers: Manager[] = [
     id: 'a1',
     name: 'Super Admin',
     email: 'admin@nexus.com',
-    role: 'System Administrator',
+    role: 'Super Admin',
     roleType: 'admin',
     teams: ['All Teams'],
     employeeId: 'NEX-9999',

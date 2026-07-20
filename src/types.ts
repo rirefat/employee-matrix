@@ -220,3 +220,19 @@ export interface DashboardMetrics {
     avgProjectsValue: number;
   }[];
 }
+
+export interface TeamTarget {
+  id: string;
+  team: string;
+  operationsManager: string;
+  title: string;
+  description: string;
+  targetType: string;
+  targetValue: string;
+  targetPeriod: string;
+  deadline: string;
+  priority: 'Low' | 'Medium' | 'High' | 'Critical';
+  status: 'Draft' | 'Active' | 'Completed' | 'Overdue' | 'Archived';
+  progress: number;
+  createdAt: string;
+}

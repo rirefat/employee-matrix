@@ -95,13 +95,26 @@ export function AdminDashboard({ loggedInManager, employees, setEmployees }: Adm
           </p>
         </div>
         
-        <button 
-          onClick={() => setIsAddUserModalOpen(true)}
-          className="flex items-center gap-2 bg-slate-900 hover:bg-black text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-slate-900/20 transition-all active:scale-95 group"
-        >
-          <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" />
-          Provision New User
-        </button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+          {loggedInManager?.role === 'Super Admin' && (
+            <button 
+              onClick={() => {
+                document.dispatchEvent(new CustomEvent('open-team-targets'));
+              }}
+              className="flex items-center justify-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all active:scale-95 group"
+            >
+              <Users className="w-4 h-4" />
+              Manage Team Targets
+            </button>
+          )}
+          <button 
+            onClick={() => setIsAddUserModalOpen(true)}
+            className="flex items-center justify-center gap-2 bg-slate-900 hover:bg-black text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-slate-900/20 transition-all active:scale-95 group"
+          >
+            <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" />
+            Provision New User
+          </button>
+        </div>
       </div>
 
       {/* Premium Stats Row */}
