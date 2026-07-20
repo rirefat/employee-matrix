@@ -70,12 +70,12 @@ export function AdminDashboard({ loggedInManager, employees, setEmployees }: Adm
   };
 
   const getRoleBadgeColor = (role: string) => {
-    if (role === 'Super Admin') return "bg-rose-100 text-rose-700 border-rose-200";
-    if (role === 'Manager') return "bg-violet-100 text-violet-700 border-violet-200";
-    if (role === 'Leader') return "bg-blue-100 text-blue-700 border-blue-200";
-    if (role === 'Co-Leader') return "bg-cyan-100 text-cyan-700 border-cyan-200";
-    if (role === 'Web Developer') return "bg-emerald-100 text-emerald-700 border-emerald-200";
-    return "bg-slate-100 text-slate-700 border-slate-200"; // Probation
+    if (role === 'Super Admin') return "bg-gradient-to-r from-rose-50 to-amber-50 text-rose-700 border-rose-200/80 rounded-full shadow-[0_0_12px_rgba(244,63,94,0.4)] relative z-10";
+    if (role === 'Manager') return "bg-indigo-50 text-indigo-700 border-indigo-200 rounded-full";
+    if (role === 'Leader') return "bg-emerald-50 text-emerald-700 border-emerald-200 rounded-full";
+    if (role === 'Co-Leader') return "bg-cyan-50 text-cyan-700 border-cyan-200 rounded-full";
+    if (role === 'Web Developer') return "bg-blue-50 text-blue-700 border-blue-200 rounded-full";
+    return "bg-slate-50 text-slate-700 border-slate-200 rounded-full"; // Probation
   };
 
   return (
@@ -199,7 +199,7 @@ export function AdminDashboard({ loggedInManager, employees, setEmployees }: Adm
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border shadow-sm ${getRoleBadgeColor(emp.role || 'Web Developer')}`}>
+                    <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border shadow-sm ${getRoleBadgeColor(emp.role || 'Web Developer')}`}>
                       {emp.role || 'Web Developer'}
                     </span>
                   </td>
