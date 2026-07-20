@@ -1151,14 +1151,6 @@ export function EmployeeDossier({
             <div className="absolute bottom-3 left-3 w-1.5 h-1.5 border-b border-l border-slate-300 pointer-events-none" />
             <div className="absolute bottom-3 right-3 w-1.5 h-1.5 border-b border-r border-slate-300 pointer-events-none" />
 
-            {/* Elegant glass active status pill */}
-            <div className="absolute top-4 left-4 flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-slate-50/90 border border-slate-200 text-emerald-700 font-mono uppercase tracking-wider shadow-2xs relative z-10">
-              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-              Active R&D Sync
-            </div>
-
-
-
             {/* Premium Avatar Visualizer with Rotating Cyber HUD & Double Halo */}
             <div className="relative mt-8 mb-6 group/avatar cursor-pointer">
               {/* Pulsing Backlight Halo */}
@@ -1216,9 +1208,15 @@ export function EmployeeDossier({
             <div className="space-y-4 w-full flex flex-col items-center relative z-10">
               
               {/* Certified Flag */}
-              <span className="inline-flex items-center gap-1 bg-gradient-to-r from-slate-50 to-slate-100 border border-slate-200/80 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold text-slate-500 tracking-widest uppercase font-mono shadow-3xs select-none">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                Active Personnel
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 shadow-[0_0_10px_rgba(99,102,241,0.1)] relative overflow-hidden group/personnel cursor-default hover:bg-indigo-100/80 transition-all duration-300">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-indigo-200/40 to-transparent -translate-x-full animate-shimmer" />
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]"></span>
+                </span>
+                <span className="text-[9px] font-extrabold text-indigo-700 tracking-widest uppercase font-mono relative z-10">
+                  Active Personnel
+                </span>
               </span>
 
               <div className="space-y-1 text-center">
@@ -2340,9 +2338,16 @@ export function EmployeeDossier({
                     {/* Active Project Overview */}
                     <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-2xs">
                       <div className="space-y-1.5">
-                        <span className="inline-block text-[10px] font-bold text-slate-800 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full font-mono uppercase tracking-wider">
-                          Active Sprint: Cycle 14
-                        </span>
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 shadow-[0_0_12px_rgba(15,23,42,0.15)] relative overflow-hidden group/sprint cursor-default hover:bg-slate-900 transition-all duration-300">
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-600/30 to-transparent -translate-x-full animate-shimmer" />
+                          <span className="relative flex h-1.5 w-1.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]"></span>
+                          </span>
+                          <span className="text-[10px] font-black text-slate-100 font-mono uppercase tracking-widest relative z-10">
+                            Active Sprint: Cycle 14
+                          </span>
+                        </div>
                         <h3 className="text-xs font-bold text-slate-900 font-display">Antigravity Distributed API Router Pipeline</h3>
                         <p className="text-xs text-slate-500 max-w-lg leading-relaxed font-medium">
                           Refactoring monolithic session controls into HttpOnly secure cookies. Integrated to containerized environments on Cloud Run.

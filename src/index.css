@@ -75,3 +75,11 @@ html, body {
   background: rgba(148, 163, 184, 1);
 }
 
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+@theme {
+  --animate-shimmer: shimmer 3s infinite linear;
+}

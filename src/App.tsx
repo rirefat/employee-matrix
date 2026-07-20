@@ -1656,7 +1656,7 @@ export default function App() {
               </>
             )}
 
-            {/* LINK: ADMIN DASHBOARD */}
+            {/* LINK: ADMIN CONTROL */}
             {isAdmin && (
               <button
                 onClick={() => {
@@ -1673,7 +1673,7 @@ export default function App() {
                   <ShieldCheck className="h-4 w-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-bold tracking-tight">Admin Dashboard</div>
+                  <div className="text-xs font-bold tracking-tight">Admin Control</div>
                 </div>
                 {activePortal === "admin" && (
                   <>
@@ -4493,8 +4493,15 @@ export default function App() {
                         <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider font-mono">
                           Team Leave & Overlap Calendar
                         </h3>
-                        <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest font-mono text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-full animate-pulse">
-                          Live Tracker
+                        <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/[0.04] border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.15)] relative overflow-hidden group/live cursor-default hover:bg-indigo-500/[0.08] transition-all duration-300">
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-indigo-400/10 to-transparent -translate-x-full animate-shimmer" />
+                          <span className="relative flex h-1.5 w-1.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]"></span>
+                          </span>
+                          <span className="text-[9px] font-black uppercase tracking-[0.15em] font-mono text-indigo-600 relative z-10">
+                            Live Tracker
+                          </span>
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-500 font-medium">Coordinate absence streams, track coverage overlaps, and avoid capacity bottlenecks</p>
@@ -5219,7 +5226,7 @@ export default function App() {
       {activePortal === "recruitment" && <RecruitmentPipeline />}
       
       {activePortal === "admin" && loggedInManager && (
-        <AdminDashboard loggedInManager={loggedInManager} employees={employees} />
+        <AdminDashboard loggedInManager={loggedInManager} employees={employees} setEmployees={setEmployees} />
       )}
       
       {activePortal === "employees" && (
