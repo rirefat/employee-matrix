@@ -300,7 +300,7 @@ export function ManagerProfile({ manager, onSave, showToast }: ManagerProfilePro
                       : "text-slate-500 hover:text-slate-800"
                   }`}
                 >
-                  Employment & Style
+                  Employment Info
                 </button>
                 <button
                   type="button"

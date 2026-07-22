@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Employee } from '../types';
 import { get3DAvatarUrl } from '../utils';
@@ -43,6 +43,39 @@ const getBadgeStyles = (role: string) => {
 export function OrgChart({ employees, setEmployees }: OrgChartProps) {
   const [draggedUser, setDraggedUser] = useState<Employee | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash;
+      if (hash && hash.startsWith('#employee-')) {
+        const id = hash.replace('#employee-', '');
+        setSelectedId(id);
+        setTimeout(() => {
+          const element = document.getElementById(`employee-${id}`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 300); // Give it some time to render
+      } else {
+        setSelectedId(null);
+      }
+    };
+
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, [employees]);
+
+  const handleEmployeeClick = (empId: string) => {
+    if (selectedId === empId) {
+      setSelectedId(null);
+      window.history.pushState(null, '', window.location.pathname + window.location.search);
+    } else {
+      setSelectedId(empId);
+      window.history.pushState(null, '', `#employee-${empId}`);
+    }
+  };
 
   const filteredEmployees = useMemo(() => {
     if (!searchTerm) return employees;
@@ -166,6 +199,8 @@ export function OrgChart({ employees, setEmployees }: OrgChartProps) {
                       {roleEmployees.map((emp, i) => (
                         <motion.div 
                           key={emp.id}
+                          id={`employee-${emp.id}`}
+                          onClick={() => handleEmployeeClick(emp.id)}
                           initial={{ opacity: 0, scale: 0.9, y: 10 }}
                           animate={{ opacity: 1, scale: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.9 }}
@@ -173,7 +208,13 @@ export function OrgChart({ employees, setEmployees }: OrgChartProps) {
                           draggable
                           onDragStart={(e) => handleDragStart(e, emp)}
                           onDragEnd={() => setDraggedUser(null)}
-                          className={`bg-white/70 backdrop-blur-xl border ${draggedUser?.id === emp.id ? 'opacity-40 border-indigo-400 ring-4 ring-indigo-500/20' : 'border-white'} shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-2xl p-5 flex flex-col items-center w-64 hover:shadow-[0_20px_40px_rgb(0,0,0,0.12)] hover:-translate-y-1.5 transition-all cursor-grab active:cursor-grabbing group relative overflow-hidden`}
+                          className={`bg-white/70 backdrop-blur-xl border ${
+                            selectedId === emp.id 
+                              ? 'border-indigo-500 ring-4 ring-indigo-500/30 shadow-xl' 
+                              : draggedUser?.id === emp.id 
+                                ? 'opacity-40 border-indigo-400 ring-4 ring-indigo-500/20' 
+                                : 'border-white'
+                          } shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-2xl p-5 flex flex-col items-center w-64 hover:shadow-[0_20px_40px_rgb(0,0,0,0.12)] hover:-translate-y-1.5 transition-all cursor-pointer group relative overflow-hidden`}
                         >
                           {/* Top Border Connector Indicator */}
                           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-[3px] bg-gradient-to-r from-transparent via-slate-300 to-transparent opacity-50" />
