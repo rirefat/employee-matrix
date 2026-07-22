@@ -110,7 +110,7 @@ export function GeneralUserDashboard({ employee, userName, performanceRecord, on
   const valScore = Math.min(100, (projectsValue / targetVal) * 100);
   const overallPerformance = performanceRecord ? Math.round(attScore * 0.5 + valScore * 0.5) : null;
 
-  const totalKudos = Object.values(kudos).reduce((a, b) => a + b, 0);
+  const totalKudos = Object.values(kudos).reduce((a: number, b: number) => a + b, 0);
 
   const handleAddKudos = async (key: keyof typeof kudos) => {
     const newValue = kudos[key as keyof typeof kudos] + 1;

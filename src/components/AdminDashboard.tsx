@@ -25,7 +25,10 @@ const ROLES_HIERARCHY = [
   "Web Developer (Probation Period)"
 ];
 
+import { OrgChart } from './OrgChart';
+
 export function AdminDashboard({ loggedInManager, employees, setEmployees }: AdminDashboardProps) {
+  const [viewTab, setViewTab] = useState<'directory' | 'orgchart'>('directory');
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('All');
   const [selectedUser, setSelectedUser] = useState<Employee | null>(null);
@@ -141,13 +144,32 @@ export function AdminDashboard({ loggedInManager, employees, setEmployees }: Adm
         ))}
       </div>
 
-      {/* Main User Directory Section */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="bg-white rounded-3xl border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden"
-      >
+      {/* View Switcher */}
+      <div className="flex gap-2 p-1 bg-slate-100 rounded-xl w-fit">
+        <button
+          onClick={() => setViewTab('directory')}
+          className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewTab === 'directory' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+        >
+          User Directory
+        </button>
+        <button
+          onClick={() => setViewTab('orgchart')}
+          className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewTab === 'orgchart' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+        >
+          Org Chart (Visual)
+        </button>
+      </div>
+
+      {viewTab === 'orgchart' ? (
+        <OrgChart employees={employees} setEmployees={setEmployees} />
+      ) : (
+        <>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="bg-white rounded-3xl border border-slate-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden"
+          >
         <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white rounded-xl shadow-sm border border-slate-200">
@@ -329,6 +351,8 @@ export function AdminDashboard({ loggedInManager, employees, setEmployees }: Adm
           </div>
         </motion.div>
       </div>
+        </>
+      )}
 
       {/* Edit User Modal */}
       <AnimatePresence>

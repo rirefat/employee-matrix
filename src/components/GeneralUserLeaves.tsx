@@ -43,12 +43,14 @@ export function GeneralUserLeaves({ employee, onAddLeave }: GeneralUserLeavesPro
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = await onAddLeave(employee.id, leaveType as any, startDate, endDate, notes, "Pending");
-    if (success !== false) {
+    try {
+      await onAddLeave(employee.id, leaveType as any, startDate, endDate, notes, "Pending");
       setShowAddForm(false);
       setStartDate('');
       setEndDate('');
       setNotes('');
+    } catch (err) {
+      console.error(err);
     }
   };
 
